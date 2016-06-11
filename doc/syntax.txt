@@ -1,0 +1,5 @@
+expression = [ "-" ] term { ( "+" | "-" ) term  }
+
+term = factor { ( "*" | "/" ) factor }
+
+factor = identifier | number | "(" expression ")"
