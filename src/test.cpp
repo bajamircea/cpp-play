@@ -82,6 +82,7 @@ namespace test
 
       if (crt_failed)
       {
+        any_failed = true;
         std::cout
           << crt_test->file_ << ":" << crt_test->line_
           << ": error: "

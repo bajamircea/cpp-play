@@ -4,21 +4,24 @@
 
 #include <stdexcept>
 
-using namespace file_contents;
-
-TEST(file_contents__read_write)
+namespace
 {
-  std::string contents{ "abc\r\ndef" };
-  std::string file_name{ "tmp/test/file_contents__read_write__simple" };
+  using namespace file_contents;
 
-  write(file_name, contents);
+  TEST(file_contents__read_write)
+  {
+    std::string contents{ "abc\r\ndef" };
+    std::string file_name{ "tmp/test/file_contents__read_write__simple" };
 
-  std::string actual{ read(file_name) };
+    write(file_name, contents);
 
-  ASSERT_EQ(contents, actual);
-}
+    std::string actual{ read(file_name) };
 
-TEST(file_contents__read_missing)
-{
-  ASSERT_THROW(read("tmp/test/file_contents__read_missing__missing"), std::runtime_error);
-}
+    ASSERT_EQ(contents, actual);
+  }
+
+  TEST(file_contents__read_missing)
+  {
+    ASSERT_THROW(read("tmp/test/file_contents__read_missing__missing"), std::runtime_error);
+  }
+} // anonymous namespace
