@@ -44,10 +44,14 @@ DEP_FILES := $(CPP_FILES:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.d)
 
 # Rules on how to build
 
-## To build all 'make'
-.DEFAULT: all
+## To build all 'make all'
+.DEFAULT: run
 
 .PHONY: all, clean, run
+
+## To build and run the program 'make run'
+run: all | $(TEST_DIR)
+	$(BIN_TARGET)
 
 all: $(BIN_TARGET)
 
@@ -74,9 +78,6 @@ $(TEST_DIR):
 clean:
 	rm -rf $(BIN_DIR) $(TMP_DIR)
 
-## To build and run the program 'make run'
-run: all | $(TEST_DIR)
-	$(BIN_TARGET)
 
 ## Do not fail when dependency file is deleted (it is required by the compile
 ## rule)
