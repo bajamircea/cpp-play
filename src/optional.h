@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <typeinfo>
 
 namespace optional
 {
@@ -34,9 +35,7 @@ namespace optional
     {
       if (this != &other)
       {
-        delete p_;
-        p_ = nullptr;
-
+        clear();
         p_ = new T(*other.p_);
       }
       return *this;
@@ -66,9 +65,7 @@ namespace optional
     {
       if (p_ != &other)
       {
-        delete p_;
-        p_ = nullptr;
-
+        clear();
         p_ = new T(other);
       }
       return *this;
@@ -83,15 +80,13 @@ namespace optional
     {
       if (p_ != &other)
       {
-        delete p_;
-        p_ = nullptr;
-
+        clear();
         p_ = new T(std::move(other));
       }
       return *this;
     }
 
-    bool is_empty()
+    bool is_empty() const noexcept
     {
       return nullptr == p_;
     }
@@ -99,6 +94,35 @@ namespace optional
     T & get()
     {
       return *p_;
+    }
+
+    const T & get() const
+    {
+      return *p_;
+    }
+
+    T & at()
+    {
+      if (is_empty())
+      {
+        throw std::bad_cast();
+      }
+      return get();
+    }
+
+    const T & at() const
+    {
+      if (is_empty())
+      {
+        throw std::bad_cast();
+      }
+      return get();
+    }
+
+    void clear() noexcept
+    {
+      delete p_;
+      p_ = nullptr;
     }
 
   private:

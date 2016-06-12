@@ -10,49 +10,83 @@ namespace
   {
     using pi = ptr<int>;
 
-    pi a;
-    ASSERT(a.is_empty());
+    {
+      pi x;
+      ASSERT(x.is_empty());
+      ASSERT_THROW(x.at(), std::bad_cast);
+    }
 
-    pi b{ a };
-    ASSERT(b.is_empty());
+    {
+      pi x{ 3 };
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(3, x.get());
+      ASSERT_EQ(3, x.at());
+    }
 
-    pi c{ 3 };
-    ASSERT_FALSE(c.is_empty());
-    ASSERT_EQ(3, c.get());
+    {
+      pi y;
+      pi x{ y };
+      ASSERT(x.is_empty());
+    }
 
-    pi d{ c };
-    ASSERT_FALSE(d.is_empty());
-    ASSERT_EQ(3, d.get());
+    {
+      pi y{ 3 };
+      pi x{ y };
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(3, x.get());
+    }
 
-    a = c;
-    ASSERT_FALSE(a.is_empty());
-    ASSERT_EQ(3, a.get());
+    {
+      pi y{ 3 };
+      pi x;
+      x = y;
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(3, x.get());
+    }
 
-    b = std::move(c);
-    ASSERT(c.is_empty());
-    ASSERT_FALSE(b.is_empty());
-    ASSERT_EQ(3, b.get());
+    {
+      pi y{ 3 };
+      pi x{ std::move(y) };
+      ASSERT(y.is_empty());
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(3, x.get());
+    }
 
-    pi e{ std::move(b) };
-    ASSERT(b.is_empty());
-    ASSERT_FALSE(e.is_empty());
-    ASSERT_EQ(3, e.get());
+    {
+      pi y{ 3 };
+      pi x;
+      x = std::move(y);
+      ASSERT(y.is_empty());
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(3, x.get());
+    }
 
-    pi f{ 4 };
-    f = std::move(e);
-    ASSERT(e.is_empty());
-    ASSERT_FALSE(f.is_empty());
-    ASSERT_EQ(3, f.get());
+    {
+      pi x;
+      x = 5;
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(5, x.get());
+    }
 
-    pi g;
-    g = 5;
-    ASSERT_FALSE(g.is_empty());
-    ASSERT_EQ(5, g.get());
+    {
+      pi x;
+      x = std::move(6);
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(6, x.get());
+    }
 
-    pi h;
-    h = std::move(6);
-    ASSERT_FALSE(h.is_empty());
-    ASSERT_EQ(6, h.get());
+    {
+      pi x{ 3 };
+      x.clear();
+      ASSERT(x.is_empty());
+    }
+
+    {
+      const pi x{ 3 };
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(3, x.get());
+      ASSERT_EQ(3, x.at());
+    }
   }
 
   TEST(optional__with_incomplete_type)
@@ -64,7 +98,7 @@ namespace
       ptr<node> next;
     };
 
-    node a(1);
+    node a{ 1 };
     ASSERT_EQ(1, a.value);
     ASSERT(a.next.is_empty());
 
