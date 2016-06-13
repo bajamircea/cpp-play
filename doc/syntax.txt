@@ -2,4 +2,4 @@ expression = [ "-" ] term { ( "+" | "-" ) term  }
 
 term = factor { ( "*" | "/" ) factor }
 
-factor = identifier | number | "(" expression ")"
+factor = number | "(" expression ")"
