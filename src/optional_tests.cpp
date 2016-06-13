@@ -46,6 +46,14 @@ namespace
 
     {
       pi y{ 3 };
+      pi x{ 4 };
+      x = y;
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(3, x.get());
+    }
+
+    {
+      pi y{ 3 };
       pi x{ std::move(y) };
       ASSERT(y.is_empty());
       ASSERT_FALSE(x.is_empty());
@@ -69,7 +77,21 @@ namespace
     }
 
     {
+      pi x{ 4 };
+      x = 5;
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(5, x.get());
+    }
+
+    {
       pi x;
+      x = std::move(6);
+      ASSERT_FALSE(x.is_empty());
+      ASSERT_EQ(6, x.get());
+    }
+
+    {
+      pi x{ 2 };
       x = std::move(6);
       ASSERT_FALSE(x.is_empty());
       ASSERT_EQ(6, x.get());

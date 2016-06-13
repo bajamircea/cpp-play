@@ -23,6 +23,24 @@ namespace variant
     {
     };
 
+    template<typename T, typename ... Ts>
+    struct is_variant_contents :
+      std::false_type
+    {
+    };
+
+    template<typename T, typename ... Ts>
+    struct is_variant_contents<T, T, Ts ...> :
+      std::true_type
+    {
+    };
+
+    template<typename T, typename First, typename ... Ts>
+    struct is_variant_contents<T, First, Ts ...> :
+      is_variant_contents<T, Ts ...>
+    {
+    };
+
     struct variant_ptr
     {
       std::size_t idx;
@@ -132,11 +150,43 @@ namespace variant
       return *this;
     }
 
-    template<typename T>
+    template<typename T,
+      typename = typename std::enable_if<
+        impl::is_variant_contents<
+          typename std::remove_const<typename std::remove_reference<T>::type>::type,
+          Ts ...
+        >::value
+        >::type
+      >
     explicit ptr(T && other) :
       x_{ impl::index_of_type<T, Ts ...>::value, new T(std::forward<T>(other)) }
     {
-      // TODO: fix this :)
+    }
+
+    template<typename T,
+      typename = typename std::enable_if<
+        impl::is_variant_contents<
+          typename std::remove_const<typename std::remove_reference<T>::type>::type,
+          Ts ...
+        >::value
+        >::type
+      >
+    ptr & operator=(T && other)
+    {
+      if (x_.p != &other)
+      {
+        if (x_.idx != impl::index_of_type<T, Ts ...>::value)
+        {
+          clear();
+          x_.p = new T(std::forward<T>(other));
+          x_.idx = impl::index_of_type<T, Ts ...>::value;
+        }
+        else
+        {
+          *static_cast<T*>(x_.p) = std::forward<T>(other);
+        }
+      }
+      return *this;
     }
 
     template<typename F>

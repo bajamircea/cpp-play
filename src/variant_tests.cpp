@@ -167,6 +167,23 @@ namespace
       int actual_int = 0;
       x.apply(detect_int(actual_int));
       ASSERT_EQ(42, actual_int);
+      ASSERT(!y.is_empty() && y.is<int>() && !x.is<bool>());
+    }
+
+    {
+      pib x;
+      x = 42;
+      int actual_int = 0;
+      x.apply(detect_int(actual_int));
+      ASSERT_EQ(42, actual_int);
+    }
+
+    {
+      pib x{ 3 };
+      x = 42;
+      int actual_int = 0;
+      x.apply(detect_int(actual_int));
+      ASSERT_EQ(42, actual_int);
     }
 
     {
@@ -186,6 +203,22 @@ namespace
       x.apply(detect_int(actual_int));
       ASSERT_EQ(42, actual_int);
       ASSERT(y.is_empty() && !y.is<int>() && !y.is<bool>());
+    }
+
+    {
+      pib x;
+      x = std::move(42);
+      int actual_int = 0;
+      x.apply(detect_int(actual_int));
+      ASSERT_EQ(42, actual_int);
+    }
+
+    {
+      pib x{ 3 };
+      x = std::move(42);
+      int actual_int = 0;
+      x.apply(detect_int(actual_int));
+      ASSERT_EQ(42, actual_int);
     }
 
     {
@@ -230,7 +263,7 @@ namespace
     ASSERT_EQ(1, a.value);
     ASSERT(a.next.is_empty());
 
-    a.next = ptr<node>(node(2));
+    a.next = node(2);
     ASSERT_FALSE(a.next.is_empty());
     ASSERT_EQ(2, a.next.get<node>().value);
     ASSERT(a.next.get<node>().next.is_empty());

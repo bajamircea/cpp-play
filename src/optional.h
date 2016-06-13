@@ -35,8 +35,14 @@ namespace optional
     {
       if (this != &other)
       {
-        clear();
-        p_ = new T(*other.p_);
+        if (nullptr == p_)
+        {
+          p_ = new T(*other.p_);
+        }
+        else
+        {
+          *p_ = *other.p_;
+        }
       }
       return *this;
     }
@@ -65,8 +71,14 @@ namespace optional
     {
       if (p_ != &other)
       {
-        clear();
-        p_ = new T(other);
+        if (nullptr == p_)
+        {
+          p_ = new T(other);
+        }
+        else
+        {
+          *p_ = other;
+        }
       }
       return *this;
     }
@@ -80,8 +92,14 @@ namespace optional
     {
       if (p_ != &other)
       {
-        clear();
-        p_ = new T(std::move(other));
+        if (nullptr == p_)
+        {
+          p_ = new T(std::move(other));
+        }
+        else
+        {
+          *p_ = std::move(other);
+        }
       }
       return *this;
     }
