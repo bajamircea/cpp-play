@@ -35,7 +35,11 @@ namespace optional
     {
       if (this != &other)
       {
-        if (nullptr == p_)
+        if (nullptr == other.p_)
+        {
+          p_ = nullptr;
+        }
+        else if (nullptr == p_)
         {
           p_ = new T(*other.p_);
         }

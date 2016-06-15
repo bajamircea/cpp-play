@@ -85,6 +85,26 @@ namespace variant
       }
     };
 
+    struct assigner
+    {
+      assigner(variant_ptr & to) :
+        to_(to)
+      {
+      }
+
+      template<typename T>
+      void operator()(const T & t) noexcept
+      {
+        *static_cast<T*>(to_.p) = t;
+      }
+
+      void operator()() noexcept
+      {
+      }
+
+      variant_ptr & to_;
+    };
+
     struct copier
     {
       template<typename T>
@@ -124,9 +144,16 @@ namespace variant
     {
       if (this != &other)
       {
-        clear();
-        x_.p = other.apply(impl::copier());
-        x_.idx = other.x_.idx;
+        if (x_.idx != other.x_.idx)
+        {
+          clear();
+          x_.p = other.apply(impl::copier());
+          x_.idx = other.x_.idx;
+        }
+        else
+        {
+          other.apply(impl::assigner(x_));
+        }
       }
       return *this;
     }
@@ -158,9 +185,12 @@ namespace variant
         >::value
         >::type
       >
-    explicit ptr(T && other) :
-      x_{ impl::index_of_type<T, Ts ...>::value, new T(std::forward<T>(other)) }
+    explicit ptr(T && other)
     {
+      using Tc = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+
+      x_.idx = impl::index_of_type<Tc, Ts ...>::value;
+      x_.p = new Tc(std::forward<T>(other));
     }
 
     template<typename T,
@@ -173,17 +203,19 @@ namespace variant
       >
     ptr & operator=(T && other)
     {
+      using Tc = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+
       if (x_.p != &other)
       {
-        if (x_.idx != impl::index_of_type<T, Ts ...>::value)
+        if (x_.idx != impl::index_of_type<Tc, Ts ...>::value)
         {
           clear();
-          x_.p = new T(std::forward<T>(other));
-          x_.idx = impl::index_of_type<T, Ts ...>::value;
+          x_.p = new Tc(std::forward<T>(other));
+          x_.idx = impl::index_of_type<Tc, Ts ...>::value;
         }
         else
         {
-          *static_cast<T*>(x_.p) = std::forward<T>(other);
+          *static_cast<Tc*>(x_.p) = std::forward<T>(other);
         }
       }
       return *this;

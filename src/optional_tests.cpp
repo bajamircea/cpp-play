@@ -53,6 +53,13 @@ namespace
     }
 
     {
+      pi y;
+      pi x{ 4 };
+      x = y;
+      ASSERT(x.is_empty());
+    }
+
+    {
       pi y{ 3 };
       pi x{ std::move(y) };
       ASSERT(y.is_empty());

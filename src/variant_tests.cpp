@@ -132,13 +132,19 @@ namespace
 
     {
       pib x{ 42 };
-      int actual_int = 0;
       ASSERT(!x.is_empty() && x.is<int>() && !x.is<bool>());
+      int actual_int = 0;
       x.apply(detect_int(actual_int));
       ASSERT_EQ(42, actual_int);
       ASSERT_EQ(42, x.at<int>());
       ASSERT_EQ(42, x.get<int>());
       ASSERT_THROW(x.at<bool>(), std::bad_cast);
+    }
+
+    {
+      const int y = 42;
+      pib x{ y };
+      ASSERT(!x.is_empty() && x.is<int>() && !x.is<bool>());
     }
 
     {
@@ -167,12 +173,49 @@ namespace
       int actual_int = 0;
       x.apply(detect_int(actual_int));
       ASSERT_EQ(42, actual_int);
-      ASSERT(!y.is_empty() && y.is<int>() && !x.is<bool>());
+      ASSERT(!x.is_empty() && x.is<int>() && !x.is<bool>());
+    }
+
+    {
+      pib y{ 42 };
+      pib x{ 3 };
+      x = y;
+      int actual_int = 0;
+      x.apply(detect_int(actual_int));
+      ASSERT_EQ(42, actual_int);
+      ASSERT(!x.is_empty() && x.is<int>() && !x.is<bool>());
+    }
+
+    {
+      pib y{ 42 };
+      pib x;
+      x = y;
+      int actual_int = 0;
+      x.apply(detect_int(actual_int));
+      ASSERT_EQ(42, actual_int);
+      ASSERT(!x.is_empty() && x.is<int>() && !x.is<bool>());
+    }
+
+    {
+      pib y;
+      pib x;
+      x = y;
+      x.apply(detect_empty());
+      ASSERT(x.is_empty() && !x.is<int>() && !x.is<bool>());
     }
 
     {
       pib x;
       x = 42;
+      int actual_int = 0;
+      x.apply(detect_int(actual_int));
+      ASSERT_EQ(42, actual_int);
+    }
+
+    {
+      const int y = 42;
+      pib x;
+      x = y;
       int actual_int = 0;
       x.apply(detect_int(actual_int));
       ASSERT_EQ(42, actual_int);
