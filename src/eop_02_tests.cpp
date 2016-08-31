@@ -112,4 +112,20 @@ namespace
     ASSERT_EQ(18, connection_point(15u, foo, foo_pred));
   }
 
+  TEST(eop_02_orbit_structure_nonterminating_orbit)
+  {
+    using result_type = triple<DistanceType(foo), DistanceType(foo), unsigned int>;
+    ASSERT_EQ(result_type(0u, 12u, 19u), orbit_structure_nonterminating_orbit(19u, foo));
+    ASSERT_EQ(result_type(3u, 12u, 18u), orbit_structure_nonterminating_orbit(15u, foo));
+  }
+
+  TEST(eop_02_orbit_structure)
+  {
+    using result_type = triple<DistanceType(foo), DistanceType(foo), unsigned int>;
+    ASSERT_EQ(result_type(0u, 0u, 60u), orbit_structure(60u, foo, foo_pred));
+    ASSERT_EQ(result_type(5u, 0u, 50u), orbit_structure(45u, foo, foo_pred));
+    ASSERT_EQ(result_type(0u, 12u, 19u), orbit_structure(19u, foo, foo_pred));
+    ASSERT_EQ(result_type(3u, 12u, 18u), orbit_structure(15u, foo, foo_pred));
+  }
+
 } // anonymous namespace
