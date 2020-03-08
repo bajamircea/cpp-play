@@ -75,13 +75,15 @@ namespace
     }
   }
 
-  TEST(big_number_unsigned_binary_add)
+  TEST(big_number_unsigned_binary_add_substract)
   {
     {
       unsigned_binary a;
       unsigned_binary b = make_unsigned_binary("12345");
       ASSERT_EQ(b, a + b);
       ASSERT_EQ(b, b + a);
+      ASSERT_EQ(b, b - a);
+      ASSERT_EQ(a, b - b);
     }
     {
       unsigned_binary a = make_unsigned_binary("1");
@@ -89,6 +91,8 @@ namespace
       unsigned_binary c = make_unsigned_binary("12346");
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
+      ASSERT_EQ(a, c - b);
+      ASSERT_EQ(b, c - a);
     }
     {
       unsigned_binary a = make_unsigned_binary("23456789012345678901");
@@ -96,6 +100,7 @@ namespace
       unsigned_binary c = make_unsigned_binary("46913578024691357802");
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
+      ASSERT_EQ(a, c - b);
     }
     {
       unsigned_binary a(1);
@@ -103,6 +108,8 @@ namespace
       unsigned_binary c = make_unsigned_binary("4294967296");
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
+      ASSERT_EQ(a, c - b);
+      ASSERT_EQ(b, c - a);
     }
     {
       unsigned_binary a(1);
@@ -110,6 +117,8 @@ namespace
       unsigned_binary c = make_unsigned_binary("4294967297");
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
+      ASSERT_EQ(a, c - b);
+      ASSERT_EQ(b, c - a);
     }
     {
       unsigned_binary a(1);
@@ -119,6 +128,8 @@ namespace
       c.units_ = {0, 0, 0, 1};
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
+      ASSERT_EQ(a, c - b);
+      ASSERT_EQ(b, c - a);
     }
     {
       unsigned_binary a(1);
@@ -128,6 +139,8 @@ namespace
       c.units_ = {0, 0, 0, 2};
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
+      ASSERT_EQ(a, c - b);
+      ASSERT_EQ(b, c - a);
     }
   }
 
