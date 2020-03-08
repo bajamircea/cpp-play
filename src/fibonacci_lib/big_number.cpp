@@ -24,11 +24,7 @@ namespace fibonacci { namespace big_number
     return '0' + x;
   }
 
-  unsigned_decimal::unsigned_decimal() noexcept
-  {
-  }
-
-  unsigned_decimal& unsigned_decimal::operator+=(const unsigned_decimal& rhs)
+  unsigned_decimal& unsigned_decimal::operator+=(const unsigned_decimal & rhs)
   {
     if (rhs.digits_.size() <= digits_.size())
     {
@@ -141,6 +137,30 @@ namespace fibonacci { namespace big_number
     for(std::size_t i = 0; rfirst != rlast; ++rfirst, ++i)
     {
       return_value.digits_[i] = make_digit(*rfirst);
+    }
+
+    return return_value;
+  }
+
+  unsigned_decimal make_unsigned_decimal(const unsigned_binary & value)
+  {
+    unsigned_decimal return_value;
+
+    unsigned_decimal power_of_2;
+    power_of_2.digits_.push_back(1);
+
+    for(unit u : value.units_)
+    {
+      unit mask = 1U;
+      for(size_t bit_pos = 0; bit_pos < unit_bits; ++bit_pos)
+      {
+        if (mask & u)
+        {
+          return_value += power_of_2;
+        }
+        mask += mask;
+        power_of_2 += power_of_2;
+      }
     }
 
     return return_value;

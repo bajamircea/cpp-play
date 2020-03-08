@@ -152,13 +152,26 @@ namespace
     }
   }
 
-  TEST(big_number_make_unsigned_decimal_to_string)
+  TEST(big_number_make_unsigned_decimal_from_unsigned_binary)
+  {
+    {
+      unsigned_binary a;
+      unsigned_decimal b = make_unsigned_decimal(a);
+      ASSERT_EQ("0", to_string(b));
+    }
+    {
+      unsigned_binary a(12345);
+      unsigned_decimal b = make_unsigned_decimal(a);
+      ASSERT_EQ("12345", to_string(b));
+    }
+  }
+
+  TEST(big_number_make_unsigned_decimal_from_to_string)
   {
     {
       unsigned_decimal x = make_unsigned_decimal("12345");
       ASSERT_EQ("12345", to_string(x));
     }
-
     {
       unsigned_decimal x = make_unsigned_decimal("");
       ASSERT_EQ("0", to_string(x));
