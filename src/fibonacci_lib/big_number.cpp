@@ -1,6 +1,7 @@
 #include "big_number.h"
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <type_traits>
 
@@ -49,32 +50,26 @@ namespace fibonacci { namespace big_number
         }
       }
 
-      if (carry == 0)
-      {
-          // no more carry
-          return *this;
-      }
-
-      for(; i < units_.size(); ++i)
-      {
-        double_unit tmp = units_[i];
-        tmp += carry;
-        if (tmp >= unit_over)
-        {
-          units_[i] = tmp - unit_over;
-          carry = 1;
-        }
-        else
-        {
-          units_[i] = tmp;
-          // no more carry
-          return *this;
-        }
-      }
-
       if (carry != 0)
       {
-        units_.push_back(1);
+        for(; i < units_.size(); ++i)
+        {
+          if (units_[i] == max_unit)
+          {
+            units_[i] = 0;
+          }
+          else
+          {
+            ++units_[i];
+            carry = 0;
+            break;
+          }
+        }
+
+        if (carry != 0)
+        {
+          units_.push_back(1);
+        }
       }
       return *this;
     }
@@ -101,22 +96,22 @@ namespace fibonacci { namespace big_number
         }
       }
 
-      for(; i < rhs.units_.size(); ++i)
+      if (carry != 0)
       {
-        double_unit tmp = rhs.units_[i];
-        tmp += carry;
-        if (tmp >= unit_over)
+        for(; i < rhs.units_.size(); ++i)
         {
-          units_.push_back(tmp - unit_over);
-          carry = 1;
-        }
-        else
-        {
-          units_.push_back(tmp);
-          // no more carry
-          carry = 0;
-          ++i;
-          break;
+          if (rhs.units_[i] == max_unit)
+          {
+            units_.push_back(0);
+          }
+          else
+          {
+            units_.push_back(rhs.units_[i] + 1);
+            // no more carry
+            carry = 0;
+            ++i;
+            break;
+          }
         }
       }
 
@@ -131,6 +126,65 @@ namespace fibonacci { namespace big_number
       }
       return *this;
     }
+  }
+
+  unsigned_binary & unsigned_binary::operator-=(const unsigned_binary & rhs)
+  {
+    assert(*this >= rhs);
+
+    unit carry = 0;
+
+    std::size_t i = 0;
+
+    for (; i < rhs.units_.size(); ++i)
+    {
+      double_unit a = units_[i];
+      double_unit b = rhs.units_[i];
+      b += carry;
+      if (a < b)
+      {
+        units_[i] = a + unit_over - b;
+        carry = 1;
+      }
+      else
+      {
+        units_[i] = a - b;
+        carry = 0;
+      }
+    }
+
+    if (carry != 0)
+    {
+      for(; i < units_.size(); ++i)
+      {
+        double_unit a = units_[i];
+        if (a == 0)
+        {
+          units_[i] = unit_over - 1;
+        }
+        else
+        {
+          units_[i] -= 1;
+          // no more carry
+          carry = 0;
+          break;
+        }
+      }
+      //assert(0 == carry);
+    }
+
+    i = units_.size();
+    while (i != 0)
+    {
+      --i;
+      if (units_[i] != 0)
+      {
+        break;
+      }
+      units_.resize(i);
+    }
+
+    return *this;
   }
 
   unsigned_decimal & unsigned_decimal::operator+=(const unsigned_decimal & rhs)
@@ -155,30 +209,26 @@ namespace fibonacci { namespace big_number
         }
       }
 
-      if (carry == 0)
-      {
-          // no more carry
-          return *this;
-      }
-
-      for(; i < digits_.size(); ++i)
-      {
-        digits_[i] += carry;
-        if (digits_[i] >= 10)
-        {
-          digits_[i] -= 10;
-          carry = 1;
-        }
-        else
-        {
-          // no more carry
-          return *this;
-        }
-      }
-
       if (carry != 0)
       {
-        digits_.push_back(1);
+        for(; i < digits_.size(); ++i)
+        {
+          if (digits_[i] == 9)
+          {
+            digits_[i] = 0;
+          }
+          else
+          {
+            ++digits_[i];
+            carry = 0;
+            break;
+          }
+        }
+
+        if (carry != 0)
+        {
+          digits_.push_back(1);
+        }
       }
       return *this;
     }
@@ -202,21 +252,22 @@ namespace fibonacci { namespace big_number
         }
       }
 
-      for(; i < rhs.digits_.size(); ++i)
+      if (carry != 0)
       {
-        digit x = rhs.digits_[i] + carry;
-        if (x >= 10)
+        for(; i < rhs.digits_.size(); ++i)
         {
-          digits_.push_back(x - 10);
-          carry = 1;
-        }
-        else
-        {
-          digits_.push_back(x);
-          // no more carry
-          carry = 0;
-          ++i;
-          break;
+          if (rhs.digits_[i] == 9)
+          {
+            digits_.push_back(0);
+          }
+          else
+          {
+            digits_.push_back(rhs.digits_[i] + 1);
+            // no more carry
+            carry = 0;
+            ++i;
+            break;
+          }
         }
       }
 

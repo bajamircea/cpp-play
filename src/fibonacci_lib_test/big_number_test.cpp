@@ -104,6 +104,31 @@ namespace
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
     }
+    {
+      unsigned_binary a(1);
+      unsigned_binary b = make_unsigned_binary("4294967296");
+      unsigned_binary c = make_unsigned_binary("4294967297");
+      ASSERT_EQ(c, a + b);
+      ASSERT_EQ(c, b + a);
+    }
+    {
+      unsigned_binary a(1);
+      unsigned_binary b;
+      b.units_ = {max_unit, max_unit, max_unit};
+      unsigned_binary c;
+      c.units_ = {0, 0, 0, 1};
+      ASSERT_EQ(c, a + b);
+      ASSERT_EQ(c, b + a);
+    }
+    {
+      unsigned_binary a(1);
+      unsigned_binary b;
+      b.units_ = {max_unit, max_unit, max_unit, 1};
+      unsigned_binary c;
+      c.units_ = {0, 0, 0, 2};
+      ASSERT_EQ(c, a + b);
+      ASSERT_EQ(c, b + a);
+    }
   }
 
   TEST(big_number_unsigned_decimal_copy_assign)
