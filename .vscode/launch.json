@@ -8,7 +8,7 @@
             "name": "Debug",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/debug/test/fib_lib_test",
+            "program": "${workspaceFolder}/bin/debug/test/fibonacci_lib_test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
