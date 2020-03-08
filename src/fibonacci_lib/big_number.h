@@ -93,6 +93,8 @@ namespace fibonacci { namespace big_number
     };
 
     unsigned_decimal& operator+=(const unsigned_decimal & rhs);
+
+    digit halve();
   };
 
   inline unsigned_decimal operator+(unsigned_decimal lhs, const unsigned_decimal & rhs)
@@ -150,6 +152,8 @@ namespace fibonacci { namespace big_number
   {
     return !(lhs < rhs);
   }
+
+  unsigned_binary make_unsigned_binary(const unsigned_decimal & value);
 
   unsigned_decimal make_unsigned_decimal(const char * first, std::size_t count);
 

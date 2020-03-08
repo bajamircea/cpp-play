@@ -121,7 +121,7 @@ namespace
     }
   }
 
-  TEST(big_number_unsigned_add)
+  TEST(big_number_unsigned_decimal_add)
   {
     {
       unsigned_decimal a;
@@ -152,6 +152,28 @@ namespace
     }
   }
 
+  TEST(big_number_unsigned_decimal_halve)
+  {
+    {
+      unsigned_decimal a;
+      unsigned_decimal zero;
+      ASSERT_EQ(0, a.halve());
+      ASSERT_EQ(zero, a);
+    }
+    {
+      unsigned_decimal a = make_unsigned_decimal("12345");
+      unsigned_decimal b = make_unsigned_decimal("6172");
+      ASSERT_EQ(1, a.halve());
+      ASSERT_EQ(b, a);
+    }
+    {
+      unsigned_decimal a = make_unsigned_decimal("90");
+      unsigned_decimal b = make_unsigned_decimal("45");
+      ASSERT_EQ(0, a.halve());
+      ASSERT_EQ(b, a);
+    }
+  }
+
   TEST(big_number_make_unsigned_decimal_from_unsigned_binary)
   {
     {
@@ -171,6 +193,10 @@ namespace
     {
       unsigned_decimal x = make_unsigned_decimal("12345");
       ASSERT_EQ("12345", to_string(x));
+    }
+    {
+      unsigned_decimal x = make_unsigned_decimal("90");
+      ASSERT_EQ("90", to_string(x));
     }
     {
       unsigned_decimal x = make_unsigned_decimal("");

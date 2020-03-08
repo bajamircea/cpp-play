@@ -2,4 +2,7 @@
     "[cpp]": {
         "editor.tabSize": 2
     },
+    "files.associations": {
+        "limits": "cpp"
+    },
 }

@@ -124,15 +124,55 @@ namespace fibonacci { namespace big_number
     }
   }
 
+  digit unsigned_decimal::halve()
+  {
+    digit carry = 0;
+
+    if (digits_.empty())
+    {
+      return carry;
+    }
+
+    std::size_t i = digits_.size() - 1;
+    carry = digits_[i] & 1U;
+    if (digits_[i] < 2)
+    {
+      digits_.pop_back();
+    }
+    else
+    {
+      digits_[i] >>= 1;
+    }
+
+    while (i != 0)
+    {
+      --i;
+      digit x = digits_[i];
+      if (carry != 0)
+      {
+        x += 10;
+      }
+      carry = digits_[i] & 1U;
+      digits_[i] = x >> 1;
+    }
+
+    return carry;
+  }
+
+  // unsigned_binary make_unsigned_binary(const unsigned_decimal & value)
+  // {
+
+  // }
+
   unsigned_decimal make_unsigned_decimal(const char * first, std::size_t count)
   {
     unsigned_decimal return_value;
 
-    auto rfirst = std::make_reverse_iterator(first + count);
-    auto rlast = std::make_reverse_iterator(first);
+    auto first_non_zero = std::find_if(first, first + count, [](char x){ return x != '0';});
+    return_value.digits_.resize(first + count - first_non_zero);
 
-    rfirst = std::find_if(rfirst, rlast, [](char x){ return x != '0';});
-    return_value.digits_.resize(rlast - rfirst);
+    auto rfirst = std::make_reverse_iterator(first + count);
+    auto rlast = std::make_reverse_iterator(first_non_zero);
 
     for(std::size_t i = 0; rfirst != rlast; ++rfirst, ++i)
     {
