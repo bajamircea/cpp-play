@@ -24,7 +24,116 @@ namespace fibonacci { namespace big_number
     return '0' + x;
   }
 
-  unsigned_decimal& unsigned_decimal::operator+=(const unsigned_decimal & rhs)
+  unsigned_binary & unsigned_binary::operator+=(const unsigned_binary & rhs)
+  {
+    if (rhs.units_.size() <= units_.size())
+    {
+      unit carry = 0;
+
+      std::size_t i = 0;
+
+      for (; i < rhs.units_.size(); ++i)
+      {
+        double_unit tmp = units_[i];
+        tmp += rhs.units_[i];
+        tmp += carry;
+        if (tmp >= unit_over)
+        {
+          units_[i] = tmp - unit_over;
+          carry = 1;
+        }
+        else
+        {
+          units_[i] = tmp;
+          carry = 0;
+        }
+      }
+
+      if (carry == 0)
+      {
+          // no more carry
+          return *this;
+      }
+
+      for(; i < units_.size(); ++i)
+      {
+        double_unit tmp = units_[i];
+        tmp += carry;
+        if (tmp >= unit_over)
+        {
+          units_[i] = tmp - unit_over;
+          carry = 1;
+        }
+        else
+        {
+          units_[i] = tmp;
+          // no more carry
+          return *this;
+        }
+      }
+
+      if (carry != 0)
+      {
+        units_.push_back(1);
+      }
+      return *this;
+    }
+    else //(rhs.digits_.size() > digits_.size())
+    {
+      unit carry = 0;
+
+      std::size_t i = 0;
+
+      for (; i < units_.size(); ++i)
+      {
+        double_unit tmp = units_[i];
+        tmp += rhs.units_[i];
+        tmp += carry;
+        if (tmp >= unit_over)
+        {
+          units_[i] = tmp - unit_over;
+          carry = 1;
+        }
+        else
+        {
+          units_[i] = tmp;
+          carry = 0;
+        }
+      }
+
+      for(; i < rhs.units_.size(); ++i)
+      {
+        double_unit tmp = rhs.units_[i];
+        tmp += carry;
+        if (tmp >= unit_over)
+        {
+          units_.push_back(tmp - unit_over);
+          carry = 1;
+        }
+        else
+        {
+          units_.push_back(tmp);
+          // no more carry
+          carry = 0;
+          ++i;
+          break;
+        }
+      }
+
+      for(; i < rhs.units_.size(); ++i)
+      {
+        units_.push_back(rhs.units_[i]);
+      }
+
+      if (carry != 0)
+      {
+        units_.push_back(1);
+      }
+      return *this;
+    }
+  }
+
+  unsigned_decimal & unsigned_decimal::operator+=(const unsigned_decimal & rhs)
   {
     if (rhs.digits_.size() <= digits_.size())
     {
@@ -35,7 +144,7 @@ namespace fibonacci { namespace big_number
       for (; i < rhs.digits_.size(); ++i)
       {
         digits_[i] += rhs.digits_[i] + carry;
-        if (digits_[i] > 9)
+        if (digits_[i] >= 10)
         {
           digits_[i] -= 10;
           carry = 1;
@@ -55,7 +164,7 @@ namespace fibonacci { namespace big_number
       for(; i < digits_.size(); ++i)
       {
         digits_[i] += carry;
-        if (digits_[i] > 9)
+        if (digits_[i] >= 10)
         {
           digits_[i] -= 10;
           carry = 1;
@@ -82,7 +191,7 @@ namespace fibonacci { namespace big_number
       for (; i < digits_.size(); ++i)
       {
         digits_[i] += rhs.digits_[i] + carry;
-        if (digits_[i] > 9)
+        if (digits_[i] >= 10)
         {
           digits_[i] -= 10;
           carry = 1;
@@ -96,7 +205,7 @@ namespace fibonacci { namespace big_number
       for(; i < rhs.digits_.size(); ++i)
       {
         digit x = rhs.digits_[i] + carry;
-        if (x > 9)
+        if (x >= 10)
         {
           digits_.push_back(x - 10);
           carry = 1;

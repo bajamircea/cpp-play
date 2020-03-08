@@ -10,6 +10,7 @@ namespace fibonacci { namespace big_number
   using double_unit = std::uint64_t;
   using digit = unsigned char;
   constexpr std::size_t unit_bits = 8U * sizeof(unit);
+  constexpr double_unit unit_over = ((double_unit)1U << unit_bits);
 
   digit make_digit(char x);
   char from_digit(digit x);
@@ -31,6 +32,8 @@ namespace fibonacci { namespace big_number
       }
       units_.push_back(value);
     }
+
+    unsigned_binary & operator+=(const unsigned_binary & rhs);
   };
 
   inline bool operator==(unsigned_binary lhs, const unsigned_binary & rhs)
@@ -83,6 +86,12 @@ namespace fibonacci { namespace big_number
     return !(lhs < rhs);
   }
 
+  inline unsigned_binary operator+(unsigned_binary lhs, const unsigned_binary & rhs)
+  {
+    lhs += rhs;
+    return lhs;
+  }
+
   struct unsigned_decimal
   {
     std::vector<digit> digits_;
@@ -92,16 +101,10 @@ namespace fibonacci { namespace big_number
     {
     };
 
-    unsigned_decimal& operator+=(const unsigned_decimal & rhs);
+    unsigned_decimal & operator+=(const unsigned_decimal & rhs);
 
     digit halve();
   };
-
-  inline unsigned_decimal operator+(unsigned_decimal lhs, const unsigned_decimal & rhs)
-  {
-    lhs += rhs;
-    return lhs;
-  }
 
   inline bool operator==(unsigned_decimal lhs, const unsigned_decimal & rhs)
   {
@@ -151,6 +154,12 @@ namespace fibonacci { namespace big_number
   inline bool operator>=(unsigned_decimal lhs, const unsigned_decimal & rhs)
   {
     return !(lhs < rhs);
+  }
+
+  inline unsigned_decimal operator+(unsigned_decimal lhs, const unsigned_decimal & rhs)
+  {
+    lhs += rhs;
+    return lhs;
   }
 
   unsigned_binary make_unsigned_binary(unsigned_decimal value);

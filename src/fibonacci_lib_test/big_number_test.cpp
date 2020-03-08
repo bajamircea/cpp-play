@@ -39,6 +39,73 @@ namespace
     }
   }
 
+  TEST(big_number_unsigned_binary_order)
+  {
+    {
+      unsigned_binary a;
+      unsigned_binary b;
+      ASSERT_FALSE(a < b);
+      ASSERT(a <= b);
+      ASSERT_FALSE(a > b);
+      ASSERT(a >= b);
+    }
+    {
+      unsigned_binary a(12345);
+      unsigned_binary b(12345);
+      ASSERT_FALSE(a < b);
+      ASSERT(a <= b);
+      ASSERT_FALSE(a > b);
+      ASSERT(a >= b);
+    }
+    {
+      unsigned_binary a;
+      unsigned_binary b(12345);
+      ASSERT(a < b);
+      ASSERT(a <= b);
+      ASSERT_FALSE(a > b);
+      ASSERT_FALSE(a >= b);
+    }
+    {
+      unsigned_binary a(12345);
+      unsigned_binary b(12351);
+      ASSERT(a < b);
+      ASSERT(a <= b);
+      ASSERT_FALSE(a > b);
+      ASSERT_FALSE(a >= b);
+    }
+  }
+
+  TEST(big_number_unsigned_binary_add)
+  {
+    {
+      unsigned_binary a;
+      unsigned_binary b = make_unsigned_binary("12345");
+      ASSERT_EQ(b, a + b);
+      ASSERT_EQ(b, b + a);
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("1");
+      unsigned_binary b = make_unsigned_binary("12345");
+      unsigned_binary c = make_unsigned_binary("12346");
+      ASSERT_EQ(c, a + b);
+      ASSERT_EQ(c, b + a);
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("23456789012345678901");
+      unsigned_binary b = make_unsigned_binary("23456789012345678901");
+      unsigned_binary c = make_unsigned_binary("46913578024691357802");
+      ASSERT_EQ(c, a + b);
+      ASSERT_EQ(c, b + a);
+    }
+    {
+      unsigned_binary a(1);
+      unsigned_binary b = make_unsigned_binary("4294967295");
+      unsigned_binary c = make_unsigned_binary("4294967296");
+      ASSERT_EQ(c, a + b);
+      ASSERT_EQ(c, b + a);
+    }
+  }
+
   TEST(big_number_unsigned_decimal_copy_assign)
   {
     {
