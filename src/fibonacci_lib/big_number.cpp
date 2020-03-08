@@ -159,10 +159,52 @@ namespace fibonacci { namespace big_number
     return carry;
   }
 
-  // unsigned_binary make_unsigned_binary(const unsigned_decimal & value)
-  // {
+  unsigned_binary make_unsigned_binary(unsigned_decimal value)
+  {
+    unsigned_binary return_value;
 
-  // }
+    unit mask = 1U;
+    unit current = 0U;
+    size_t bit_pos = 0;
+
+    while (!value.digits_.empty())
+    {
+      digit carry = value.halve();
+      if (carry != 0)
+      {
+        current |= mask;
+      }
+      ++bit_pos;
+      if (bit_pos == unit_bits)
+      {
+        return_value.units_.push_back(current);
+        mask = 1U;
+        current = 0U;
+        bit_pos = 0;
+      }
+      else
+      {
+        mask <<= 1;
+      }
+    }
+
+    if (current != 0)
+    {
+      return_value.units_.push_back(current);
+    }
+
+    return return_value;
+  }
+
+  unsigned_binary make_unsigned_binary(const char * first, std::size_t count)
+  {
+    return make_unsigned_binary(make_unsigned_decimal(first, count));
+  }
+
+  std::string to_string(const unsigned_binary & value)
+  {
+    return to_string(make_unsigned_decimal(value));
+  }
 
   unsigned_decimal make_unsigned_decimal(const char * first, std::size_t count)
   {
@@ -198,7 +240,7 @@ namespace fibonacci { namespace big_number
         {
           return_value += power_of_2;
         }
-        mask += mask;
+        mask <<= 1;
         power_of_2 += power_of_2;
       }
     }

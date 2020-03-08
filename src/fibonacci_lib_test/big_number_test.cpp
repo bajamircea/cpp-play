@@ -174,6 +174,50 @@ namespace
     }
   }
 
+  TEST(big_number_make_unsigned_binary)
+  {
+    {
+      unsigned_binary a = make_unsigned_binary("");
+      ASSERT(a.units_.empty());
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("12345");
+      unsigned_binary b(12345U);
+      ASSERT_EQ(a, b);
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("4294967295");
+      unsigned_binary b(4294967295U);
+      ASSERT_EQ(a, b);
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("18446744073709551615");
+      unsigned_decimal b = make_unsigned_decimal("18446744073709551615");
+      ASSERT_EQ(b, make_unsigned_decimal(a));
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("23456789012345678901");
+      unsigned_decimal b = make_unsigned_decimal("23456789012345678901");
+      ASSERT_EQ(b, make_unsigned_decimal(a));
+    }
+  }
+
+  TEST(big_number_make_unsigned_binary_from_to_string)
+  {
+    {
+      unsigned_binary x = make_unsigned_binary("12345");
+      ASSERT_EQ("12345", to_string(x));
+    }
+    {
+      unsigned_binary x = make_unsigned_binary("90");
+      ASSERT_EQ("90", to_string(x));
+    }
+    {
+      unsigned_binary x = make_unsigned_binary("");
+      ASSERT_EQ("0", to_string(x));
+    }
+  }
+
   TEST(big_number_make_unsigned_decimal_from_unsigned_binary)
   {
     {

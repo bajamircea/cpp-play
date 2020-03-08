@@ -153,7 +153,18 @@ namespace fibonacci { namespace big_number
     return !(lhs < rhs);
   }
 
-  unsigned_binary make_unsigned_binary(const unsigned_decimal & value);
+  unsigned_binary make_unsigned_binary(unsigned_decimal value);
+
+  unsigned_binary make_unsigned_binary(const char * first, std::size_t count);
+
+  template <std::size_t N>
+  unsigned_binary make_unsigned_binary(const char (&string_literal)[N])
+  {
+    static_assert(N > 0, "");
+    return make_unsigned_binary(string_literal, N - 1);
+  }
+
+  std::string to_string(const unsigned_binary & value);
 
   unsigned_decimal make_unsigned_decimal(const char * first, std::size_t count);
 
