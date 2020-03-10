@@ -144,6 +144,42 @@ namespace
     }
   }
 
+  TEST(big_number_long_multiplication)
+  {
+    {
+      unsigned_binary a;
+      unsigned_binary b = make_unsigned_binary("12345");
+      ASSERT_EQ(a.units_, long_multiplication(a.units_, b.units_));
+      ASSERT_EQ(a.units_, long_multiplication(b.units_, a.units_));
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("1");
+      unsigned_binary b = make_unsigned_binary("12345");
+      ASSERT_EQ(b.units_, long_multiplication(a.units_, b.units_));
+      ASSERT_EQ(b.units_, long_multiplication(b.units_, a.units_));
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("23456789012345678901");
+      unsigned_binary b = make_unsigned_binary("23456789012345678901");
+      unsigned_binary c = make_unsigned_binary("550220950769700970237433565526596567801");
+      ASSERT_EQ(c.units_, long_multiplication(a.units_, b.units_));
+      ASSERT_EQ(c.units_, long_multiplication(b.units_, a.units_));
+    }
+    {
+      unsigned_binary a(1);
+      unsigned_binary b = make_unsigned_binary("4294967295");
+      ASSERT_EQ(b.units_, long_multiplication(a.units_, b.units_));
+      ASSERT_EQ(b.units_, long_multiplication(b.units_, a.units_));
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("4294967295");
+      unsigned_binary b(2);
+      unsigned_binary c = a + a;
+      ASSERT_EQ(c.units_, long_multiplication(a.units_, b.units_));
+      ASSERT_EQ(c.units_, long_multiplication(b.units_, a.units_));
+    }
+  }
+
   TEST(big_number_unsigned_decimal_copy_assign)
   {
     {

@@ -25,6 +25,55 @@ namespace fibonacci { namespace big_number
     return '0' + x;
   }
 
+  std::vector<unit> long_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs)
+  {
+    if (lhs.empty())
+    {
+      return lhs;
+    }
+    if (rhs.empty())
+    {
+      return rhs;
+    }
+    std::vector<unit> total;
+    total.resize(lhs.size() + rhs.size());
+
+    for(std::size_t i = 0; i < rhs.size() ; ++i)
+    {
+      unit carry = 0;
+      std::size_t offset = i;
+      for(std::size_t j = 0; j < lhs.size() ; ++j, ++offset)
+      {
+        double_unit tmp = rhs[i];
+        tmp *= lhs[j];
+        tmp += carry;
+        tmp += total[offset];
+        total[offset] = tmp;
+        carry = tmp >> unit_bits;
+      }
+      for (;carry != 0; ++offset)
+      {
+        double_unit tmp = carry;
+        tmp += total[offset];
+        total[offset] = tmp;
+        carry = tmp >> unit_bits;
+      }
+    }
+
+    std::size_t non_zeroes = total.size();
+    while (non_zeroes != 0)
+    {
+      --non_zeroes;
+      if (total[non_zeroes] != 0)
+      {
+        break;
+      }
+      total.resize(non_zeroes);
+    }
+
+    return total;
+  }
+
   unsigned_binary & unsigned_binary::operator+=(const unsigned_binary & rhs)
   {
     if (rhs.units_.size() <= units_.size())
@@ -184,6 +233,13 @@ namespace fibonacci { namespace big_number
       units_.resize(i);
     }
 
+    return *this;
+  }
+
+  unsigned_binary & unsigned_binary::operator*=(const unsigned_binary & rhs)
+  {
+    this->units_ = long_multiplication(this->units_, rhs.units_);
+    
     return *this;
   }
 

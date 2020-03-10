@@ -17,6 +17,8 @@ namespace fibonacci { namespace big_number
   digit make_digit(char x);
   char from_digit(digit x);
 
+  std::vector<unit> long_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs);
+
   struct unsigned_binary
   {
     std::vector<unit> units_;
@@ -38,6 +40,8 @@ namespace fibonacci { namespace big_number
     unsigned_binary & operator+=(const unsigned_binary & rhs);
 
     unsigned_binary & operator-=(const unsigned_binary & rhs);
+
+    unsigned_binary & operator*=(const unsigned_binary & rhs);
   };
 
   inline bool operator==(unsigned_binary lhs, const unsigned_binary & rhs)
@@ -99,6 +103,12 @@ namespace fibonacci { namespace big_number
   inline unsigned_binary operator-(unsigned_binary lhs, const unsigned_binary & rhs)
   {
     lhs -= rhs;
+    return lhs;
+  }
+
+  inline unsigned_binary operator*(unsigned_binary lhs, const unsigned_binary & rhs)
+  {
+    lhs *= rhs;
     return lhs;
   }
 
