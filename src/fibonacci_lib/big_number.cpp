@@ -13,16 +13,86 @@ namespace fibonacci { namespace big_number
 
   static_assert(std::is_unsigned<double_unit>::value, "");
 
-  static_assert(std::is_unsigned<digit>::value, "");
+  static_assert(std::is_unsigned<big_digit>::value, "");
 
-  digit make_digit(char x)
+  static_assert(std::is_unsigned<double_digit>::value, "");
+
+  big_digit make_digit(char x)
   {
     return x - '0';
   }
 
-  char from_digit(digit x)
+  big_digit from_chars_helper(const char * first, const char * last)
   {
-    return '0' + x;
+    big_digit return_value = 0;
+    switch(last - first)
+    {
+      case 9:
+        static_assert(9 == dec_in_digit, "");
+        return_value += make_digit(*first) * 100'000'000;
+        ++first;
+      case 8:
+        return_value += make_digit(*first) * 10'000'000;
+        ++first;
+      case 7:
+        return_value += make_digit(*first) * 1'000'000;
+        ++first;
+      case 6:
+        return_value += make_digit(*first) * 100'000;
+        ++first;
+      case 5:
+        return_value += make_digit(*first) * 10'000;
+        ++first;
+      case 4:
+        return_value += make_digit(*first) * 1'000;
+        ++first;
+      case 3:
+        return_value += make_digit(*first) * 100;
+        ++first;
+      case 2:
+        return_value += make_digit(*first) * 10;
+        ++first;
+      case 1:
+        return_value += make_digit(*first);
+    }
+    return return_value;
+  }
+
+  void to_chars_helper(char * first, char * last, big_digit value)
+  {
+    static constexpr char pairs[201] =
+      "0001020304050607080910111213141516171819"
+      "2021222324252627282930313233343536373839"
+      "4041424344454647484950515253545556575859"
+      "6061626364656667686970717273747576777879"
+      "8081828384858687888990919293949596979899";
+    while (value >= 100)
+    {
+      auto offset = (value % 100) * 2;
+      value /= 100;
+      --last;
+      *last = pairs[offset + 1];
+      --last;
+      *last = pairs[offset];
+    }
+    if (value >= 10)
+    {
+      auto offset = value * 2;
+      --last;
+      *last = pairs[offset + 1];
+      --last;
+      *last = pairs[offset];
+    }
+    else
+    {
+      --last;
+      *last = '0' + value;
+    }
+    while (first != last)
+    {
+      --last;
+      *last = '0';
+    }
   }
 
   std::vector<unit> long_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs)
@@ -247,20 +317,23 @@ namespace fibonacci { namespace big_number
   {
     if (rhs.digits_.size() <= digits_.size())
     {
-      digit carry = 0;
+      big_digit carry = 0;
 
       std::size_t i = 0;
 
       for (; i < rhs.digits_.size(); ++i)
       {
-        digits_[i] += rhs.digits_[i] + carry;
-        if (digits_[i] >= 10)
+        double_digit tmp = digits_[i];
+        tmp += rhs.digits_[i];
+        tmp += carry;
+        if (tmp >= big_digit_over)
         {
-          digits_[i] -= 10;
+          digits_[i] = tmp - big_digit_over;
           carry = 1;
         }
         else
         {
+          digits_[i] = tmp;
           carry = 0;
         }
       }
@@ -269,7 +342,7 @@ namespace fibonacci { namespace big_number
       {
         for(; i < digits_.size(); ++i)
         {
-          if (digits_[i] == 9)
+          if (digits_[i] == max_big_digit)
           {
             digits_[i] = 0;
           }
@@ -290,20 +363,23 @@ namespace fibonacci { namespace big_number
     }
     else //(rhs.digits_.size() > digits_.size())
     {
-      digit carry = 0;
+      big_digit carry = 0;
 
       std::size_t i = 0;
 
       for (; i < digits_.size(); ++i)
       {
-        digits_[i] += rhs.digits_[i] + carry;
-        if (digits_[i] >= 10)
+        double_digit tmp = digits_[i];
+        tmp += rhs.digits_[i];
+        tmp += carry;
+        if (tmp >= big_digit_over)
         {
-          digits_[i] -= 10;
+          digits_[i] = tmp - big_digit_over;
           carry = 1;
         }
         else
         {
+          digits_[i] = tmp;
           carry = 0;
         }
       }
@@ -312,7 +388,7 @@ namespace fibonacci { namespace big_number
       {
         for(; i < rhs.digits_.size(); ++i)
         {
-          if (rhs.digits_[i] == 9)
+          if (rhs.digits_[i] == max_big_digit)
           {
             digits_.push_back(0);
           }
@@ -340,9 +416,9 @@ namespace fibonacci { namespace big_number
     }
   }
 
-  digit unsigned_decimal::halve()
+  big_digit unsigned_decimal::halve()
   {
-    digit carry = 0;
+    big_digit carry = 0;
 
     if (digits_.empty())
     {
@@ -363,10 +439,10 @@ namespace fibonacci { namespace big_number
     while (i != 0)
     {
       --i;
-      digit x = digits_[i];
+      double_digit x = digits_[i];
       if (carry != 0)
       {
-        x += 10;
+        x += big_digit_over;
       }
       carry = digits_[i] & 1U;
       digits_[i] = x >> 1;
@@ -385,7 +461,7 @@ namespace fibonacci { namespace big_number
 
     while (!value.digits_.empty())
     {
-      digit carry = value.halve();
+      big_digit carry = value.halve();
       if (carry != 0)
       {
         current |= mask;
@@ -426,15 +502,40 @@ namespace fibonacci { namespace big_number
   {
     unsigned_decimal return_value;
 
-    auto first_non_zero = std::find_if(first, first + count, [](char x){ return x != '0';});
-    return_value.digits_.resize(first + count - first_non_zero);
+    const char * last = first + count;
+    first = std::find_if(first, last, [](char x){ return x != '0';});
+    count = last - first;
 
-    auto rfirst = std::make_reverse_iterator(first + count);
-    auto rlast = std::make_reverse_iterator(first_non_zero);
-
-    for(std::size_t i = 0; rfirst != rlast; ++rfirst, ++i)
+    std::size_t whole_digits = count / dec_in_digit;
+    std::size_t remaining = count % dec_in_digit;
+    
+    const char * first_group = first;
+    const char * last_group;
+    if (remaining != 0)
     {
-      return_value.digits_[i] = make_digit(*rfirst);
+      return_value.digits_.resize(whole_digits + 1);
+      last_group = first_group + remaining;
+    }
+    else
+    {
+      return_value.digits_.resize(whole_digits);
+      if (whole_digits == 0)
+      {
+        return return_value;
+      }
+      last_group = first_group + dec_in_digit;
+    }
+    std::size_t i = return_value.digits_.size();
+    while (true)
+    {
+      --i;
+      return_value.digits_[i] = from_chars_helper(first_group, last_group);
+      if (last_group == last)
+      {
+        break;
+      }
+      first_group = last_group;
+      last_group += dec_in_digit;
     }
 
     return return_value;
@@ -474,14 +575,60 @@ namespace fibonacci { namespace big_number
       return return_value;
     }
 
-    return_value.resize(value.digits_.size());
-
-    auto rfirst = value.digits_.rbegin();
-    auto rlast = value.digits_.rend();
-
-    for(std::size_t i = 0; rfirst != rlast; ++rfirst, ++i)
+    std::size_t first_size;
+    std::size_t i = value.digits_.size() - 1;
+    if(value.digits_[i] < 10)
     {
-      return_value[i] = from_digit(*rfirst);
+      first_size = 1;
+    }
+    else if(value.digits_[i] < 100)
+    {
+      first_size = 2;
+    }
+    else if(value.digits_[i] < 1000)
+    {
+      first_size = 3;
+    }
+    else if(value.digits_[i] < 10'000)
+    {
+      first_size = 4;
+    }
+    else if(value.digits_[i] < 100'000)
+    {
+      first_size = 5;
+    }
+    else if(value.digits_[i] < 1'000'000)
+    {
+      first_size = 6;
+    }
+    else if(value.digits_[i] < 10'000'000)
+    {
+      first_size = 7;
+    }
+    else if(value.digits_[i] < 100'000'000)
+    {
+      first_size = 8;
+    }
+    else
+    {
+      first_size = 9;
+      static_assert(9 == dec_in_digit, "");
+    }
+
+    return_value.resize(first_size + dec_in_digit * i);
+    char * first = &return_value[0];
+    char * last = first + first_size;
+
+    while(true)
+    {
+      to_chars_helper(first, last, value.digits_[i]);
+      if (i == 0)
+      {
+        break;
+      }
+      --i;
+      first = last;
+      last += dec_in_digit;
     }
 
     return return_value;

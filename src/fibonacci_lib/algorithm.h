@@ -53,7 +53,7 @@ struct multiply_2x2
   
   template <typename R, typename N> R fibonacci_pow(N n)
   {
-    if (n == 0) return R(1);
-    return power(std::array<R, 4>{ R(1), R(1), R(1), R(0) }, n, multiply_2x2<R>())[0];
+    if (n == 0) return R(0);
+    return power(std::array<R, 4>{ R(1), R(1), R(1), R(0) }, N(n - 1), multiply_2x2<R>())[0];
   }
 }} // namespace fibonacci::algorithm

@@ -28,7 +28,7 @@ namespace
 
   TEST(algorithm_fibonacci_pow)
   {
-    auto x = fibonacci_pow<unsigned_binary, uint32_t>(4);
+    auto x = fibonacci_pow<unsigned_binary, uint32_t>(5);
     ASSERT_EQ(unsigned_binary(5), x);
   }
 } // anonymous namespace

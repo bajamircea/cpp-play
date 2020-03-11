@@ -1,5 +1,6 @@
 #pragma once
 
+#include <climits>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -9,13 +10,19 @@ namespace fibonacci { namespace big_number
 {
   using unit = std::uint32_t;
   using double_unit = std::uint64_t;
-  using digit = unsigned char;
-  constexpr std::size_t unit_bits = 8U * sizeof(unit);
-  constexpr double_unit unit_over = ((double_unit)1U << unit_bits);
+  constexpr std::size_t unit_bits = CHAR_BIT * sizeof(unit);
   constexpr unit max_unit = std::numeric_limits<unit>::max();
+  constexpr double_unit unit_over = ((double_unit)1U << unit_bits);
 
-  digit make_digit(char x);
-  char from_digit(digit x);
+  using big_digit = std::uint32_t;
+  using double_digit = std::uint64_t;
+  constexpr big_digit max_big_digit = 999'999'999;
+  constexpr big_digit big_digit_over = max_big_digit + 1;
+  constexpr std::size_t dec_in_digit = 9;
+
+  big_digit make_digit(char x);
+  big_digit from_chars_helper(const char * first, const char * last);
+  void to_chars_helper(char * first, char * last, big_digit value);
 
   std::vector<unit> long_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs);
 
@@ -114,7 +121,7 @@ namespace fibonacci { namespace big_number
 
   struct unsigned_decimal
   {
-    std::vector<digit> digits_;
+    std::vector<big_digit> digits_;
 
     // default constructor is zero
     unsigned_decimal() noexcept
@@ -123,7 +130,7 @@ namespace fibonacci { namespace big_number
 
     unsigned_decimal & operator+=(const unsigned_decimal & rhs);
 
-    digit halve();
+    big_digit halve();
   };
 
   inline bool operator==(unsigned_decimal lhs, const unsigned_decimal & rhs)

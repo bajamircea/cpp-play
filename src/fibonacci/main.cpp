@@ -8,6 +8,7 @@
 
 int main(int argc, char * argv[])
 {
+  std::ios_base::sync_with_stdio(false);
   if (argc < 2)
   {
     std::cout << "No argument\n";
@@ -48,15 +49,16 @@ int main(int argc, char * argv[])
   if (arg == "log_2")
   {
     auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(100'000);
-    //std::cout << fibonacci::big_number::to_string(result) << '\n';
-    std::cout << result.units_.size() << '\n';
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << result.units_.size() << '\n';
     return 0;
   }
   if (arg == "log_3")
   {
-    auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'001);
+    auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
     //std::cout << fibonacci::big_number::to_string(result) << '\n';
-    std::cout << result.units_.size() << '\n';
+    std::cout << fibonacci::big_number::to_string(result).size() << '\n';
+    //std::cout << result.units_.size() << '\n';
     return 0;
   }
   if (arg == "linear_first_big")

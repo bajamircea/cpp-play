@@ -9,7 +9,6 @@ namespace
   TEST(big_number_digit)
   {
     ASSERT_EQ(3, make_digit('3'));
-    ASSERT_EQ('3', from_digit(3));
   }
 
   TEST(big_number_unsigned_binary_copy_assign)
