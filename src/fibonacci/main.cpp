@@ -56,8 +56,8 @@ int main(int argc, char * argv[])
   if (arg == "log_3")
   {
     auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
-    //std::cout << fibonacci::big_number::to_string(result) << '\n';
-    std::cout << fibonacci::big_number::to_string(result).size() << '\n';
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << fibonacci::big_number::to_string(result).size() << '\n';
     //std::cout << result.units_.size() << '\n';
     return 0;
   }

@@ -313,6 +313,48 @@ namespace fibonacci { namespace big_number
     return *this;
   }
 
+  unit unsigned_binary::divide_by(unit value)
+  {
+    unit carry = 0;
+
+    if (units_.empty())
+    {
+      return carry;
+    }
+
+    std::size_t i = units_.size() - 1;
+    carry = units_[i] % value;
+    if (units_[i] < value)
+    {
+      units_.pop_back();
+    }
+    else
+    {
+      units_[i] /= value;
+    }
+
+    while (i != 0)
+    {
+      --i;
+      double_unit tmp;
+      if (carry != 0)
+      {
+        tmp = carry;
+        tmp *= unit_over;
+        tmp += units_[i]; 
+      }
+      else
+      {
+        tmp = units_[i];
+      }
+      
+      carry = tmp % value;
+      units_[i] = tmp / value;
+    }
+
+    return carry;
+  }
+
   unsigned_decimal & unsigned_decimal::operator+=(const unsigned_decimal & rhs)
   {
     if (rhs.digits_.size() <= digits_.size())
@@ -541,25 +583,14 @@ namespace fibonacci { namespace big_number
     return return_value;
   }
 
-  unsigned_decimal make_unsigned_decimal(const unsigned_binary & value)
+  unsigned_decimal make_unsigned_decimal(unsigned_binary value)
   {
     unsigned_decimal return_value;
 
-    unsigned_decimal power_of_2;
-    power_of_2.digits_.push_back(1);
-
-    for(unit u : value.units_)
+    while (!value.units_.empty())
     {
-      unit mask = 1U;
-      for(size_t bit_pos = 0; bit_pos < unit_bits; ++bit_pos)
-      {
-        if (mask & u)
-        {
-          return_value += power_of_2;
-        }
-        mask <<= 1;
-        power_of_2 += power_of_2;
-      }
+      big_digit carry = value.divide_by(big_digit_over);
+      return_value.digits_.push_back(carry);
     }
 
     return return_value;

@@ -179,6 +179,28 @@ namespace
     }
   }
 
+  TEST(big_number_unsigned_binary_divide_by)
+  {
+    {
+      unsigned_binary a;
+      unsigned_binary zero;
+      ASSERT_EQ(0, a.divide_by(1000000000));
+      ASSERT_EQ(zero, a);
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("12345678901");
+      unsigned_binary b = make_unsigned_binary("12");
+      ASSERT_EQ(345678901, a.divide_by(1000000000));
+      ASSERT_EQ(b, a);
+    }
+    {
+      unsigned_binary a = make_unsigned_binary("12000000000");
+      unsigned_binary b = make_unsigned_binary("12");
+      ASSERT_EQ(0, a.divide_by(1000000000));
+      ASSERT_EQ(b, a);
+    }
+  }
+
   TEST(big_number_unsigned_decimal_copy_assign)
   {
     {
@@ -277,9 +299,9 @@ namespace
       ASSERT_EQ(c, b + a);
     }
     {
-      unsigned_decimal a = make_unsigned_decimal("9");
-      unsigned_decimal b = make_unsigned_decimal("99");
-      unsigned_decimal c = make_unsigned_decimal("108");
+      unsigned_decimal a = make_unsigned_decimal("999999999");
+      unsigned_decimal b = make_unsigned_decimal("999999999999999999");
+      unsigned_decimal c = make_unsigned_decimal("1000000000999999998");
       ASSERT_EQ(c, a + b);
       ASSERT_EQ(c, b + a);
     }

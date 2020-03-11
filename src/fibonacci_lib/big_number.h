@@ -49,6 +49,8 @@ namespace fibonacci { namespace big_number
     unsigned_binary & operator-=(const unsigned_binary & rhs);
 
     unsigned_binary & operator*=(const unsigned_binary & rhs);
+
+    unit divide_by(unit value);
   };
 
   inline bool operator==(unsigned_binary lhs, const unsigned_binary & rhs)
@@ -211,7 +213,7 @@ namespace fibonacci { namespace big_number
     return make_unsigned_decimal(string_literal, N - 1);
   }
 
-  unsigned_decimal make_unsigned_decimal(const unsigned_binary & value);
+  unsigned_decimal make_unsigned_decimal(unsigned_binary value);
 
   std::string to_string(const unsigned_decimal & value);
 }} // namespace fibonacci::big_number
