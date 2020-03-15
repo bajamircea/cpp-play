@@ -179,6 +179,164 @@ namespace
     }
   }
 
+  TEST(big_number_karatsuba_add_helper)
+  {
+    {
+      std::vector<unit> a;
+      std::vector<unit> b = {12345};
+      ASSERT_EQ(b, karatsuba_add_helper(a, b));
+      ASSERT_EQ(b, karatsuba_add_helper(b, a));
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {12345};
+      std::vector<unit> c = {12346};
+      ASSERT_EQ(c, karatsuba_add_helper(a, b));
+      ASSERT_EQ(c, karatsuba_add_helper(b, a));
+    }
+    {
+      std::vector<unit> a = {1, 2, 3};
+      std::vector<unit> b = {1, 2, 3};
+      std::vector<unit> c = {2, 4, 6};
+      ASSERT_EQ(c, karatsuba_add_helper(a, b));
+      ASSERT_EQ(c, karatsuba_add_helper(b, a));
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {4294967295};
+      std::vector<unit> c = {0, 1};
+      ASSERT_EQ(c, karatsuba_add_helper(a, b));
+      ASSERT_EQ(c, karatsuba_add_helper(b, a));
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {0, 1};
+      std::vector<unit> c = {1, 1};
+      ASSERT_EQ(c, karatsuba_add_helper(a, b));
+      ASSERT_EQ(c, karatsuba_add_helper(b, a));
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit};
+      std::vector<unit> c = {0, 0, 0, 1};
+      ASSERT_EQ(c, karatsuba_add_helper(a, b));
+      ASSERT_EQ(c, karatsuba_add_helper(b, a));
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit, 1};
+      std::vector<unit> c = {0, 0, 0, 2};
+      ASSERT_EQ(c, karatsuba_add_helper(a, b));
+      ASSERT_EQ(c, karatsuba_add_helper(b, a));
+    }
+  }
+
+  TEST(big_number_karatsuba_shift_add_helper)
+  {
+    {
+      std::vector<unit> a;
+      std::vector<unit> b = {12345};
+      std::vector<unit> c = {12345};
+      karatsuba_shift_add_helper(b, a, 1);
+      ASSERT_EQ(c, b);
+    }
+    {
+      std::vector<unit> a;
+      std::vector<unit> b = {12345};
+      std::vector<unit> c = {0, 12345};
+      karatsuba_shift_add_helper(a, b, 1);
+      ASSERT_EQ(c, a);
+    }
+    {
+      std::vector<unit> a = {1, 2, 3};
+      std::vector<unit> b = {1, 2, 3};
+      std::vector<unit> c = {1, 3, 5, 3};
+      karatsuba_shift_add_helper(a, b, 1);
+      ASSERT_EQ(c, a);
+    }
+    {
+      std::vector<unit> a = {0, 1};
+      std::vector<unit> b = {4294967295};
+      std::vector<unit> c = {0, 0, 1};
+      karatsuba_shift_add_helper(a, b, 1);
+      ASSERT_EQ(c, a);
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {0, 4294967295};
+      std::vector<unit> c = {0, 0, 1};
+      karatsuba_shift_add_helper(b, a, 1);
+      ASSERT_EQ(c, b);
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {0, 0, 1};
+      std::vector<unit> c = {0, 1, 1};
+      karatsuba_shift_add_helper(b, a, 1);
+      ASSERT_EQ(c, b);
+    }
+    {
+      std::vector<unit> a = {0, 0, 1};
+      std::vector<unit> b = {1};
+      std::vector<unit> c = {0, 1, 1};
+      karatsuba_shift_add_helper(a, b, 1);
+      ASSERT_EQ(c, a);
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit, max_unit};
+      std::vector<unit> c = {max_unit, 0, 0, 0, 1};
+      karatsuba_shift_add_helper(b, a, 1);
+      ASSERT_EQ(c, b);
+    }
+    {
+      std::vector<unit> a = {1, 1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit, max_unit};
+      std::vector<unit> c = {1, 0, 0, 0, 0, 1};
+      karatsuba_shift_add_helper(a, b, 1);
+      ASSERT_EQ(c, a);
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit, max_unit, 1};
+      std::vector<unit> c = {max_unit, 0, 0, 0, 2};
+      karatsuba_shift_add_helper(b, a, 1);
+      ASSERT_EQ(c, b);
+    }
+    {
+      std::vector<unit> a = {1 , 1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit, max_unit, 1};
+      std::vector<unit> c = {1, 0, 0, 0, 0, 2};
+      karatsuba_shift_add_helper(a, b, 1);
+      ASSERT_EQ(c, a);
+    }
+    {
+      std::vector<unit> a = {1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit, max_unit, 1, 1};
+      std::vector<unit> c = {max_unit, 0, 0, 0, 2, 1};
+      karatsuba_shift_add_helper(b, a, 1);
+      ASSERT_EQ(c, b);
+    }
+    {
+      std::vector<unit> a = {1 , 1};
+      std::vector<unit> b = {max_unit, max_unit, max_unit, max_unit, 1, 1};
+      std::vector<unit> c = {1, 0, 0, 0, 0, 2, 1};
+      karatsuba_shift_add_helper(a, b, 1);
+      ASSERT_EQ(c, a);
+    }
+  }
+
+  TEST(big_number_karatsuba_multiplication)
+  {
+    {
+      std::vector<unit> a = {1 ,2, 3, 4, 5, 6, 7, 8, 9 , 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+      std::vector<unit> b = {1 ,2, 3, 4, 5, 6, 7, 8, 9 , 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8};
+      std::vector<unit> c = long_multiplication(a, b);
+      ASSERT_EQ(c, karatsuba_multiplication(a, b));
+      ASSERT_EQ(c, karatsuba_multiplication(b, a));
+    }
+  }
+
   TEST(big_number_unsigned_binary_divide_by)
   {
     {

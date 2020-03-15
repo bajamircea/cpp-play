@@ -5,6 +5,11 @@
 #include <iterator>
 #include <type_traits>
 
+namespace
+{
+  const std::size_t g_karatsuba_threshold = 100;
+}
+
 namespace fibonacci { namespace big_number
 {
   static_assert(2*sizeof(unit) == sizeof(double_unit), "");
@@ -95,27 +100,26 @@ namespace fibonacci { namespace big_number
     }
   }
 
-  std::vector<unit> long_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs)
+  std::vector<unit> long_multiplication(const unit * lhs_first, const unit * lhs_last, const unit * rhs_first, const unit * rhs_last)
   {
-    if (lhs.empty())
-    {
-      return lhs;
-    }
-    if (rhs.empty())
-    {
-      return rhs;
-    }
     std::vector<unit> total;
-    total.resize(lhs.size() + rhs.size());
 
-    for(std::size_t i = 0; i < rhs.size() ; ++i)
+    if ((lhs_first == lhs_last) || (rhs_first == rhs_last))
+    {
+      return total;
+    }
+    std::size_t lhs_size = lhs_last - lhs_first;
+    std::size_t rhs_size = rhs_last - rhs_first;
+    total.resize(lhs_size + rhs_size);
+
+    for(std::size_t i = 0; i < rhs_size ; ++i)
     {
       unit carry = 0;
       std::size_t offset = i;
-      for(std::size_t j = 0; j < lhs.size() ; ++j, ++offset)
+      for(std::size_t j = 0; j < lhs_size ; ++j, ++offset)
       {
-        double_unit tmp = rhs[i];
-        tmp *= lhs[j];
+        double_unit tmp = rhs_first[i];
+        tmp *= lhs_first[j];
         tmp += carry;
         tmp += total[offset];
         total[offset] = tmp;
@@ -144,9 +148,232 @@ namespace fibonacci { namespace big_number
     return total;
   }
 
+  std::vector<unit> long_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs)
+  {
+    return long_multiplication(lhs.data(), lhs.data() + lhs.size(), rhs.data(), rhs.data() + rhs.size());
+  }
+
+  std::vector<unit> karatsuba_add_helper(const unit * lhs_first, const unit * lhs_last, const unit * rhs_first, const unit * rhs_last)
+  {
+    std::vector<unit> return_value;
+    
+    unit carry = 0;
+
+    for (;(lhs_first != lhs_last) && (rhs_first != rhs_last); ++lhs_first, ++rhs_first)
+    {
+      double_unit tmp = *lhs_first;
+      tmp += *rhs_first;
+      tmp += carry;
+      if (tmp >= unit_over)
+      {
+        return_value.push_back(tmp - unit_over);
+        carry = 1;
+      }
+      else
+      {
+        return_value.push_back(tmp);
+        carry = 0;
+      }
+    }
+
+    const unit * x_first = (lhs_first != lhs_last) ? lhs_first : rhs_first;
+    const unit * x_last = (lhs_first != lhs_last) ? lhs_last : rhs_last;
+
+    if (carry != 0)
+    {
+      for(; x_first != x_last; ++x_first)
+      {
+        if (*x_first == max_unit)
+        {
+          return_value.push_back(0);
+        }
+        else
+        {
+          return_value.push_back(*x_first + 1);
+          carry = 0;
+          ++x_first;
+          break;
+        }
+      }
+    }
+
+    for(; x_first != x_last; ++x_first)
+    {
+      return_value.push_back(*x_first);
+    }
+
+    if (carry != 0)
+    {
+      return_value.push_back(1);
+    }
+
+    return return_value;
+  }
+
+  std::vector<unit> karatsuba_add_helper(std::vector<unit> & lhs, const std::vector<unit> & rhs)
+  {
+    return karatsuba_add_helper(lhs.data(), lhs.data() + lhs.size(), rhs.data(), rhs.data() + rhs.size());
+  }
+
+  void karatsuba_shift_add_helper(std::vector<unit> & lhs, const std::vector<unit> & rhs, std::size_t rhs_shift)
+  {
+    if (rhs.empty())
+    {
+      return;
+    }
+
+    if (lhs.size() < rhs_shift)
+    {
+      lhs.resize(rhs_shift);
+    }
+
+    if (lhs.size() >= rhs.size() + rhs_shift)
+    {
+      unit carry = 0;
+
+      std::size_t i = rhs_shift;
+      std::size_t j = 0;
+
+      for (; j < rhs.size(); ++i, ++j)
+      {
+        double_unit tmp = lhs[i];
+        tmp += rhs[j];
+        tmp += carry;
+        if (tmp >= unit_over)
+        {
+          lhs[i] = tmp - unit_over;
+          carry = 1;
+        }
+        else
+        {
+          lhs[i] = tmp;
+          carry = 0;
+        }
+      }
+
+      if (carry != 0)
+      {
+        for(; i < lhs.size(); ++i)
+        {
+          if (lhs[i] == max_unit)
+          {
+            lhs[i] = 0;
+          }
+          else
+          {
+            ++lhs[i];
+            carry = 0;
+            break;
+          }
+        }
+
+        if (carry != 0)
+        {
+          lhs.push_back(1);
+        }
+      }
+    }
+    else //lhs.size() < rhs.size() + rhs_shift
+    {
+      unit carry = 0;
+
+      std::size_t i = rhs_shift;
+      std::size_t j = 0;
+
+      for (; i < lhs.size(); ++i, ++j)
+      {
+        double_unit tmp = lhs[i];
+        tmp += rhs[j];
+        tmp += carry;
+        if (tmp >= unit_over)
+        {
+          lhs[i] = tmp - unit_over;
+          carry = 1;
+        }
+        else
+        {
+          lhs[i] = tmp;
+          carry = 0;
+        }
+      }
+
+      if (carry != 0)
+      {
+        for(; j < rhs.size(); ++j)
+        {
+          if (rhs[j] == max_unit)
+          {
+            lhs.push_back(0);
+          }
+          else
+          {
+            lhs.push_back(rhs[j] + 1);
+            // no more carry
+            carry = 0;
+            ++j;
+            break;
+          }
+        }
+      }
+
+      for(; j < rhs.size(); ++j)
+      {
+        lhs.push_back(rhs[j]);
+      }
+
+      if (carry != 0)
+      {
+        lhs.push_back(1);
+      }
+    }
+  }
+
+  std::vector<unit> karatsuba_multiplication(const unit * lhs_first, const unit * lhs_last, const unit * rhs_first, const unit * rhs_last)
+  {
+    std::size_t lhs_size = lhs_last - lhs_first;
+    std::size_t rhs_size = rhs_last - rhs_first;
+    if (lhs_size < g_karatsuba_threshold || rhs_size < g_karatsuba_threshold)
+    {
+      return long_multiplication(lhs_first, lhs_last, rhs_first, rhs_last);
+    }
+
+    // x = x1*B^m + x0
+    // y = y1*B^m + y1
+    // z0 = x0 * y0
+    // z2 = x1 * y1
+    // z1 = (x1 + x0)*(y1 + y0) - z2 - z0
+    // x * y = z2*B^2m + z1*B^m + z0
+
+    std::size_t split_size = std::max(lhs_size, rhs_size) / 2;
+    const unit * lhs_split = (lhs_size > split_size) ? (lhs_first + split_size) : lhs_last;
+    const unit * rhs_split = (rhs_size > split_size) ? (rhs_first + split_size) : rhs_last;
+
+    unsigned_binary z0;
+    z0.units_ = karatsuba_multiplication(lhs_first, lhs_split, rhs_first, rhs_split);
+    unsigned_binary z2;
+    z2.units_ = karatsuba_multiplication(lhs_split, lhs_last, rhs_split, rhs_last);
+
+    std::vector<unit> p1 = karatsuba_add_helper(lhs_first, lhs_split, lhs_split, lhs_last);
+    std::vector<unit> p2 = karatsuba_add_helper(rhs_first, rhs_split, rhs_split, rhs_last);
+    unsigned_binary z1;
+    z1.units_ = karatsuba_multiplication(p1, p2);
+    z1 -= z0;
+    z1 -= z2;
+
+    std::vector<unit> return_value = std::move(z0.units_);
+    karatsuba_shift_add_helper(return_value, z1.units_, split_size);
+    karatsuba_shift_add_helper(return_value, z2.units_, 2 * split_size);
+    return return_value;
+  }
+
+  std::vector<unit> karatsuba_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs)
+  {
+    return karatsuba_multiplication(lhs.data(), lhs.data() + lhs.size(), rhs.data(), rhs.data() + rhs.size());
+  }
+
   unsigned_binary & unsigned_binary::operator+=(const unsigned_binary & rhs)
   {
-    if (rhs.units_.size() <= units_.size())
+    if (units_.size() >= rhs.units_.size())
     {
       unit carry = 0;
 
@@ -192,7 +419,7 @@ namespace fibonacci { namespace big_number
       }
       return *this;
     }
-    else //(rhs.digits_.size() > digits_.size())
+    else // units_.size() < rhs.units_.size())
     {
       unit carry = 0;
 
@@ -308,7 +535,7 @@ namespace fibonacci { namespace big_number
 
   unsigned_binary & unsigned_binary::operator*=(const unsigned_binary & rhs)
   {
-    this->units_ = long_multiplication(this->units_, rhs.units_);
+    this->units_ = karatsuba_multiplication(this->units_, rhs.units_);
     
     return *this;
   }
@@ -357,7 +584,7 @@ namespace fibonacci { namespace big_number
 
   unsigned_decimal & unsigned_decimal::operator+=(const unsigned_decimal & rhs)
   {
-    if (rhs.digits_.size() <= digits_.size())
+    if (digits_.size() >= rhs.digits_.size())
     {
       big_digit carry = 0;
 
@@ -403,7 +630,7 @@ namespace fibonacci { namespace big_number
       }
       return *this;
     }
-    else //(rhs.digits_.size() > digits_.size())
+    else // digits_.size() < rhs.digits_.size()
     {
       big_digit carry = 0;
 

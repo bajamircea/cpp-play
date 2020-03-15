@@ -24,7 +24,15 @@ namespace fibonacci { namespace big_number
   big_digit from_chars_helper(const char * first, const char * last);
   void to_chars_helper(char * first, char * last, big_digit value);
 
+  std::vector<unit> long_multiplication(const unit * lhs_first, const unit * lhs_last, const unit * rhs_first, const unit * rhs_last);
   std::vector<unit> long_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs);
+
+  std::vector<unit> karatsuba_add_helper(const unit * lhs_first, const unit * lhs_last, const unit * rhs_first, const unit * rhs_last);
+  std::vector<unit> karatsuba_add_helper(std::vector<unit> & lhs, const std::vector<unit> & rhs);
+  void karatsuba_shift_add_helper(std::vector<unit> & lhs, const std::vector<unit> & rhs, std::size_t rhs_shift);
+
+  std::vector<unit> karatsuba_multiplication(const unit * lhs_first, const unit * lhs_last, const unit * rhs_first, const unit * rhs_last);
+  std::vector<unit> karatsuba_multiplication(const std::vector<unit> & lhs, const std::vector<unit> & rhs);
 
   struct unsigned_binary
   {

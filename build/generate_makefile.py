@@ -47,7 +47,7 @@ DEP_FLAGS = -MT $@ -MMD -MP -MF $(@:.o=.d)
 STD_FLAGS = --std=c++17 -pthread -fno-rtti
 WARN_FLAGS = -Wall -Werror
 debug_FLAGS = -g
-release_FLAGS = -O3
+release_FLAGS = -O3 -march=native
 CXXFLAGS = $(STD_FLAGS) $(DEP_FLAGS) $(WARN_FLAGS)
 LDFLAGS = $(STD_FLAGS) $(WARN_FLAGS)
 
