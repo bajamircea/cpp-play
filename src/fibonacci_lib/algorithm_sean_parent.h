@@ -1,17 +1,9 @@
 #pragma once
 
-#include "big_number.h"
-
 #include <array>
-#include <cstdint>
 
-namespace fibonacci { namespace algorithm
+namespace fibonacci { namespace algorithm_sean_parent
 {
-  std::uint64_t exponential_naive(std::uint32_t value);
-  std::uint64_t linear_naive(std::uint32_t value);
-  fibonacci::big_number::unsigned_binary linear_big(std::uint32_t value);
-  std::uint32_t linear_first_big();
-
   // from https://sean-parent.stlab.cc/presentations/2017-01-18-concurrency/2017-01-18-concurrency.pdf
   template <typename T, typename N, typename O>
   T power(T x, N n, O op)
@@ -56,4 +48,4 @@ struct multiply_2x2
     if (n == 0) return R(0);
     return power(std::array<R, 4>{ R(1), R(1), R(1), R(0) }, N(n - 1), multiply_2x2<R>())[0];
   }
-}} // namespace fibonacci::algorithm
+}} // namespace fibonacci::algorithm_sean_parent

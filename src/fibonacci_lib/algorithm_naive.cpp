@@ -1,6 +1,6 @@
-#include "algorithm.h"
+#include "algorithm_naive.h"
 
-namespace fibonacci { namespace algorithm
+namespace fibonacci { namespace algorithm_naive
 {
   std::uint64_t exponential_naive(std::uint32_t value)
   {
@@ -58,4 +58,4 @@ namespace fibonacci { namespace algorithm
       }
     }
   }
-}} // namespace fibonacci::algorithm
+}} // namespace fibonacci::algorithm_naive

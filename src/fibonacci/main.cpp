@@ -1,4 +1,6 @@
-#include "../fibonacci_lib/algorithm.h"
+#include "../fibonacci_lib/algorithm_eop.h"
+#include "../fibonacci_lib/algorithm_naive.h"
+#include "../fibonacci_lib/algorithm_sean_parent.h"
 
 #include <iostream>
 #include <string>
@@ -17,62 +19,91 @@ int main(int argc, char * argv[])
   std::string arg = argv[1];
   if (arg == "exponential_naive")
   {
-    auto result = fibonacci::algorithm::exponential_naive(50);
+    auto result = fibonacci::algorithm_naive::exponential_naive(50);
     std::cout << result << '\n';
     return 0;
   }
   if (arg == "linear_naive")
   {
-    auto result = fibonacci::algorithm::linear_naive(92);
+    auto result = fibonacci::algorithm_naive::linear_naive(92);
     std::cout << result << '\n';
     return 0;
   }
   if (arg == "linear")
   {
-    auto result = fibonacci::algorithm::linear_big(92);
+    auto result = fibonacci::algorithm_naive::linear_big(92);
     std::cout << fibonacci::big_number::to_string(result) << '\n';
     return 0;
   }
   if (arg == "linear_2")
   {
-    auto result = fibonacci::algorithm::linear_big(100'000);
+    auto result = fibonacci::algorithm_naive::linear_big(100'000);
     //std::cout << fibonacci::big_number::to_string(result) << '\n';
     std::cout << result.units_.size() << '\n';
-    return 0;
-  }
-  if (arg == "log")
-  {
-    auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(92);
-    std::cout << fibonacci::big_number::to_string(result) << '\n';
-    return 0;
-  }
-  if (arg == "log_2")
-  {
-    auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(100'000);
-    std::cout << fibonacci::big_number::to_string(result) << '\n';
-    //std::cout << result.units_.size() << '\n';
-    return 0;
-  }
-  if (arg == "log_3")
-  {
-    auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
-    //std::cout << fibonacci::big_number::to_string(result) << '\n';
-    //std::cout << fibonacci::big_number::to_string(result).size() << '\n';
-    std::cout << result.units_.size() << '\n';
-    return 0;
-  }
-  if (arg == "log_4")
-  {
-    auto result = fibonacci::algorithm::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
-    std::cout << fibonacci::big_number::to_string(result) << '\n';
-    //std::cout << fibonacci::big_number::to_string(result).size() << '\n';
-    //std::cout << result.units_.size() << '\n';
     return 0;
   }
   if (arg == "linear_first_big")
   {
-    auto result = fibonacci::algorithm::linear_first_big();
+    auto result = fibonacci::algorithm_naive::linear_first_big();
     std::cout << result << '\n';
+    return 0;
+  }
+  if (arg == "sp")
+  {
+    auto result = fibonacci::algorithm_sean_parent::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(92);
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    return 0;
+  }
+  if (arg == "sp_2")
+  {
+    auto result = fibonacci::algorithm_sean_parent::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(100'000);
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << result.units_.size() << '\n';
+    return 0;
+  }
+  if (arg == "sp_3")
+  {
+    auto result = fibonacci::algorithm_sean_parent::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
+    //std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << fibonacci::big_number::to_string(result).size() << '\n';
+    std::cout << result.units_.size() << '\n';
+    return 0;
+  }
+  if (arg == "sp_4")
+  {
+    auto result = fibonacci::algorithm_sean_parent::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << fibonacci::big_number::to_string(result).size() << '\n';
+    //std::cout << result.units_.size() << '\n';
+    return 0;
+  }
+  if (arg == "eop")
+  {
+    auto result = fibonacci::algorithm_eop::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(92);
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    return 0;
+  }
+  if (arg == "eop_2")
+  {
+    auto result = fibonacci::algorithm_eop::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(100'000);
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << result.units_.size() << '\n';
+    return 0;
+  }
+  if (arg == "eop_3")
+  {
+    auto result = fibonacci::algorithm_eop::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
+    //std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << fibonacci::big_number::to_string(result).size() << '\n';
+    std::cout << result.units_.size() << '\n';
+    return 0;
+  }
+  if (arg == "eop_4")
+  {
+    auto result = fibonacci::algorithm_eop::fibonacci_pow<fibonacci::big_number::unsigned_binary, uint32_t>(1'000'000);
+    std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << fibonacci::big_number::to_string(result).size() << '\n';
+    //std::cout << result.units_.size() << '\n';
     return 0;
   }
 
