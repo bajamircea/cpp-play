@@ -2,7 +2,8 @@
 
 This is a play area on an variety of C++ topics
 
-The project structure is:
+## Project structure
+
 - `build` - see `generate_makefile.py` which generates/overrides the makefile
 - `src` - the source folder underneath there folders which are are:
   - `xyz` - plain executable projects
@@ -16,3 +17,7 @@ The project structure is:
   - under `debug` and `release`
 - `int` - intermediate build folder for object files
 - `.vscode` - settings for building, debuging and indentation
+
+## Fibonacci
+
+[See more details](src/fibonacci/README.md)
