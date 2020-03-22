@@ -17,7 +17,7 @@ This is a play on Fibonacci implementations, see comments below.
 Obviously naive implementations of Fibonacci are slow. Everyone and his dog should be able to implement
 it recursively, but that has exponential complexity and quickly takes seconds for mid double digit arguments.
 
-With a bit of care, all programmers should be able to implement linear complexity versions. 
+With a bit of care, all programmers should be able to implement linear complexity versions.
 
 
 ## Elements of Programming chapter 3

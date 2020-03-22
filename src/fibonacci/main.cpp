@@ -19,32 +19,33 @@ int main(int argc, char * argv[])
   std::string arg = argv[1];
   if (arg == "exponential_naive")
   {
-    auto result = fibonacci::algorithm_naive::exponential_naive(50);
+    auto result = fibonacci::algorithm_naive::exponential_naive(46);
     std::cout << result << '\n';
     return 0;
   }
   if (arg == "linear_naive")
   {
-    auto result = fibonacci::algorithm_naive::linear_naive(92);
+    auto result = fibonacci::algorithm_naive::linear_naive(93);
     std::cout << result << '\n';
     return 0;
   }
   if (arg == "linear")
   {
-    auto result = fibonacci::algorithm_naive::linear_big(92);
+    auto result = fibonacci::algorithm_naive::linear_big(93);
     std::cout << fibonacci::big_number::to_string(result) << '\n';
+    //std::cout << result.units_.size() << '\n';
     return 0;
   }
   if (arg == "linear_2")
   {
-    auto result = fibonacci::algorithm_naive::linear_big(100'000);
+    auto result = fibonacci::algorithm_naive::linear_big(1'000'000);
     //std::cout << fibonacci::big_number::to_string(result) << '\n';
     std::cout << result.units_.size() << '\n';
     return 0;
   }
-  if (arg == "linear_first_big")
+  if (arg == "linear_first_over")
   {
-    auto result = fibonacci::algorithm_naive::linear_first_big();
+    auto result = fibonacci::algorithm_naive::linear_first_over_uint64_t();
     std::cout << result << '\n';
     return 0;
   }

@@ -2,60 +2,60 @@
 
 namespace fibonacci { namespace algorithm_naive
 {
-  std::uint64_t exponential_naive(std::uint32_t value)
+  std::uint64_t exponential_naive(std::uint32_t x)
   {
-    if (value < 2)
+    if (x < 2)
     {
-      return 1;
+      return x;
     }
-    return exponential_naive(value - 1) + exponential_naive(value - 2);
+    return exponential_naive(x - 1) + exponential_naive(x - 2);
   }
 
-  std::uint64_t linear_naive(std::uint32_t value)
+  std::uint64_t linear_naive(std::uint32_t x)
   {
-    if (value < 2)
+    if (x < 2)
     {
-      return 1;
+      return x;
     }
-    std::uint64_t a = 1;
+    std::uint64_t a = 0;
     std::uint64_t b = 1;
-    for (value -= 1; value > 0; --value)
+    for (--x; x > 0; --x)
     {
       std::uint64_t c = a + b;
-      b = a;
-      a = c;
+      a = b;
+      b = c;
     }
-    return a;
+    return b;
   }
 
-  fibonacci::big_number::unsigned_binary linear_big(std::uint32_t value)
+  fibonacci::big_number::unsigned_binary linear_big(std::uint32_t x)
   {
-    if (value < 2)
+    if (x < 2)
     {
-      return fibonacci::big_number::unsigned_binary(1);
+      return fibonacci::big_number::unsigned_binary(x);
     }
-    fibonacci::big_number::unsigned_binary a(1);
+    fibonacci::big_number::unsigned_binary a(0);
     fibonacci::big_number::unsigned_binary b(1);
-    for (value -= 1; value > 0; --value)
+    for (--x; x > 0; --x)
     {
-      b += a;
+      a += b;
       std::swap(a.units_, b.units_);
     }
-    return a;
+    return b;
   }
 
-  std::uint32_t linear_first_big()
+  std::uint32_t linear_first_over_uint64_t()
   {
-    fibonacci::big_number::unsigned_binary a(1);
+    fibonacci::big_number::unsigned_binary a(0);
     fibonacci::big_number::unsigned_binary b(1);
     for (std::uint32_t return_value = 2; ; ++return_value)
     {
-      b += a;
-      std::swap(a.units_, b.units_);
+      a += b;
       if (a.units_.size() > 2)
       {
         return return_value;
       }
+      std::swap(a.units_, b.units_);
     }
   }
 }} // namespace fibonacci::algorithm_naive
