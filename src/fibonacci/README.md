@@ -113,9 +113,9 @@ Elements of Programming.
 
 In Elements of Programming the implementation uses half of matrix. Using this approach takes it to
 **about 0.3 seconds to calculate Fibonacci, plus about 1 second** to convert
-and print. So not the calculation is dominated by the conversion (and print).
+and print. So now the calculation is dominated by the conversion (and print).
 
-I stopped there. Could have tried to see what difference it makes by using a more optimised power algorith.
+I stopped there. Could have tried to see what difference it makes by using a more optimised power algorithm.
 Could also spend more effort on the conversion issue.
 
 Interestingly the power in EOP uses same type for argument and return value, I used different types: unsigned 32 bit
