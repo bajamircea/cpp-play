@@ -24,7 +24,7 @@ TMP_DIR = tmp
 CXX = g++
 ## -MMD creates dependency list, but ignores system includes
 ## -MF specifies where to create the dependency file name
-## -MP creates phony targtes for headers (deals with deleted headers after
+## -MP creates phony targets for headers (deals with deleted headers after
 ##  obj file has been compiled)
 ## -MT specifies the dependency target (path qualified obj file name)
 DEP_FLAGS = -MT $@ -MMD -MP -MF $(@:.o=.d)
@@ -142,6 +142,34 @@ release : $(INT_DIR)/release/fibonacci_lib_test/success.run
 
 DEP_FILES += $(release_fibonacci_lib_test_OBJ_FILES:.o=.d)
 
+# Rules for how_vector_works
+
+how_vector_works_CPP_FILES := $(wildcard $(SRC_DIR)/how_vector_works/*.cpp)
+
+debug_how_vector_works_OBJ_FILES := $(how_vector_works_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_how_vector_works_OBJ_FILES) : $(INT_DIR)/debug/how_vector_works/%.o : $(SRC_DIR)/how_vector_works/%.cpp $(INT_DIR)/debug/how_vector_works/%.d | $(INT_DIR)/debug/how_vector_works
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/how_vector_works : $(debug_how_vector_works_OBJ_FILES)  | $(BIN_DIR)/debug
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+debug : $(BIN_DIR)/debug/how_vector_works
+
+DEP_FILES += $(debug_how_vector_works_OBJ_FILES:.o=.d)
+
+release_how_vector_works_OBJ_FILES := $(how_vector_works_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_how_vector_works_OBJ_FILES) : $(INT_DIR)/release/how_vector_works/%.o : $(SRC_DIR)/how_vector_works/%.cpp $(INT_DIR)/release/how_vector_works/%.d | $(INT_DIR)/release/how_vector_works
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/release/how_vector_works : $(release_how_vector_works_OBJ_FILES)  | $(BIN_DIR)/release
+	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
+
+release : $(BIN_DIR)/release/how_vector_works
+
+DEP_FILES += $(release_how_vector_works_OBJ_FILES:.o=.d)
+
 # Rules for test_lib
 
 test_lib_CPP_FILES := $(wildcard $(SRC_DIR)/test_lib/*.cpp)
@@ -220,6 +248,9 @@ $(INT_DIR)/debug/fibonacci_lib : | $(INT_DIR)/debug
 $(INT_DIR)/debug/fibonacci_lib_test : | $(INT_DIR)/debug
 	mkdir $@
 
+$(INT_DIR)/debug/how_vector_works : | $(INT_DIR)/debug
+	mkdir $@
+
 $(INT_DIR)/debug/test_lib : | $(INT_DIR)/debug
 	mkdir $@
 
@@ -242,6 +273,9 @@ $(INT_DIR)/release/fibonacci_lib : | $(INT_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release/fibonacci_lib_test : | $(INT_DIR)/release
+	mkdir $@
+
+$(INT_DIR)/release/how_vector_works : | $(INT_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release/test_lib : | $(INT_DIR)/release

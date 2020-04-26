@@ -9,6 +9,7 @@ def write_makefile(out):
         ("fibonacci", ["fibonacci_lib"]),
         ("fibonacci_lib", []),
         ("fibonacci_lib_test", ["fibonacci_lib", "test_lib", "test_main_lib"]),
+        ("how_vector_works", []),
         ("test_lib", []),
         ("test_main_lib", []),
     ]

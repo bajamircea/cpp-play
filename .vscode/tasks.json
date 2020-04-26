@@ -38,11 +38,11 @@
             }
         },
         {
-            "label": "Build test",
+            "label": "Build for debug",
             "type": "shell",
             "command": "make",
             "args": [
-                "bin/debug/test/fibonacci_lib_test"
+                "bin/debug/how_vector_works"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

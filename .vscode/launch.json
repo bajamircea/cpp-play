@@ -8,7 +8,7 @@
             "name": "Debug",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/debug/test/fibonacci_lib_test",
+            "program": "${workspaceFolder}/bin/debug/how_vector_works",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -22,7 +22,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "Build test",
+            "preLaunchTask": "Build for debug",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ]
