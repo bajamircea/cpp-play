@@ -3,6 +3,7 @@
         "editor.tabSize": 2
     },
     "files.associations": {
-        "limits": "cpp"
+        "limits": "cpp",
+        "*.tcc": "cpp"
     },
 }
