@@ -78,8 +78,18 @@ namespace
     ~instrumented_sentinel() { delete pi_; ++g_counters[operation::destructor]; }
   };
 
+  struct instrumented_copy_only
+  {
+    int i_;
+    instrumented_copy_only() noexcept:i_{0} { ++g_counters[operation::default_constructor]; }
+    explicit instrumented_copy_only(int i) noexcept:i_{i} { ++g_counters[operation::other_constructor]; }
+    instrumented_copy_only(const instrumented_copy_only & other) noexcept:i_{other.i_} { ++g_counters[operation::copy_constructor]; }
+    instrumented_copy_only & operator=(const instrumented_copy_only & other) noexcept { i_ = other.i_; ++g_counters[operation::copy_assignment]; return *this; }
+    ~instrumented_copy_only() { ++g_counters[operation::destructor]; }
+  };
+
   template<typename T>
-  void push_back_test(const char * message)
+  void push_back_test(const char * message, int n)
   {
     std::cout << "==== " << message << "\n";
 
@@ -87,7 +97,7 @@ namespace
 
     std::vector<T> x;
 
-    for (int i = 0 ; i < 10; ++i)
+    for (int i = 0 ; i < n; ++i)
     {
       x.push_back(T(i));
       print_and_reset();
@@ -120,9 +130,14 @@ namespace
 
 int main()
 {
-  push_back_test<instrumented_simple>("simple type");
-  push_back_test<instrumented_container>("simple container");
-  push_back_test<instrumented_container>("container with dynamically allocated sentinel");
+  push_back_test<instrumented_simple>("test for allocation steps", 40);
+
+  int n = 6;
+  push_back_test<instrumented_simple>("simple type", n);
+  push_back_test<instrumented_container>("simple container", n);
+  push_back_test<instrumented_sentinel>("container with dynamically allocated sentinel", n);
+  push_back_test<instrumented_copy_only>("copy-only type", n);
+
   fill_test();
   std::cout << "Done!\n";
 }
