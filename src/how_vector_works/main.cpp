@@ -111,20 +111,20 @@ namespace
 
     std::vector<int> x(0);
 
-    double usage = 0;
+    double waste = 0;
 
     int n = 1024 * 1024;
 
     for (int i = 0 ; i < n; ++i)
     {
       x.push_back(i);
-      double this_usage = double(x.size()) / double(x.capacity());
-      //std::cout << "usage: " << this_usage << "\n";
+      double this_waste = double(x.capacity() - x.size()) / double(x.size());
+      //std::cout << "waste: " << this_waste << "\n";
       //std::cout << "size: " << x.size() << ", capacity: " << x.capacity() << "\n";
-      usage += this_usage;
+      waste += this_waste;
     }
 
-    std::cout << "average usage: " << (usage / double(n)) << "\n";
+    std::cout << "average waste: " << (waste / double(n)) << "\n";
   }
 }
 
