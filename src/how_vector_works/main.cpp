@@ -113,13 +113,13 @@ namespace
 
     double waste = 0;
 
-    int n = 1024 * 1024;
+    int n = 1024;
 
     for (int i = 0 ; i < n; ++i)
     {
       x.push_back(i);
       double this_waste = double(x.capacity() - x.size()) / double(x.size());
-      //std::cout << "waste: " << this_waste << "\n";
+      std::cout << "waste: " << this_waste << "\n";
       //std::cout << "size: " << x.size() << ", capacity: " << x.capacity() << "\n";
       waste += this_waste;
     }
