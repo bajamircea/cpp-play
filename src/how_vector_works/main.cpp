@@ -1,5 +1,6 @@
 #include <array>
 #include <iostream>
+#include <list>
 #include <vector>
 
 namespace
@@ -105,6 +106,23 @@ namespace
     }
   }
 
+  template<typename T>
+  void push_back_list_test(const char * message, int n)
+  {
+    std::cout << "==== " << message << "\n";
+
+    reset();
+
+    std::vector<std::list<T>> x;
+
+    for (int i = 0 ; i < n; ++i)
+    {
+      x.push_back(std::list{T(i)});
+      print_and_reset();
+      std::cout << "size: " << x.size() << ", capacity: " << x.capacity() << "\n";
+    }
+  }
+
   void fill_test()
   {
     std::cout << "==== fill test\n";
@@ -114,12 +132,13 @@ namespace
     double waste = 0;
 
     int n = 1024;
+    //int n = 1065;
 
     for (int i = 0 ; i < n; ++i)
     {
       x.push_back(i);
       double this_waste = double(x.capacity() - x.size()) / double(x.size());
-      std::cout << "waste: " << this_waste << "\n";
+      //std::cout << "waste: " << this_waste << "\n";
       //std::cout << "size: " << x.size() << ", capacity: " << x.capacity() << "\n";
       waste += this_waste;
     }
@@ -137,6 +156,7 @@ int main()
   push_back_test<instrumented_container>("simple container", n);
   push_back_test<instrumented_sentinel>("container with dynamically allocated sentinel", n);
   push_back_test<instrumented_copy_only>("copy-only type", n);
+  push_back_list_test<instrumented_simple>("list of simple type", n);
 
   fill_test();
   std::cout << "Done!\n";
