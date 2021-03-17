@@ -1,7 +1,13 @@
 #include <array>
+#include <deque>
 #include <iostream>
 #include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <type_traits>
 #include <vector>
+#include <unordered_map>
 
 namespace
 {
@@ -43,6 +49,7 @@ namespace
     reset();
   }
 
+  // simulates simple type, all operations are noexcept, e.g. int
   struct instrumented_simple
   {
     int i_;
@@ -55,6 +62,7 @@ namespace
     ~instrumented_simple() { ++g_counters[operation::destructor]; }
   };
 
+  // simulates simple container, move and destructors are noexcept, others could throw, e.g. vector
   struct instrumented_container
   {
     int * pi_;
@@ -67,6 +75,7 @@ namespace
     ~instrumented_container() { delete pi_; ++g_counters[operation::destructor]; }
   };
 
+  // simulates container with allocated sentinel, move constructor is not noexcept, e.g. Microsoft std::list
   struct instrumented_sentinel
   {
     int * pi_;
@@ -79,6 +88,7 @@ namespace
     ~instrumented_sentinel() { delete pi_; ++g_counters[operation::destructor]; }
   };
 
+  // simulates type where move is not defined, only copy (which is noexcept)
   struct instrumented_copy_only
   {
     int i_;
@@ -131,8 +141,8 @@ namespace
 
     double waste = 0;
 
-    int n = 1024;
-    //int n = 1065;
+    int n = 1024; // for growth factors of 2x
+    //int n = 1066; // about same, to use for growth factors of 1.5x
 
     for (int i = 0 ; i < n; ++i)
     {
@@ -144,6 +154,34 @@ namespace
     }
 
     std::cout << "average waste: " << (waste / double(n)) << "\n";
+  }
+
+  const char * yes_no(bool x)
+  {
+    return x ? "yes" : "no";
+  }
+
+
+  template<typename T>
+  void container_operations(const char * message)
+  {
+    std::cout << message << ":\n";
+    std::cout << "  is_copy_constructible:         " << yes_no(std::is_copy_constructible_v<T>) << "\n";
+    std::cout << "  is_nothrow_move_constructible: " << yes_no(std::is_nothrow_move_constructible_v<T>) << "\n";
+    std::cout << "  is_nothrow_move_assignable:    " << yes_no(std::is_nothrow_move_assignable_v<T>) << "\n";
+  }
+
+  void all_container_operations()
+  {
+    std::cout << "==== container operations\n";
+    container_operations<std::vector<int>>("std::vector<int>");
+    container_operations<std::list<int>>("std::list<int>");
+    container_operations<std::vector<std::list<int>>>("std::vector<std::list<int>>");
+    container_operations<std::map<int, int>>("std::map<int, int>");
+    container_operations<std::set<int>>("std::set<int>");
+    container_operations<std::unordered_map<int, int>>("std::unordered_map<int, int>");
+    container_operations<std::deque<int>>("std::deque<int>");
+    container_operations<std::string>("std::string");
   }
 }
 
@@ -159,5 +197,7 @@ int main()
   push_back_list_test<instrumented_simple>("list of simple type", n);
 
   fill_test();
+
+  all_container_operations();
   std::cout << "Done!\n";
 }
