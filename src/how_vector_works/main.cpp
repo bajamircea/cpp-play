@@ -116,18 +116,19 @@ namespace
     }
   }
 
-  template<typename T>
-  void push_back_list_test(const char * message, int n)
+  template<typename Cont>
+  void push_back_container_test(const char * message, int n)
   {
+    using T = typename Cont::value_type;
     std::cout << "==== " << message << "\n";
 
     reset();
 
-    std::vector<std::list<T>> x;
+    std::vector<Cont> x;
 
     for (int i = 0 ; i < n; ++i)
     {
-      x.push_back(std::list{T(i)});
+      x.push_back(Cont{T(i)});
       print_and_reset();
       std::cout << "size: " << x.size() << ", capacity: " << x.capacity() << "\n";
     }
@@ -194,7 +195,8 @@ int main()
   push_back_test<instrumented_container>("simple container", n);
   push_back_test<instrumented_sentinel>("container with dynamically allocated sentinel", n);
   push_back_test<instrumented_copy_only>("copy-only type", n);
-  push_back_list_test<instrumented_simple>("list of simple type", n);
+  push_back_container_test<std::list<instrumented_simple>>("list of simple type", n);
+  push_back_container_test<std::deque<instrumented_simple>>("deque of simple type", n);
 
   fill_test();
 

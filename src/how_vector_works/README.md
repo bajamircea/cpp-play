@@ -11,14 +11,14 @@ The output of the instrumentation counts things like:
 
 Single `main.cpp` file.
 
-Tested with GCC/g++ on Ubuntu, and Microsoft Visual Studio on Windows.
+Tested with g++ on Ubuntu, and Microsoft Visual Studio on Windows. The behaviour relates to the standard libraries implementations, not to the compilers themselves.
 
 
 ## Allocation steps
 
 Tests the allocation steps.
 
-E.g. output below indicatates that `std::vector` uses a growth factor of 2x when capacity is reached (gcc), i.e. capacity grows 1, 2, 4, 8, 16 ...:
+E.g. output below indicatates that `std::vector` uses a growth factor of 2x when capacity is reached (g++), i.e. capacity grows 1, 2, 4, 8, 16 ...:
 
 ```
 ==== test for allocation steps
@@ -88,13 +88,13 @@ The move is done if for the value type T:
 - `is_nothrow_move_constructible<T>`
 - OR `negation<is_copy_constructible<Ty>>`
 See
-- `__move_if_noexcept_cond` for GCC
+- `__move_if_noexcept_cond` for g++
 - `_Umove_if_noexcept1` for Microsoft
 
 
 # Containers with dynamically allocated sentinels
 
-The move constructor throws, currently GCC and Microsoft copy construct when resizing:
+The move constructor throws, currently g++ and Microsoft copy construct when resizing:
 ```
 ==== container with dynamically allocated sentinel
 o: 1, mc: 1, ~: 1
@@ -112,7 +112,7 @@ size: 6, capacity: 6
 ```
 
 
-In GCC std::list is moved on resize:
+In g++ std::list is moved on resize:
 ```
 ==== list of simple type
 o: 1, cc: 1, ~: 1
@@ -165,8 +165,45 @@ average waste: 0.211812
 
 ## Container proding
 
-In GCC:
+In Microsoft:
+```
+==== container operations
+std::vector<int>:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: yes
+  is_nothrow_move_assignable:    yes
+std::list<int>:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: no
+  is_nothrow_move_assignable:    yes
+std::vector<std::list<int>>:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: yes
+  is_nothrow_move_assignable:    yes
+std::map<int, int>:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: no
+  is_nothrow_move_assignable:    yes
+std::set<int>:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: no
+  is_nothrow_move_assignable:    yes
+std::unordered_map<int, int>:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: no
+  is_nothrow_move_assignable:    yes
+std::deque<int>:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: no
+  is_nothrow_move_assignable:    yes
+std::string:
+  is_copy_constructible:         yes
+  is_nothrow_move_constructible: yes
+  is_nothrow_move_assignable:    yes
+```
+Other Microsoft containers have a move constructor that could throw, not just the list.
 
+g++:
 ```
 ==== container operations
 std::vector<int>:
@@ -203,5 +240,19 @@ std::string:
   is_nothrow_move_assignable:    yes
 ```
 
-TODO: in Microsoft
-TODO: why deque in GCC
+g++ does something special about deque, because it moves it when resizing a vector of deque:
+```
+==== deque of simple type
+o: 1, cc: 1, ~: 1
+size: 1, capacity: 1
+o: 1, cc: 1, ~: 1
+size: 2, capacity: 2
+o: 1, cc: 1, ~: 1
+size: 3, capacity: 4
+o: 1, cc: 1, ~: 1
+size: 4, capacity: 4
+o: 1, cc: 1, ~: 1
+size: 5, capacity: 8
+o: 1, cc: 1, ~: 1
+size: 6, capacity: 8
+```
