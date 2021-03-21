@@ -18,6 +18,11 @@ This is a play area on an variety of C++ topics
 - `int` - intermediate build folder for object files
 - `.vscode` - settings for building, debuging and indentation
 
+
+## How vector works
+
+[See more details](src/how_vector_works/README.md)
+
 ## Fibonacci
 
 [See more details](src/fibonacci/README.md)

@@ -11,7 +11,7 @@ The output of the instrumentation counts things like:
 
 Single `main.cpp` file.
 
-Tested with g++ on Ubuntu, and Microsoft Visual Studio on Windows. The behaviour relates to the standard libraries implementations, not to the compilers themselves.
+Tested with g++ on Ubuntu, and Microsoft Visual Studio on Windows. Strictly speaking, the behaviour relates to the standard libraries implementations, not to the compilers themselves.
 
 
 ## Allocation steps
@@ -62,6 +62,23 @@ size: 10, capacity: 13
 ```
 
 
+## Fill test
+
+For a container of `n` entries, test the average excess memory usage (depends on growth factor)
+
+E.g. for growth factor of 2x:
+```
+==== fill test
+average waste: 0.381265
+```
+
+for growth factor of 1.5x:
+```
+==== fill test
+average waste: 0.211812
+```
+
+
 ## Copy vs. move
 
 Tests the operation used when resizing, e.g. move constructor for the simple type, and copy constructor for the copy-only type:
@@ -74,6 +91,8 @@ o: 1, mc: 2, ~: 2
 size: 2, capacity: 2
 o: 1, mc: 3, ~: 3
 size: 3, capacity: 4
+o: 1, mc: 1, ~: 1
+size: 4, capacity: 4
 ...
 ==== copy-only type
 o: 1, cc: 1, ~: 1
@@ -82,14 +101,29 @@ o: 1, cc: 2, ~: 2
 size: 2, capacity: 2
 o: 1, cc: 3, ~: 3
 size: 3, capacity: 4
+o: 1, cc: 1, ~: 1
+size: 4, capacity: 4
 ```
 
-The move is done if for the value type T:
+As a baseline, the move is done if for the value type T:
 - `is_nothrow_move_constructible<T>`
 - OR `negation<is_copy_constructible<Ty>>`
 See
 - `__move_if_noexcept_cond` for g++
 - `_Umove_if_noexcept1` for Microsoft
+
+A simple container that move constructs `noexcept` is moved on resize, just like a simple type:
+```
+==== simple container
+o: 1, mc: 1, ~: 1
+size: 1, capacity: 1
+o: 1, mc: 2, ~: 2
+size: 2, capacity: 2
+o: 1, mc: 3, ~: 3
+size: 3, capacity: 4
+o: 1, mc: 1, ~: 1
+size: 4, capacity: 4
+```
 
 
 # Containers with dynamically allocated sentinels
@@ -147,100 +181,126 @@ size: 6, capacity: 6
 ```
 
 
-## Fill test
-
-For a container of `n` entries, test the average excess memory usage (depends on growth factor)
-
-E.g. for growth factor of 2x:
-```
-==== fill test
-average waste: 0.381265
-```
-
-for growth factor of 1.5x:
-```
-==== fill test
-average waste: 0.211812
-```
-
 ## Container proding
 
-In Microsoft:
+TODO: Check from here
+
+As far as the instrumented types, both compilers confirm:
+TODO: it's a bit weird, clarify why
 ```
-==== container operations
+instrumented_simple:
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
+instrumented_copy_only:
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
+instrumented_container:
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
+instrumented_sentinel:
+  is_nothrow_move_constructible:   no
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:no
+```
+
+Microsoft containers:
+```
 std::vector<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::list<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: no
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   no
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:no
 std::vector<std::list<int>>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::map<int, int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: no
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   no
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:no
 std::set<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: no
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   no
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:no
 std::unordered_map<int, int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: no
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   no
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:no
 std::deque<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: no
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   no
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:no
 std::string:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 ```
 Other Microsoft containers have a move constructor that could throw, not just the list.
 
 g++:
 ```
-==== container operations
 std::vector<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::list<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::vector<std::list<int>>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::map<int, int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::set<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::unordered_map<int, int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 std::deque<int>:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: no
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   no
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:no
 std::string:
-  is_copy_constructible:         yes
-  is_nothrow_move_constructible: yes
-  is_nothrow_move_assignable:    yes
+  is_nothrow_move_constructible:   yes
+  is_nothrow_move_assignable:      yes
+  is_copy_constructible:           yes
+  is_nothrow_default_constructible:yes
 ```
 
 g++ does something special about deque, because it moves it when resizing a vector of deque:
+TODO: check
 ```
 ==== deque of simple type
 o: 1, cc: 1, ~: 1
@@ -256,3 +316,9 @@ size: 5, capacity: 8
 o: 1, cc: 1, ~: 1
 size: 6, capacity: 8
 ```
+
+TODO:
+read https://stackoverflow.com/questions/17730689/is-a-moved-from-vector-always-empty
+in particular, figure out how empty is a "moved from" vector, list etc.
+
+https://isocpp.org/files/papers/N4055.html

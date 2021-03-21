@@ -161,17 +161,19 @@ int main()
     vec.push_back(instrumented_simple(i));
   }, 40);
 
+  fill_test();
+
   push_back_test<instrumented_simple>("simple type", [](auto & vec, int i){
     vec.push_back(instrumented_simple(i));
+  });
+  push_back_test<instrumented_copy_only>("copy-only type", [](auto & vec, int i){
+    vec.push_back(instrumented_copy_only(i));
   });
   push_back_test<instrumented_container>("simple container", [](auto & vec, int i){
     vec.push_back(instrumented_container(i));
   });
   push_back_test<instrumented_sentinel>("container with dynamically allocated sentinel", [](auto & vec, int i){
     vec.push_back(instrumented_sentinel(i));
-  });
-  push_back_test<instrumented_copy_only>("copy-only type", [](auto & vec, int i){
-    vec.push_back(instrumented_copy_only(i));
   });
   push_back_test<std::list<instrumented_simple>>("list of simple type", [](auto & vec, int i){
     vec.push_back(std::list<instrumented_simple>{instrumented_simple(i)});
@@ -183,13 +185,11 @@ int main()
     vec.push_back(std::map<int, instrumented_simple>{{i, instrumented_simple(i)}});
   });
 
-  fill_test();
-
   std::cout << "==== introspect types\n";
   introspect_type<instrumented_simple>("instrumented_simple");
+  introspect_type<instrumented_copy_only>("instrumented_copy_only");
   introspect_type<instrumented_container>("instrumented_container");
   introspect_type<instrumented_sentinel>("instrumented_sentinel");
-  introspect_type<instrumented_copy_only>("instrumented_copy_only");
   introspect_type<std::vector<int>>("std::vector<int>");
   introspect_type<std::list<int>>("std::list<int>");
   introspect_type<std::vector<std::list<int>>>("std::vector<std::list<int>>");
