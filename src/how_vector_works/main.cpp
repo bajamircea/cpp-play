@@ -79,7 +79,7 @@ namespace
   struct instrumented_sentinel
   {
     int * pi_;
-    instrumented_sentinel() noexcept:pi_{0} { ++g_counters[operation::default_constructor]; }
+    instrumented_sentinel():pi_{new int(-1)} { ++g_counters[operation::default_constructor]; }
     explicit instrumented_sentinel(int i):pi_{new int(i)} { ++g_counters[operation::other_constructor]; }
     instrumented_sentinel(const instrumented_sentinel & other):pi_{new int(*other.pi_)} { ++g_counters[operation::copy_constructor]; }
     instrumented_sentinel & operator=(const instrumented_sentinel & other) { delete pi_; pi_ = new int(*other.pi_); ++g_counters[operation::copy_assignment]; return *this; }
@@ -99,38 +99,20 @@ namespace
     ~instrumented_copy_only() { ++g_counters[operation::destructor]; }
   };
 
-  template<typename T>
-  void push_back_test(const char * message, int n)
+  template<typename T, typename PushFn>
+  void push_back_test(const char * message, PushFn push_fn, int steps = 6)
   {
     std::cout << "==== " << message << "\n";
 
     reset();
 
-    std::vector<T> x;
+    std::vector<T> vec;
 
-    for (int i = 0 ; i < n; ++i)
+    for (int i = 0 ; i < steps; ++i)
     {
-      x.push_back(T(i));
+      push_fn(vec, i);
       print_and_reset();
-      std::cout << "size: " << x.size() << ", capacity: " << x.capacity() << "\n";
-    }
-  }
-
-  template<typename Cont>
-  void push_back_container_test(const char * message, int n)
-  {
-    using T = typename Cont::value_type;
-    std::cout << "==== " << message << "\n";
-
-    reset();
-
-    std::vector<Cont> x;
-
-    for (int i = 0 ; i < n; ++i)
-    {
-      x.push_back(Cont{T(i)});
-      print_and_reset();
-      std::cout << "size: " << x.size() << ", capacity: " << x.capacity() << "\n";
+      std::cout << "size: " << vec.size() << ", capacity: " << vec.capacity() << "\n";
     }
   }
 
@@ -162,44 +144,59 @@ namespace
     return x ? "yes" : "no";
   }
 
-
   template<typename T>
-  void container_operations(const char * message)
+  void introspect_type(const char * message)
   {
     std::cout << message << ":\n";
-    std::cout << "  is_copy_constructible:         " << yes_no(std::is_copy_constructible_v<T>) << "\n";
-    std::cout << "  is_nothrow_move_constructible: " << yes_no(std::is_nothrow_move_constructible_v<T>) << "\n";
-    std::cout << "  is_nothrow_move_assignable:    " << yes_no(std::is_nothrow_move_assignable_v<T>) << "\n";
-  }
-
-  void all_container_operations()
-  {
-    std::cout << "==== container operations\n";
-    container_operations<std::vector<int>>("std::vector<int>");
-    container_operations<std::list<int>>("std::list<int>");
-    container_operations<std::vector<std::list<int>>>("std::vector<std::list<int>>");
-    container_operations<std::map<int, int>>("std::map<int, int>");
-    container_operations<std::set<int>>("std::set<int>");
-    container_operations<std::unordered_map<int, int>>("std::unordered_map<int, int>");
-    container_operations<std::deque<int>>("std::deque<int>");
-    container_operations<std::string>("std::string");
+    std::cout << "  is_nothrow_move_constructible:   " << yes_no(std::is_nothrow_move_constructible_v<T>) << "\n";
+    std::cout << "  is_nothrow_move_assignable:      " << yes_no(std::is_nothrow_move_assignable_v<T>) << "\n";
+    std::cout << "  is_copy_constructible:           " << yes_no(std::is_copy_constructible_v<T>) << "\n";
+    std::cout << "  is_nothrow_default_constructible:" << yes_no(std::is_nothrow_default_constructible_v<T>) << "\n";
   }
 }
 
 int main()
 {
-  push_back_test<instrumented_simple>("test for allocation steps", 40);
+  push_back_test<instrumented_simple>("test for allocation steps", [](auto & vec, int i){
+    vec.push_back(instrumented_simple(i));
+  }, 40);
 
-  int n = 6;
-  push_back_test<instrumented_simple>("simple type", n);
-  push_back_test<instrumented_container>("simple container", n);
-  push_back_test<instrumented_sentinel>("container with dynamically allocated sentinel", n);
-  push_back_test<instrumented_copy_only>("copy-only type", n);
-  push_back_container_test<std::list<instrumented_simple>>("list of simple type", n);
-  push_back_container_test<std::deque<instrumented_simple>>("deque of simple type", n);
+  push_back_test<instrumented_simple>("simple type", [](auto & vec, int i){
+    vec.push_back(instrumented_simple(i));
+  });
+  push_back_test<instrumented_container>("simple container", [](auto & vec, int i){
+    vec.push_back(instrumented_container(i));
+  });
+  push_back_test<instrumented_sentinel>("container with dynamically allocated sentinel", [](auto & vec, int i){
+    vec.push_back(instrumented_sentinel(i));
+  });
+  push_back_test<instrumented_copy_only>("copy-only type", [](auto & vec, int i){
+    vec.push_back(instrumented_copy_only(i));
+  });
+  push_back_test<std::list<instrumented_simple>>("list of simple type", [](auto & vec, int i){
+    vec.push_back(std::list<instrumented_simple>{instrumented_simple(i)});
+  });
+  push_back_test<std::deque<instrumented_simple>>("deque of simple type", [](auto & vec, int i){
+    vec.push_back(std::deque<instrumented_simple>{instrumented_simple(i)});
+  });
+  push_back_test<std::map<int, instrumented_simple>>("map of int to simple type", [](auto & vec, int i){
+    vec.push_back(std::map<int, instrumented_simple>{{i, instrumented_simple(i)}});
+  });
 
   fill_test();
 
-  all_container_operations();
+  std::cout << "==== introspect types\n";
+  introspect_type<instrumented_simple>("instrumented_simple");
+  introspect_type<instrumented_container>("instrumented_container");
+  introspect_type<instrumented_sentinel>("instrumented_sentinel");
+  introspect_type<instrumented_copy_only>("instrumented_copy_only");
+  introspect_type<std::vector<int>>("std::vector<int>");
+  introspect_type<std::list<int>>("std::list<int>");
+  introspect_type<std::vector<std::list<int>>>("std::vector<std::list<int>>");
+  introspect_type<std::map<int, int>>("std::map<int, int>");
+  introspect_type<std::set<int>>("std::set<int>");
+  introspect_type<std::unordered_map<int, int>>("std::unordered_map<int, int>");
+  introspect_type<std::deque<int>>("std::deque<int>");
+  introspect_type<std::string>("std::string");
   std::cout << "Done!\n";
 }
