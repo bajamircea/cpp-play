@@ -62,7 +62,7 @@ namespace
     ~instrumented_simple() { ++g_counters[operation::destructor]; }
   };
 
-  // simulates simple container, move and destructors are noexcept, others could throw, e.g. vector
+  // simulates simple container, move and destructors are noexcept, others could throw, e.g. vector copy
   struct instrumented_container
   {
     int * pi_;
@@ -88,15 +88,17 @@ namespace
     ~instrumented_sentinel() { delete pi_; ++g_counters[operation::destructor]; }
   };
 
-  // simulates type where move is not defined, only copy (which is noexcept)
-  struct instrumented_copy_only
+  // simulates movable, but non-copyable RAII class
+  struct instrumented_raii
   {
-    int i_;
-    instrumented_copy_only() noexcept:i_{0} { ++g_counters[operation::default_constructor]; }
-    explicit instrumented_copy_only(int i) noexcept:i_{i} { ++g_counters[operation::other_constructor]; }
-    instrumented_copy_only(const instrumented_copy_only & other) noexcept:i_{other.i_} { ++g_counters[operation::copy_constructor]; }
-    instrumented_copy_only & operator=(const instrumented_copy_only & other) noexcept { i_ = other.i_; ++g_counters[operation::copy_assignment]; return *this; }
-    ~instrumented_copy_only() { ++g_counters[operation::destructor]; }
+    int h_;
+    instrumented_raii():h_{0} { ++g_counters[operation::default_constructor]; }
+    explicit instrumented_raii(int i):h_{i} { ++g_counters[operation::other_constructor]; }
+    instrumented_raii(const instrumented_raii & other) = delete;
+    instrumented_raii & operator=(const instrumented_raii & other) = delete;
+    instrumented_raii(instrumented_raii && other) noexcept :h_{other.h_} { other.h_ = 0; ++g_counters[operation::move_constructor]; }
+    instrumented_raii & operator=(instrumented_raii && other) noexcept { std::swap(h_, other.h_); ++g_counters[operation::move_assignment]; return *this; }
+    ~instrumented_raii() { ++g_counters[operation::destructor]; }
   };
 
   template<typename T, typename PushFn>
@@ -145,13 +147,24 @@ namespace
   }
 
   template<typename T>
-  void introspect_type(const char * message)
+  void introspect_type_basic()
   {
-    std::cout << message << ":\n";
-    std::cout << "  is_nothrow_move_constructible:   " << yes_no(std::is_nothrow_move_constructible_v<T>) << "\n";
-    std::cout << "  is_nothrow_move_assignable:      " << yes_no(std::is_nothrow_move_assignable_v<T>) << "\n";
-    std::cout << "  is_copy_constructible:           " << yes_no(std::is_copy_constructible_v<T>) << "\n";
     std::cout << "  is_nothrow_default_constructible:" << yes_no(std::is_nothrow_default_constructible_v<T>) << "\n";
+    std::cout << "  is_copy_constructible:           " << yes_no(std::is_copy_constructible_v<T>) << "\n";
+    // NOTE: "Types without a move constructor, but with a copy constructor that accepts const T& arguments,
+    // satisfy std::is_move_constructible". Not exploring this line for now.
+    static_assert(std::is_move_constructible_v<T>);
+    std::cout << "  is_nothrow_move_constructible:   " << yes_no(std::is_nothrow_move_constructible_v<T>) << "\n";
+    static_assert(std::is_nothrow_move_assignable_v<T>);
+  }
+
+  template<typename T>
+  void introspect_type(const char * type_name)
+  {
+    std::cout << type_name << ":\n";
+    introspect_type_basic<T>();
+    std::cout << "std::vector<" << type_name << ">:\n";
+    introspect_type_basic<std::vector<T>>();
   }
 }
 
@@ -166,14 +179,14 @@ int main()
   push_back_test<instrumented_simple>("simple type", [](auto & vec, int i){
     vec.push_back(instrumented_simple(i));
   });
-  push_back_test<instrumented_copy_only>("copy-only type", [](auto & vec, int i){
-    vec.push_back(instrumented_copy_only(i));
-  });
   push_back_test<instrumented_container>("simple container", [](auto & vec, int i){
     vec.push_back(instrumented_container(i));
   });
   push_back_test<instrumented_sentinel>("container with dynamically allocated sentinel", [](auto & vec, int i){
     vec.push_back(instrumented_sentinel(i));
+  });
+  push_back_test<instrumented_raii>("raii", [](auto & vec, int i){
+    vec.push_back(instrumented_raii(i));
   });
   push_back_test<std::list<instrumented_simple>>("list of simple type", [](auto & vec, int i){
     vec.push_back(std::list<instrumented_simple>{instrumented_simple(i)});
@@ -187,16 +200,16 @@ int main()
 
   std::cout << "==== introspect types\n";
   introspect_type<instrumented_simple>("instrumented_simple");
-  introspect_type<instrumented_copy_only>("instrumented_copy_only");
   introspect_type<instrumented_container>("instrumented_container");
   introspect_type<instrumented_sentinel>("instrumented_sentinel");
+  introspect_type<instrumented_raii>("instrumented_raii");
   introspect_type<std::vector<int>>("std::vector<int>");
   introspect_type<std::list<int>>("std::list<int>");
-  introspect_type<std::vector<std::list<int>>>("std::vector<std::list<int>>");
   introspect_type<std::map<int, int>>("std::map<int, int>");
   introspect_type<std::set<int>>("std::set<int>");
   introspect_type<std::unordered_map<int, int>>("std::unordered_map<int, int>");
   introspect_type<std::deque<int>>("std::deque<int>");
   introspect_type<std::string>("std::string");
-  std::cout << "Done!\n";
+
+ std::cout << "Done!\n";
 }
