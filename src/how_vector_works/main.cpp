@@ -130,7 +130,7 @@ namespace
     }
   }
 
-  void fill_test()
+  [[maybe_unused]] void fill_test()
   {
     std::cout << "==== fill test\n";
 
@@ -153,7 +153,7 @@ namespace
     std::cout << "average waste: " << (waste / double(n)) << "\n";
   }
 
-  const char * yes_no(bool x)
+  [[maybe_unused]] const char * yes_no(bool x)
   {
     return x ? "yes" : "no";
   }
@@ -237,5 +237,5 @@ int main()
 
   static_assert(std::is_nothrow_move_constructible_v<instrumented_copy_only>);
 
- std::cout << "Done!\n";
+  std::cout << "Done!\n";
 }

@@ -280,10 +280,12 @@ o: 1, cc: 1, ~: 1
 size: 6, capacity: 8
 ```
 
-TODO:
-read g++ vector source code, understand the g++ deque case
+Ultimately the g++ behaviour for `std::vector<std::deque<int>>` is special because of `std::__is_bitwise_relocatable` is specialized for `std::deque`.
 
+TODO:
 read https://stackoverflow.com/questions/17730689/is-a-moved-from-vector-always-empty
 in particular, figure out how empty is a "moved from" vector, list etc.
 
+TODO:
+read
 https://isocpp.org/files/papers/N4055.html
