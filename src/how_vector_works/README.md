@@ -165,7 +165,7 @@ o: 1, mc: 1, ~: 1
 size: 6, capacity: 6
 ```
 
-In g++ `std::list` is moved on resize:
+In g++ `std::list` is moved on resize (hence constant `cc: 1`):
 ```
 ==== list of simple type
 o: 1, cc: 1, ~: 1
@@ -202,124 +202,68 @@ size: 6, capacity: 6
 
 ## Container proding
 
-TODO: Check from here
-
-As far as the instrumented types, both compilers confirm:
-TODO: it's a bit weird, clarify why
+As far as the instrumented types, and `std::vector<int>` both compilers confirm:
 ```
 instrumented_simple:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
   is_nothrow_default_constructible:yes
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   yes
 instrumented_copy_only:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
   is_nothrow_default_constructible:yes
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   yes
 instrumented_container:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
   is_nothrow_default_constructible:yes
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   yes
+instrumented_raii:
+  is_nothrow_default_constructible:no
+  is_copy_constructible:           no
+  is_nothrow_move_constructible:   yes
 instrumented_sentinel:
-  is_nothrow_move_constructible:   no
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
   is_nothrow_default_constructible:no
-```
-
-Microsoft containers:
-```
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   no
 std::vector<int>:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
   is_nothrow_default_constructible:yes
-std::list<int>:
-  is_nothrow_move_constructible:   no
-  is_nothrow_move_assignable:      yes
   is_copy_constructible:           yes
-  is_nothrow_default_constructible:no
-std::vector<std::list<int>>:
   is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-std::map<int, int>:
-  is_nothrow_move_constructible:   no
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:no
-std::set<int>:
-  is_nothrow_move_constructible:   no
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:no
-std::unordered_map<int, int>:
-  is_nothrow_move_constructible:   no
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:no
-std::deque<int>:
-  is_nothrow_move_constructible:   no
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:no
-std::string:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-```
-Other Microsoft containers have a move constructor that could throw, not just the list.
-
-g++:
-```
-std::vector<int>:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-std::list<int>:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-std::vector<std::list<int>>:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-std::map<int, int>:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-std::set<int>:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-std::unordered_map<int, int>:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
-std::deque<int>:
-  is_nothrow_move_constructible:   no
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:no
-std::string:
-  is_nothrow_move_constructible:   yes
-  is_nothrow_move_assignable:      yes
-  is_copy_constructible:           yes
-  is_nothrow_default_constructible:yes
 ```
 
-g++ does something special about deque, because it moves it when resizing a vector of deque:
-TODO: check
+But while `std::list` in g++:
+```
+std::list<int>:
+  is_nothrow_default_constructible:yes
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   yes
+```
+
+the Microsoft `std::list` behaves likes `instrumented_sentinel` (hence the copy of values we've seen above):
+```
+std::list<int>:
+  is_nothrow_default_constructible:no
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   no
+```
+
+Microsoft took the same sentinal approach for:
+- `std::list`:
+- `std::map`
+- `std::set`
+- `std::unordered_map`
+- `std::deque`
+while `std::string` is like `std::vector`
+
+
+g++ does something special about deque, because you'd expect it to be sentinel-like:
+```
+std::deque<int>:
+  is_nothrow_default_constructible:no
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   no
+```
+
+But it moves it when resizing a vector of deque:
 ```
 ==== deque of simple type
 o: 1, cc: 1, ~: 1
@@ -337,6 +281,8 @@ size: 6, capacity: 8
 ```
 
 TODO:
+read g++ vector source code, understand the g++ deque case
+
 read https://stackoverflow.com/questions/17730689/is-a-moved-from-vector-always-empty
 in particular, figure out how empty is a "moved from" vector, list etc.
 
