@@ -66,13 +66,13 @@ size: 10, capacity: 13
 
 For a container of `n` entries, test the average excess memory usage (depends on growth factor)
 
-E.g. for growth factor of 2x:
+E.g. for growth factor of 2x, with `n = 1024`:
 ```
 ==== fill test
 average waste: 0.381265
 ```
 
-for growth factor of 1.5x:
+for growth factor of 1.5x, with `n = 1066`::
 ```
 ==== fill test
 average waste: 0.211812
@@ -81,8 +81,9 @@ average waste: 0.211812
 
 ## Copy vs. move
 
-Tests the operation used when resizing, e.g. move constructor for the simple type, and copy constructor for the copy-only type:
+Tests the operation used when resizing.
 
+On resize the simple type is moved:
 ```
 ==== simple type
 o: 1, mc: 1, ~: 1
@@ -93,8 +94,11 @@ o: 1, mc: 3, ~: 3
 size: 3, capacity: 4
 o: 1, mc: 1, ~: 1
 size: 4, capacity: 4
-...
-==== copy-only type
+```
+
+On resize the copy only type is copied:
+```
+==== copy only
 o: 1, cc: 1, ~: 1
 size: 1, capacity: 1
 o: 1, cc: 2, ~: 2
@@ -112,6 +116,8 @@ See
 - `__move_if_noexcept_cond` for g++
 - `_Umove_if_noexcept1` for Microsoft
 
+But the copy only class is more weird than at first look because it turns out that `std::is_nothrow_move_constructible_v<instrumented_copy_only>` is true. That comes to "Types without a move constructor, but with a copy constructor that accepts const T& arguments, satisfy std::is_move_constructible". Despite the type traits saying that it's movable, it's copied actually instead.
+
 A simple container that move constructs `noexcept` is moved on resize, just like a simple type:
 ```
 ==== simple container
@@ -125,10 +131,24 @@ o: 1, mc: 1, ~: 1
 size: 4, capacity: 4
 ```
 
+RAII types that move, but don't copy, are also moved:
+```
+==== raii
+o: 1, mc: 1, ~: 1
+size: 1, capacity: 1
+o: 1, mc: 2, ~: 2
+size: 2, capacity: 2
+o: 1, mc: 3, ~: 3
+size: 3, capacity: 4
+o: 1, mc: 1, ~: 1
+size: 4, capacity: 4
+```
+Even if the move constructor for RAII class throws, the values will still be move constructed, but the `push_back` only gives basic exception guarantees instead of the strong ones. 
+
 
 # Containers with dynamically allocated sentinels
 
-The move constructor throws, currently g++ and Microsoft copy construct when resizing:
+If the move constructor throws, currently g++ and Microsoft copy construct when resizing:
 ```
 ==== container with dynamically allocated sentinel
 o: 1, mc: 1, ~: 1
@@ -145,8 +165,7 @@ o: 1, mc: 1, ~: 1
 size: 6, capacity: 6
 ```
 
-
-In g++ std::list is moved on resize:
+In g++ `std::list` is moved on resize:
 ```
 ==== list of simple type
 o: 1, cc: 1, ~: 1
@@ -163,7 +182,7 @@ o: 1, cc: 1, ~: 1
 size: 6, capacity: 8
 ```
 
-But the Microsoft std::list is copied (list values are copy constructed on resize):
+But the Microsoft `std::list` implementation uses dynamically allocated sentinels, and therefore is copied (list values are copy constructed on resize):
 ```
 ==== list of simple type
 o: 1, cc: 1, ~: 1
