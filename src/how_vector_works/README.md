@@ -112,6 +112,7 @@ size: 4, capacity: 4
 As a baseline, the move is done if for the value type T:
 - `is_nothrow_move_constructible<T>`
 - OR `negation<is_copy_constructible<Ty>>`
+
 See
 - `__move_if_noexcept_cond` for g++
 - `_Umove_if_noexcept1` for Microsoft
@@ -217,7 +218,7 @@ instrumented_container:
   is_copy_constructible:           yes
   is_nothrow_move_constructible:   yes
 instrumented_raii:
-  is_nothrow_default_constructible:no
+  is_nothrow_default_constructible:yes
   is_copy_constructible:           no
   is_nothrow_move_constructible:   yes
 instrumented_sentinel:
@@ -252,8 +253,11 @@ Microsoft took the same sentinal approach for:
 - `std::set`
 - `std::unordered_map`
 - `std::deque`
+
 while `std::string` is like `std::vector`
 
+
+# Deque in g++, an interesting case
 
 g++ does something special about deque, because you'd expect it to be sentinel-like:
 ```
@@ -281,6 +285,30 @@ size: 6, capacity: 8
 ```
 
 Ultimately the g++ behaviour for `std::vector<std::deque<int>>` is special because of `std::__is_bitwise_relocatable` is specialized for `std::deque`.
+
+But that means that it only works with a vector of deque, not with a vector of a structure containing other containers. For a structure containing a vector, a list and a deque we're back to the lowest denominator (copying) all three members on resize:
+
+```
+==== combo struct
+o: 3, cc: 3, ~: 3
+size: 1, capacity: 1
+o: 3, cc: 6, ~: 6
+size: 2, capacity: 2
+o: 3, cc: 9, ~: 9
+size: 3, capacity: 4
+o: 3, cc: 3, ~: 3
+size: 4, capacity: 4
+```
+
+and
+
+```
+combo_struct:
+  is_nothrow_default_constructible:no
+  is_copy_constructible:           yes
+  is_nothrow_move_constructible:   no
+```
+
 
 TODO:
 read https://stackoverflow.com/questions/17730689/is-a-moved-from-vector-always-empty

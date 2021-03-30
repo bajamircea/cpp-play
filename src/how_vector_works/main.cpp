@@ -91,8 +91,8 @@ namespace
   struct instrumented_raii
   {
     int h_;
-    instrumented_raii():h_{0} { ++g_counters[operation::default_constructor]; }
-    explicit instrumented_raii(int i):h_{i} { ++g_counters[operation::other_constructor]; }
+    instrumented_raii() noexcept :h_{0} { ++g_counters[operation::default_constructor]; }
+    explicit instrumented_raii(int i) noexcept :h_{i} { ++g_counters[operation::other_constructor]; }
     instrumented_raii(const instrumented_raii & other) = delete;
     instrumented_raii & operator=(const instrumented_raii & other) = delete;
     instrumented_raii(instrumented_raii && other) noexcept :h_{other.h_} { other.h_ = 0; ++g_counters[operation::move_constructor]; }
@@ -111,6 +111,13 @@ namespace
     instrumented_sentinel(instrumented_sentinel && other):pi_{new int(*other.pi_)} { ++g_counters[operation::move_constructor]; }
     instrumented_sentinel & operator=(instrumented_sentinel && other) noexcept { std::swap(pi_, other.pi_); ++g_counters[operation::move_assignment]; return *this; }
     ~instrumented_sentinel() { delete pi_; ++g_counters[operation::destructor]; }
+  };
+
+  struct combo_struct
+  {
+    std::vector<instrumented_simple> m0;
+    std::list<instrumented_simple> m1;
+    std::deque<instrumented_simple> m2;
   };
 
   template<typename T, typename PushFn>
@@ -220,6 +227,12 @@ int main()
   push_back_test<std::map<int, instrumented_simple>>("map of int to simple type", [](auto & vec, int i){
     vec.push_back(std::map<int, instrumented_simple>{{i, instrumented_simple(i)}});
   });
+  push_back_test<std::map<int, instrumented_simple>>("map of int to simple type", [](auto & vec, int i){
+    vec.push_back(std::map<int, instrumented_simple>{{i, instrumented_simple(i)}});
+  });
+  push_back_test<combo_struct>("combo struct", [](auto & vec, int i){
+    vec.push_back(combo_struct{{instrumented_simple(i)}, {instrumented_simple(i)}, {instrumented_simple(i)}});
+  });
 
   std::cout << "==== introspect types\n";
   introspect_type<instrumented_simple>("instrumented_simple");
@@ -234,6 +247,7 @@ int main()
   introspect_type<std::unordered_map<int, int>>("std::unordered_map<int, int>");
   introspect_type<std::deque<int>>("std::deque<int>");
   introspect_type<std::string>("std::string");
+  introspect_type<combo_struct>("combo_struct");
 
   static_assert(std::is_nothrow_move_constructible_v<instrumented_copy_only>);
 
