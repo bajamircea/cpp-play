@@ -8,7 +8,7 @@
             "name": "Debug",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/debug/how_vector_works",
+            "program": "${workspaceFolder}/bin/debug/test/clrs_lib_test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

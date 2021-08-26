@@ -6,7 +6,7 @@ def write_makefile(out):
     configs = ["debug", "release"]
 
     projects = [
-        ("clrs_test", ["test_lib", "test_main_lib"]),
+        ("clrs_lib_test", ["test_lib", "test_main_lib"]),
         ("fibonacci", ["fibonacci_lib"]),
         ("fibonacci_lib", []),
         ("fibonacci_lib_test", ["fibonacci_lib", "test_lib", "test_main_lib"]),
