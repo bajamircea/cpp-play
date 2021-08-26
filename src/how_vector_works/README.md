@@ -309,6 +309,8 @@ combo_struct:
   is_nothrow_move_constructible:   no
 ```
 
+TODO:
+check clang/libc++
 
 TODO:
 read https://stackoverflow.com/questions/17730689/is-a-moved-from-vector-always-empty
