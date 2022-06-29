@@ -7,6 +7,9 @@ def write_makefile(out):
 
     projects = [
         ("clrs_lib_test", ["test_lib", "test_main_lib"]),
+        ("cpp_util_lib_test", ["test_lib", "test_main_lib"]),
+        ("cstdio_lib", []),
+        ("cstdio_lib_test", ["cstdio_lib", "test_lib", "test_main_lib"]),
         ("fibonacci", ["fibonacci_lib"]),
         ("fibonacci_lib", []),
         ("fibonacci_lib_test", ["fibonacci_lib", "test_lib", "test_main_lib"]),

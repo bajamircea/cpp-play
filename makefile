@@ -86,6 +86,106 @@ release : $(INT_DIR)/release/clrs_lib_test/success.run
 
 DEP_FILES += $(release_clrs_lib_test_OBJ_FILES:.o=.d)
 
+# Rules for cpp_util_lib_test
+
+cpp_util_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/cpp_util_lib_test/*.cpp)
+
+debug_cpp_util_lib_test_OBJ_FILES := $(cpp_util_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_cpp_util_lib_test_OBJ_FILES) : $(INT_DIR)/debug/cpp_util_lib_test/%.o : $(SRC_DIR)/cpp_util_lib_test/%.cpp $(INT_DIR)/debug/cpp_util_lib_test/%.d | $(INT_DIR)/debug/cpp_util_lib_test
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/test/cpp_util_lib_test : $(debug_cpp_util_lib_test_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+$(INT_DIR)/debug/cpp_util_lib_test/success.run : $(BIN_DIR)/debug/test/cpp_util_lib_test | $(INT_DIR)/debug/cpp_util_lib_test
+	$^
+	touch $@
+
+debug : $(INT_DIR)/debug/cpp_util_lib_test/success.run
+
+DEP_FILES += $(debug_cpp_util_lib_test_OBJ_FILES:.o=.d)
+
+release_cpp_util_lib_test_OBJ_FILES := $(cpp_util_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_cpp_util_lib_test_OBJ_FILES) : $(INT_DIR)/release/cpp_util_lib_test/%.o : $(SRC_DIR)/cpp_util_lib_test/%.cpp $(INT_DIR)/release/cpp_util_lib_test/%.d | $(INT_DIR)/release/cpp_util_lib_test
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/release/test/cpp_util_lib_test : $(release_cpp_util_lib_test_OBJ_FILES) $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release/test
+	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
+
+$(INT_DIR)/release/cpp_util_lib_test/success.run : $(BIN_DIR)/release/test/cpp_util_lib_test | $(INT_DIR)/release/cpp_util_lib_test
+	$^
+	touch $@
+
+release : $(INT_DIR)/release/cpp_util_lib_test/success.run
+
+DEP_FILES += $(release_cpp_util_lib_test_OBJ_FILES:.o=.d)
+
+# Rules for cstdio_lib
+
+cstdio_lib_CPP_FILES := $(wildcard $(SRC_DIR)/cstdio_lib/*.cpp)
+
+debug_cstdio_lib_OBJ_FILES := $(cstdio_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_cstdio_lib_OBJ_FILES) : $(INT_DIR)/debug/cstdio_lib/%.o : $(SRC_DIR)/cstdio_lib/%.cpp $(INT_DIR)/debug/cstdio_lib/%.d | $(INT_DIR)/debug/cstdio_lib
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(INT_DIR)/debug/cstdio_lib.a : $(debug_cstdio_lib_OBJ_FILES) | $(INT_DIR)/debug
+	ar rcs $@ $^
+
+debug : $(INT_DIR)/debug/cstdio_lib.a
+
+DEP_FILES += $(debug_cstdio_lib_OBJ_FILES:.o=.d)
+
+release_cstdio_lib_OBJ_FILES := $(cstdio_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_cstdio_lib_OBJ_FILES) : $(INT_DIR)/release/cstdio_lib/%.o : $(SRC_DIR)/cstdio_lib/%.cpp $(INT_DIR)/release/cstdio_lib/%.d | $(INT_DIR)/release/cstdio_lib
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(INT_DIR)/release/cstdio_lib.a : $(release_cstdio_lib_OBJ_FILES) | $(INT_DIR)/release
+	ar rcs $@ $^
+
+release : $(INT_DIR)/release/cstdio_lib.a
+
+DEP_FILES += $(release_cstdio_lib_OBJ_FILES:.o=.d)
+
+# Rules for cstdio_lib_test
+
+cstdio_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/cstdio_lib_test/*.cpp)
+
+debug_cstdio_lib_test_OBJ_FILES := $(cstdio_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_cstdio_lib_test_OBJ_FILES) : $(INT_DIR)/debug/cstdio_lib_test/%.o : $(SRC_DIR)/cstdio_lib_test/%.cpp $(INT_DIR)/debug/cstdio_lib_test/%.d | $(INT_DIR)/debug/cstdio_lib_test
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/test/cstdio_lib_test : $(debug_cstdio_lib_test_OBJ_FILES) $(INT_DIR)/debug/cstdio_lib.a $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+$(INT_DIR)/debug/cstdio_lib_test/success.run : $(BIN_DIR)/debug/test/cstdio_lib_test | $(INT_DIR)/debug/cstdio_lib_test
+	$^
+	touch $@
+
+debug : $(INT_DIR)/debug/cstdio_lib_test/success.run
+
+DEP_FILES += $(debug_cstdio_lib_test_OBJ_FILES:.o=.d)
+
+release_cstdio_lib_test_OBJ_FILES := $(cstdio_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_cstdio_lib_test_OBJ_FILES) : $(INT_DIR)/release/cstdio_lib_test/%.o : $(SRC_DIR)/cstdio_lib_test/%.cpp $(INT_DIR)/release/cstdio_lib_test/%.d | $(INT_DIR)/release/cstdio_lib_test
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/release/test/cstdio_lib_test : $(release_cstdio_lib_test_OBJ_FILES) $(INT_DIR)/release/cstdio_lib.a $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release/test
+	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
+
+$(INT_DIR)/release/cstdio_lib_test/success.run : $(BIN_DIR)/release/test/cstdio_lib_test | $(INT_DIR)/release/cstdio_lib_test
+	$^
+	touch $@
+
+release : $(INT_DIR)/release/cstdio_lib_test/success.run
+
+DEP_FILES += $(release_cstdio_lib_test_OBJ_FILES:.o=.d)
+
 # Rules for fibonacci
 
 fibonacci_CPP_FILES := $(wildcard $(SRC_DIR)/fibonacci/*.cpp)
@@ -278,6 +378,15 @@ $(INT_DIR)/debug : | $(INT_DIR)
 $(INT_DIR)/debug/clrs_lib_test : | $(INT_DIR)/debug
 	mkdir $@
 
+$(INT_DIR)/debug/cpp_util_lib_test : | $(INT_DIR)/debug
+	mkdir $@
+
+$(INT_DIR)/debug/cstdio_lib : | $(INT_DIR)/debug
+	mkdir $@
+
+$(INT_DIR)/debug/cstdio_lib_test : | $(INT_DIR)/debug
+	mkdir $@
+
 $(INT_DIR)/debug/fibonacci : | $(INT_DIR)/debug
 	mkdir $@
 
@@ -306,6 +415,15 @@ $(INT_DIR)/release : | $(INT_DIR)
 	mkdir $@
 
 $(INT_DIR)/release/clrs_lib_test : | $(INT_DIR)/release
+	mkdir $@
+
+$(INT_DIR)/release/cpp_util_lib_test : | $(INT_DIR)/release
+	mkdir $@
+
+$(INT_DIR)/release/cstdio_lib : | $(INT_DIR)/release
+	mkdir $@
+
+$(INT_DIR)/release/cstdio_lib_test : | $(INT_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release/fibonacci : | $(INT_DIR)/release
