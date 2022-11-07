@@ -12,7 +12,7 @@ namespace
     {
       T key = a[j];
       std::size_t i = j;
-      while ((i > 0) && (a[i - 1] > key))
+      while ((i > 0) && (key < a[i - 1]))
       {
         a[i] = a[i - 1];
         --i;
