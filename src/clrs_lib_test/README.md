@@ -21,3 +21,8 @@ but to the professional a more consistent approach would make a easier reading, 
 should not have almost each algorithm use a different approach just to save a few lines
 of code.
 
+Another case: the maximum subaray problem is introduced via a buy cheap then sell expensive
+problem in the divide and conquer chapter. I read the problem description carefully to make
+sure I understand it, then I figure out that I can solve it by linear traversal, then I wonder
+why would you use divide and conquer, which over many pages turns out it's O(n*lg(n)), to
+finally get to the challange to solve it in O(n) i.e. linear traversal.

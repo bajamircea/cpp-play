@@ -6,8 +6,7 @@ namespace cpp_util
   // - a handle type - the type of the handle
   // - a function static void close_handle(handle) noexcept - the function to
   //   close the handle
-  // - and a invalid_value constant - the special value indicating no handle is
-  //   hold
+  // - and an invalid_value constant - the special value indicating "no handle"
   class raii_with_invalid_value
   {
   public:
