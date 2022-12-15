@@ -17,7 +17,7 @@ namespace cstdio
 
       static void close_handle(handle h) noexcept
       {
-        static_cast<void>(fclose(h));
+        static_cast<void>(std::fclose(h));
       }
     };
   }

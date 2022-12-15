@@ -11,14 +11,13 @@ namespace cpp_util
   {
   public:
     using handle = typename Traits::handle;
-    static constexpr auto invalid_value = Traits::invalid_value;
 
   private:
     handle h_;
 
   public:
     raii_with_invalid_value() noexcept :
-      h_{ invalid_value }
+      h_{ Traits::invalid_value }
     {
     }
 
@@ -41,13 +40,13 @@ namespace cpp_util
     raii_with_invalid_value(raii_with_invalid_value && other) noexcept :
       h_{ other.h_ }
     {
-      other.h_ = invalid_value;
+      other.h_ = Traits::invalid_value;
     }
 
     raii_with_invalid_value & operator=(raii_with_invalid_value && other) noexcept
     {
       handle tmp = other.h_;
-      other.h_ = invalid_value;
+      other.h_ = Traits::invalid_value;
       if (is_valid())
       {
         Traits::close_handle(h_);
@@ -58,7 +57,7 @@ namespace cpp_util
 
     bool is_valid() const noexcept
     {
-      return h_ != invalid_value;
+      return h_ != Traits::invalid_value;
     }
 
     explicit operator bool() const noexcept
@@ -81,7 +80,7 @@ namespace cpp_util
       return &h_;
     }
 
-    void reset(handle h = invalid_value) noexcept
+    void reset(handle h = Traits::invalid_value) noexcept
     {
       if (is_valid())
       {
@@ -93,7 +92,7 @@ namespace cpp_util
     handle release() noexcept
     {
       handle tmp = h_;
-      h_ = invalid_value;
+      h_ = Traits::invalid_value;
       return tmp;
     }
   };

@@ -113,4 +113,33 @@ namespace
 
     ASSERT(g_values_closed.empty());
   }
+
+  namespace detail
+  {
+    struct test_reinterpret_traits
+    {
+      using handle = void *;
+
+      static inline auto invalid_value = reinterpret_cast<handle>(-1);
+
+      static void close_handle(handle) noexcept
+      {
+        g_values_closed.push_back(42);
+      }
+    };
+  }
+
+  using test_reinterpret_raii = cpp_util::raii_with_invalid_value<detail::test_reinterpret_traits>;
+
+  TEST(raii_with_invalid_value_reinterpret_cast)
+  {
+    g_values_closed.clear();
+
+    {
+      test_reinterpret_raii x(nullptr);
+    }
+
+    ASSERT_EQ((std::vector{42}), g_values_closed);
+  }
+
 } // anonymous namespace
