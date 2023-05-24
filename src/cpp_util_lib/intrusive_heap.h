@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bit>
 #include <cassert>
 #include <cstddef>
 
@@ -17,73 +18,76 @@ namespace cpp_util
   // - remove a node in O(lg(N)) (e.g. when the timer is cancelled)
   //
   // The node would have intrusive_heap_ptrs as a member.
-  // You would store intrusive_heap_object somewhere (e.g. in the io_service).
-  // You would manipulate the heap via intrusive_heap instantiated with:
+  // You would store intrusive_heap somewhere (e.g. in the io_service).
+  // You the heap access is parametrised with:
   // - your node type
   // - the pointer to the intrusive_heap_ptrs member
   // - the comparison operation
 
+  template<typename Node>
   struct intrusive_heap_ptrs
   {
-    void * left;
-    void * right;
-    void * parent;
+    Node * left;
+    Node * right;
+    Node * parent;
   };
 
-  struct intrusive_heap_object
+  template<typename Node, intrusive_heap_ptrs<Node> Node::*ptrs, typename Compare>
+  class intrusive_heap
   {
-    void * min_node = nullptr;
-    std::size_t size = 0;
-  };
+    Node * min_node_ = nullptr;
+    std::size_t size_ = 0;
 
-  template<typename Node, intrusive_heap_ptrs Node::*ptrs, typename Compare>
-  struct intrusive_heap
-  {
-    static bool empty(const intrusive_heap_object& heap) noexcept
+  public:
+    bool empty() const noexcept
     {
-      return heap.min_node == nullptr;
+      return (min_node_ == nullptr);
     }
 
-    static Node * min_node(intrusive_heap_object& heap) noexcept
+    std::size_t size() const noexcept
     {
-      return ptr_to_node(heap.min_node);
+      return size_;
     }
 
-    static void insert(intrusive_heap_object& heap, Node * new_node) noexcept
+    Node * min_node() noexcept
+    {
+      return min_node_;
+    }
+
+    const Node * min_node() const noexcept
+    {
+      return min_node_;
+    }
+
+    void insert(Node * new_node) noexcept
     {
       // Assume new node is added
-      ++heap.size;
+      ++size_;
 
-      // Calculate path bits: 0 (even) means left, 1 (odd) means right
-      std::size_t path = 0;
-      std::size_t steps = 0;
-      for (std::size_t direction = heap.size; direction >= 2; direction /= 2)
-      {
-        path <<= 1;
-        path |= (direction & 1);
-        ++steps;
-      }
+      // Position of the most significat bit in size_ indicate level in tree,
+      // the following bits indicate 0 for left, 1 for right
+      std::size_t mask = (size_ > 1) ?
+        ((std::size_t)1 << (std::bit_width(size_) - 2)) : (std::size_t)0;
 
       // Traverse path to new node initial location and insert
-      Node * parent = min_node(heap);
-      Node ** link_to_new = reinterpret_cast<Node **>(&heap.min_node);
-      while (steps > 0)
+      Node * parent = min_node_;
+      Node ** link_to_new = &min_node_;
+      while (mask != 0)
       {
         parent = *link_to_new;
-        intrusive_heap_ptrs & parent_ptrs = parent->*ptrs;
-        if (path & 1)
+        auto & parent_ptrs = parent->*ptrs;
+        if (size_ & mask)
         {
-          link_to_new = reinterpret_cast<Node **>(&parent_ptrs.right);
+          link_to_new = &parent_ptrs.right;
         }
         else
         {
-          link_to_new = reinterpret_cast<Node **>(&parent_ptrs.left);
+          link_to_new = &parent_ptrs.left;
         }
-        path >>= 1;
-        --steps;
+        mask >>= 1;
       }
 
-      intrusive_heap_ptrs & new_node_ptrs = new_node->*ptrs;
+      auto & new_node_ptrs = new_node->*ptrs;
       new_node_ptrs.left = nullptr;
       new_node_ptrs.right = nullptr;
       new_node_ptrs.parent = parent;
@@ -93,137 +97,97 @@ namespace cpp_util
       // Walk up and fix min heap property
       while (new_node_ptrs.parent != nullptr)
       {
-        parent = ptr_to_node(new_node_ptrs.parent);
+        parent = new_node_ptrs.parent;
         if (!compare(*new_node, *parent))
         {
           break;
         }
-        node_swap(heap, parent, new_node);
+        node_swap(parent, new_node);
       }
     }
 
-    static void remove(intrusive_heap_object& heap, Node * node) noexcept
+    void remove(Node * node) noexcept
     {
-      // Calculate path bits: 0 (even) means left, 1 (odd) means right
-      std::size_t path = 0;
-      std::size_t steps = 0;
-      for (std::size_t direction = heap.size; direction >= 2; direction /= 2)
-      {
-        path <<= 1;
-        path |= (direction & 1);
-        ++steps;
-      }
+      // Position of the most significat bit in size_ indicate level in tree,
+      // the following bits indicate 0 for left, 1 for right
+      std::size_t mask = (size_ > 1) ?
+        ((std::size_t)1 << (std::bit_width(size_) - 2)) : (std::size_t)0;
 
       // Traverse path to last node location
-      Node ** link_to_last = reinterpret_cast<Node **>(&heap.min_node);
-      while (steps > 0)
+      Node ** link_to_last = &min_node_;
+      while (mask != 0)
       {
-        intrusive_heap_ptrs & last_ptrs = (*link_to_last)->*ptrs;
-        if (path & 1)
+        auto & last_ptrs = (*link_to_last)->*ptrs;
+        if (size_ & mask)
         {
-          link_to_last = reinterpret_cast<Node **>(&last_ptrs.right);
+          link_to_last = &last_ptrs.right;
         }
         else
         {
-          link_to_last = reinterpret_cast<Node **>(&last_ptrs.left);
+          link_to_last = &last_ptrs.left;
         }
-        path >>= 1;
-        --steps;
+        mask >>= 1;
       }
 
       // Unlink last node
       Node * last = *link_to_last;
       *link_to_last = nullptr;
-      --heap.size;
+      --size_;
 
       if (node == last)
       {
         return;
       }
 
-      intrusive_heap_ptrs & last_ptrs = last->*ptrs;
-      intrusive_heap_ptrs & node_ptrs = node->*ptrs;
+      auto & last_ptrs = last->*ptrs;
 
       // Replace node with last
-      last_ptrs.left = node_ptrs.left;
-      last_ptrs.right = node_ptrs.right;
-      last_ptrs.parent = node_ptrs.parent;
-
-      if (last_ptrs.left != nullptr)
-      {
-        (ptr_to_node(last_ptrs.left)->*ptrs).parent = last;
-      }
-      if (last_ptrs.right != nullptr)
-      {
-        (ptr_to_node(last_ptrs.right)->*ptrs).parent = last;
-      }
-
-      if (last_ptrs.parent == nullptr)
-      {
-        heap.min_node = last;
-      }
-      else
-      {
-        intrusive_heap_ptrs & new_parent_ptrs = ptr_to_node(last_ptrs.parent)->*ptrs;
-        if (new_parent_ptrs.left == node)
-        {
-          new_parent_ptrs.left = last;
-        }
-        else
-        {
-          new_parent_ptrs.right = last;
-        }
-      }
+      last_ptrs = node->*ptrs;
+      fix_links_from_children(last);
+      fix_link_from_parent(last, node);
 
       Compare compare;
       // Walk down and fix min heap property
       while (true)
       {
-        Node * min_node = last;
+        Node * crt_min = last;
         if (last_ptrs.left != nullptr)
         {
-          Node * left = ptr_to_node(last_ptrs.left);
-          if (compare(*left, *min_node))
+          if (compare(*last_ptrs.left, *crt_min))
           {
-            min_node = left;
+            crt_min = last_ptrs.left;
           }
         }
         if (last_ptrs.right != nullptr)
         {
-          Node * right = ptr_to_node(last_ptrs.right);
-          if (compare(*right, *min_node))
+          if (compare(*last_ptrs.right, *crt_min))
           {
-            min_node = right;
+            crt_min = last_ptrs.right;
           }
         }
-        if (min_node == last)
+        if (crt_min == last)
         {
           break;
         }
-        node_swap(heap, last, min_node);
+        node_swap(last, crt_min);
       }
     }
 
-    static void pop_min(intrusive_heap_object& heap) noexcept
+    void pop_min() noexcept
     {
-      remove(heap, ptr_to_node(heap.min_node));
+      remove(min_node_);
     }
 
   private:
-    static Node * ptr_to_node(void * p) noexcept
+    void node_swap(Node * parent, Node * child) noexcept
     {
-      return reinterpret_cast<Node *>(p);
-    }
-
-    static void node_swap(intrusive_heap_object& heap, Node * parent, Node * child) noexcept
-    {
-      intrusive_heap_ptrs & parent_ptrs = parent->*ptrs;
-      intrusive_heap_ptrs & child_ptrs = child->*ptrs;
+      auto & parent_ptrs = parent->*ptrs;
+      auto & child_ptrs = child->*ptrs;
 
       Node * sibling;
       if (parent_ptrs.left == child)
       {
-        sibling = ptr_to_node(parent_ptrs.right);
+        sibling = parent_ptrs.right;
         parent_ptrs.left = child_ptrs.left;
         parent_ptrs.right = child_ptrs.right;
         child_ptrs.left = parent;
@@ -231,7 +195,7 @@ namespace cpp_util
       }
       else
       {
-        sibling = ptr_to_node(parent_ptrs.left);
+        sibling = parent_ptrs.left;
         parent_ptrs.left = child_ptrs.left;
         parent_ptrs.right = child_ptrs.right;
         child_ptrs.left = sibling;
@@ -245,29 +209,39 @@ namespace cpp_util
         (sibling->*ptrs).parent = child;
       }
 
-      if (parent_ptrs.left != nullptr)
-      {
-        (ptr_to_node(parent_ptrs.left)->*ptrs).parent = parent;
-      }
-      if (parent_ptrs.right != nullptr)
-      {
-        (ptr_to_node(parent_ptrs.right)->*ptrs).parent = parent;
-      }
+      fix_links_from_children(parent);
+      fix_link_from_parent(child, parent);
+    }
 
-      if (child_ptrs.parent == nullptr)
+    void fix_links_from_children(Node * node) noexcept
+    {
+      auto & node_ptrs = node->*ptrs;
+      if (node_ptrs.left != nullptr)
       {
-        heap.min_node = child;
+        (node_ptrs.left->*ptrs).parent = node;
+      }
+      if (node_ptrs.right != nullptr)
+      {
+        (node_ptrs.right->*ptrs).parent = node;
+      }
+    }
+
+    void fix_link_from_parent(Node * new_node, Node * old_node) noexcept
+    {
+      if ((new_node->*ptrs).parent == nullptr)
+      {
+        min_node_ = new_node;
       }
       else
       {
-        intrusive_heap_ptrs & new_parent_ptrs = ptr_to_node(child_ptrs.parent)->*ptrs;
-        if (new_parent_ptrs.left == parent)
+        auto & new_parent_ptrs = (new_node->*ptrs).parent->*ptrs;
+        if (new_parent_ptrs.left == old_node)
         {
-          new_parent_ptrs.left = child;
+          new_parent_ptrs.left = new_node;
         }
         else
         {
-          new_parent_ptrs.right = child;
+          new_parent_ptrs.right = new_node;
         }
       }
     }

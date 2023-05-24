@@ -9,7 +9,7 @@ namespace
   struct heap_node
   {
     std::string key;
-    cpp_util::intrusive_heap_ptrs ptrs;
+    cpp_util::intrusive_heap_ptrs<heap_node> ptrs;
   };
 
   struct heap_node_compare
@@ -20,67 +20,65 @@ namespace
     }
   };
 
-  using heap_api = cpp_util::intrusive_heap<heap_node, &heap_node::ptrs, heap_node_compare>;
-
   TEST(intrusive_heap_simple)
   {
-    cpp_util::intrusive_heap_object heap;
+    cpp_util::intrusive_heap<heap_node, &heap_node::ptrs, heap_node_compare> heap;
 
     heap_node foo_node{ "foo" };
     heap_node bar_node{ "bar" };
     heap_node buzz_node{ "buzz" };
     heap_node wozz_node{ "wozz" };
 
-    ASSERT(heap_api::empty(heap));
-    ASSERT_EQ(0, heap.size);
-    ASSERT_EQ(nullptr, heap_api::min_node(heap));
+    ASSERT(heap.empty());
+    ASSERT_EQ(0, heap.size());
+    ASSERT_EQ(nullptr, heap.min_node());
 
-    heap_api::insert(heap, &foo_node);
+    heap.insert(&foo_node);
 
-    ASSERT_FALSE(heap_api::empty(heap));
-    ASSERT_EQ(1, heap.size);
-    ASSERT_EQ(&foo_node, heap_api::min_node(heap));
+    ASSERT_FALSE(heap.empty());
+    ASSERT_EQ(1, heap.size());
+    ASSERT_EQ(&foo_node, heap.min_node());
 
-    heap_api::insert(heap, &bar_node);
+    heap.insert(&bar_node);
 
-    ASSERT_FALSE(heap_api::empty(heap));
-    ASSERT_EQ(2, heap.size);
-    ASSERT_EQ(&bar_node, heap_api::min_node(heap));
+    ASSERT_FALSE(heap.empty());
+    ASSERT_EQ(2, heap.size());
+    ASSERT_EQ(&bar_node, heap.min_node());
 
-    heap_api::insert(heap, &buzz_node);
+    heap.insert(&buzz_node);
 
-    ASSERT_FALSE(heap_api::empty(heap));
-    ASSERT_EQ(3, heap.size);
-    ASSERT_EQ(&bar_node, heap_api::min_node(heap));
+    ASSERT_FALSE(heap.empty());
+    ASSERT_EQ(3, heap.size());
+    ASSERT_EQ(&bar_node, heap.min_node());
 
-    heap_api::insert(heap, &wozz_node);
+    heap.insert(&wozz_node);
 
-    ASSERT_FALSE(heap_api::empty(heap));
-    ASSERT_EQ(4, heap.size);
-    ASSERT_EQ(&bar_node, heap_api::min_node(heap));
+    ASSERT_FALSE(heap.empty());
+    ASSERT_EQ(4, heap.size());
+    ASSERT_EQ(&bar_node, heap.min_node());
 
-    heap_api::pop_min(heap);
+    heap.pop_min();
 
-    ASSERT_FALSE(heap_api::empty(heap));
-    ASSERT_EQ(3, heap.size);
-    ASSERT_EQ(&buzz_node, heap_api::min_node(heap));
+    ASSERT_FALSE(heap.empty());
+    ASSERT_EQ(3, heap.size());
+    ASSERT_EQ(&buzz_node, heap.min_node());
 
-    heap_api::pop_min(heap);
+    heap.pop_min();
 
-    ASSERT_FALSE(heap_api::empty(heap));
-    ASSERT_EQ(2, heap.size);
-    ASSERT_EQ(&foo_node, heap_api::min_node(heap));
+    ASSERT_FALSE(heap.empty());
+    ASSERT_EQ(2, heap.size());
+    ASSERT_EQ(&foo_node, heap.min_node());
 
-    heap_api::pop_min(heap);
+    heap.pop_min();
 
-    ASSERT_FALSE(heap_api::empty(heap));
-    ASSERT_EQ(1, heap.size);
-    ASSERT_EQ(&wozz_node, heap_api::min_node(heap));
+    ASSERT_FALSE(heap.empty());
+    ASSERT_EQ(1, heap.size());
+    ASSERT_EQ(&wozz_node, heap.min_node());
 
-    heap_api::pop_min(heap);
+    heap.pop_min();
 
-    ASSERT(heap_api::empty(heap));
-    ASSERT_EQ(0, heap.size);
-    ASSERT_EQ(nullptr, heap_api::min_node(heap));
+    ASSERT(heap.empty());
+    ASSERT_EQ(0, heap.size());
+    ASSERT_EQ(nullptr, heap.min_node());
   }
 } // anonymous namespace
