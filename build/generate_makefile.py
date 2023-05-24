@@ -6,6 +6,7 @@ def write_makefile(out):
     configs = ["debug", "release"]
 
     projects = [
+        ("aio_lib_test", ["test_lib", "test_main_lib"]),
         ("clrs_lib_test", ["test_lib", "test_main_lib"]),
         ("cpp_util_lib_test", ["test_lib", "test_main_lib"]),
         ("cstdio_lib", []),
@@ -42,14 +43,14 @@ INT_DIR = int
 TMP_DIR = tmp
 
 # Compiler flags
-CXX = g++
+CXX = g++-10
 ## -MMD creates dependency list, but ignores system includes
 ## -MF specifies where to create the dependency file name
 ## -MP creates phony targets for headers (deals with deleted headers after
 ##  obj file has been compiled)
 ## -MT specifies the dependency target (path qualified obj file name)
 DEP_FLAGS = -MT $@ -MMD -MP -MF $(@:.o=.d)
-STD_FLAGS = --std=c++2a -pthread -fno-rtti
+STD_FLAGS = --std=c++20 -pthread -fno-rtti -fcoroutines
 WARN_FLAGS = -Wall -Werror
 debug_FLAGS = -g
 release_FLAGS = -O3 -march=native

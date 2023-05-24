@@ -21,14 +21,14 @@ INT_DIR = int
 TMP_DIR = tmp
 
 # Compiler flags
-CXX = g++
+CXX = g++-10
 ## -MMD creates dependency list, but ignores system includes
 ## -MF specifies where to create the dependency file name
 ## -MP creates phony targets for headers (deals with deleted headers after
 ##  obj file has been compiled)
 ## -MT specifies the dependency target (path qualified obj file name)
 DEP_FLAGS = -MT $@ -MMD -MP -MF $(@:.o=.d)
-STD_FLAGS = --std=c++2a -pthread -fno-rtti
+STD_FLAGS = --std=c++20 -pthread -fno-rtti -fcoroutines
 WARN_FLAGS = -Wall -Werror
 debug_FLAGS = -g
 release_FLAGS = -O3 -march=native
@@ -49,6 +49,42 @@ all : debug release
 debug release :
 
 DEP_FILES :=
+
+# Rules for aio_lib_test
+
+aio_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/aio_lib_test/*.cpp)
+
+debug_aio_lib_test_OBJ_FILES := $(aio_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_aio_lib_test_OBJ_FILES) : $(INT_DIR)/debug/aio_lib_test/%.o : $(SRC_DIR)/aio_lib_test/%.cpp $(INT_DIR)/debug/aio_lib_test/%.d | $(INT_DIR)/debug/aio_lib_test
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/test/aio_lib_test : $(debug_aio_lib_test_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+$(INT_DIR)/debug/aio_lib_test/success.run : $(BIN_DIR)/debug/test/aio_lib_test | $(INT_DIR)/debug/aio_lib_test
+	$^
+	touch $@
+
+debug : $(INT_DIR)/debug/aio_lib_test/success.run
+
+DEP_FILES += $(debug_aio_lib_test_OBJ_FILES:.o=.d)
+
+release_aio_lib_test_OBJ_FILES := $(aio_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_aio_lib_test_OBJ_FILES) : $(INT_DIR)/release/aio_lib_test/%.o : $(SRC_DIR)/aio_lib_test/%.cpp $(INT_DIR)/release/aio_lib_test/%.d | $(INT_DIR)/release/aio_lib_test
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/release/test/aio_lib_test : $(release_aio_lib_test_OBJ_FILES) $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release/test
+	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
+
+$(INT_DIR)/release/aio_lib_test/success.run : $(BIN_DIR)/release/test/aio_lib_test | $(INT_DIR)/release/aio_lib_test
+	$^
+	touch $@
+
+release : $(INT_DIR)/release/aio_lib_test/success.run
+
+DEP_FILES += $(release_aio_lib_test_OBJ_FILES:.o=.d)
 
 # Rules for clrs_lib_test
 
@@ -375,6 +411,9 @@ $(BIN_DIR)/debug/test : | $(BIN_DIR)/debug
 $(INT_DIR)/debug : | $(INT_DIR)
 	mkdir $@
 
+$(INT_DIR)/debug/aio_lib_test : | $(INT_DIR)/debug
+	mkdir $@
+
 $(INT_DIR)/debug/clrs_lib_test : | $(INT_DIR)/debug
 	mkdir $@
 
@@ -412,6 +451,9 @@ $(BIN_DIR)/release/test : | $(BIN_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release : | $(INT_DIR)
+	mkdir $@
+
+$(INT_DIR)/release/aio_lib_test : | $(INT_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release/clrs_lib_test : | $(INT_DIR)/release
