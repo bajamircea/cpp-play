@@ -14,7 +14,7 @@ namespace cpp_util
   // acceptable time complexity and noexcept):
   // - insert a new node in O(lg(N)) (e.g. a new coroutine waiting for a timer)
   // - get the smallest node in O(1) (e.g. the next duration we need to wait for)
-  // - pop the smallest node in O(lg(N)) (e.g. when it's duration has passed)
+  // - pop the smallest node in O(lg(N)) (e.g. after its duration has elapsed)
   // - remove a node in O(lg(N)) (e.g. when the timer is cancelled)
   //
   // The node would have intrusive_heap_ptrs as a member.
