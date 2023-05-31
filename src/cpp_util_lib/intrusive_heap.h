@@ -27,9 +27,9 @@ namespace cpp_util
   template<typename Node>
   struct intrusive_heap_ptrs
   {
-    Node * left;
-    Node * right;
-    Node * parent;
+    Node * left {nullptr};
+    Node * right {nullptr};
+    Node * parent {nullptr};
   };
 
   template<typename Node, intrusive_heap_ptrs<Node> Node::*ptrs, typename Compare>
