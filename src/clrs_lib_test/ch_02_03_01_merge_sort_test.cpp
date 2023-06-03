@@ -63,7 +63,7 @@ namespace
   {
     for (std::size_t i = 1; i < n; ++i)
     {
-      ASSERT(a[i - 1] <= a[i]);
+      ASSERT_TRUE(a[i - 1] <= a[i]);
     }
   }
 

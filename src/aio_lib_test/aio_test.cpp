@@ -94,9 +94,9 @@ namespace
     recorder.clear();
 
     task t = foo();
-    ASSERT(recorder.empty());
+    ASSERT_TRUE(recorder.empty());
 
-    ASSERT(t.resume());
+    ASSERT_TRUE(t.resume());
     ASSERT_EQ(std::vector<std::string>{"in foo"}, recorder);
 
     ASSERT_FALSE(t.resume());

@@ -44,31 +44,31 @@ namespace
       unsigned_binary a;
       unsigned_binary b;
       ASSERT_FALSE(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
-      ASSERT(a >= b);
+      ASSERT_TRUE(a >= b);
     }
     {
       unsigned_binary a(12345);
       unsigned_binary b(12345);
       ASSERT_FALSE(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
-      ASSERT(a >= b);
+      ASSERT_TRUE(a >= b);
     }
     {
       unsigned_binary a;
       unsigned_binary b(12345);
-      ASSERT(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a < b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
       ASSERT_FALSE(a >= b);
     }
     {
       unsigned_binary a(12345);
       unsigned_binary b(12351);
-      ASSERT(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a < b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
       ASSERT_FALSE(a >= b);
     }
@@ -411,31 +411,31 @@ namespace
       unsigned_decimal a;
       unsigned_decimal b;
       ASSERT_FALSE(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
-      ASSERT(a >= b);
+      ASSERT_TRUE(a >= b);
     }
     {
       unsigned_decimal a = make_unsigned_decimal("12345");
       unsigned_decimal b = make_unsigned_decimal("12345");
       ASSERT_FALSE(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
-      ASSERT(a >= b);
+      ASSERT_TRUE(a >= b);
     }
     {
       unsigned_decimal a;
       unsigned_decimal b = make_unsigned_decimal("12345");
-      ASSERT(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a < b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
       ASSERT_FALSE(a >= b);
     }
     {
       unsigned_decimal a = make_unsigned_decimal("12345");
       unsigned_decimal b = make_unsigned_decimal("12351");
-      ASSERT(a < b);
-      ASSERT(a <= b);
+      ASSERT_TRUE(a < b);
+      ASSERT_TRUE(a <= b);
       ASSERT_FALSE(a > b);
       ASSERT_FALSE(a >= b);
     }
@@ -498,7 +498,7 @@ namespace
   {
     {
       unsigned_binary a = make_unsigned_binary("");
-      ASSERT(a.units_.empty());
+      ASSERT_TRUE(a.units_.empty());
     }
     {
       unsigned_binary a = make_unsigned_binary("12345");

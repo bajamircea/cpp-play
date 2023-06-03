@@ -29,7 +29,7 @@ namespace
     heap_node buzz_node{ "buzz" };
     heap_node wozz_node{ "wozz" };
 
-    ASSERT(heap.empty());
+    ASSERT_TRUE(heap.empty());
     ASSERT_EQ(0, heap.size());
     ASSERT_EQ(nullptr, heap.min_node());
 
@@ -77,7 +77,7 @@ namespace
 
     heap.pop_min();
 
-    ASSERT(heap.empty());
+    ASSERT_TRUE(heap.empty());
     ASSERT_EQ(0, heap.size());
     ASSERT_EQ(nullptr, heap.min_node());
   }

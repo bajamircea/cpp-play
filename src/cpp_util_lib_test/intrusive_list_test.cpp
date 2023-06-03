@@ -15,7 +15,7 @@ namespace
   TEST(empty_list)
   {
     lst x;
-    ASSERT(x.empty());
+    ASSERT_TRUE(x.empty());
     ASSERT_EQ(0, x.size());
 
     int i{ 0 };
@@ -53,7 +53,7 @@ namespace
     ASSERT_EQ(nullptr, y.ptrs.next);
     ASSERT_EQ(nullptr, y.ptrs.prev);
 
-    ASSERT(x.empty());
+    ASSERT_TRUE(x.empty());
     ASSERT_EQ(0, x.size());
 
     i = 0;
@@ -104,7 +104,7 @@ namespace
     ASSERT_EQ(nullptr, z.ptrs.next);
     ASSERT_EQ(nullptr, z.ptrs.prev);
 
-    ASSERT(x.empty());
+    ASSERT_TRUE(x.empty());
     ASSERT_EQ(0, x.size());
 
     i = 0;

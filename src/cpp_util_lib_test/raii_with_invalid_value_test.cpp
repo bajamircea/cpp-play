@@ -38,12 +38,12 @@ namespace
       ASSERT_EQ(1, y.get());
       ASSERT_EQ(-1, z.get());
 
-      ASSERT(x.is_valid());
-      ASSERT(y.is_valid());
+      ASSERT_TRUE(x.is_valid());
+      ASSERT_TRUE(y.is_valid());
       ASSERT_FALSE(z.is_valid());
 
-      ASSERT(x);
-      ASSERT(y);
+      ASSERT_TRUE(x);
+      ASSERT_TRUE(y);
       ASSERT_FALSE(z);
     }
 
@@ -58,7 +58,7 @@ namespace
       test_raii x(0);
       test_raii y(std::move(x));
 
-      ASSERT(g_values_closed.empty());
+      ASSERT_TRUE(g_values_closed.empty());
       ASSERT_EQ(-1, x.get());
       ASSERT_EQ(0, y.get());
     }
@@ -76,7 +76,7 @@ namespace
 
       y = std::move(x);
 
-      ASSERT(g_values_closed.empty());
+      ASSERT_TRUE(g_values_closed.empty());
       ASSERT_EQ(-1, x.get());
       ASSERT_EQ(0, y.get());
     }
@@ -111,7 +111,7 @@ namespace
       ASSERT_FALSE(x.is_valid());
     }
 
-    ASSERT(g_values_closed.empty());
+    ASSERT_TRUE(g_values_closed.empty());
   }
 
   namespace detail

@@ -60,7 +60,7 @@ namespace
 
   TEST(eop_02__is_terminating)
   {
-    ASSERT(is_terminating(60u, foo, foo_pred));
+    ASSERT_TRUE(is_terminating(60u, foo, foo_pred));
 
     ASSERT_FALSE(is_terminating(1u, foo, foo_pred));
   }
@@ -77,7 +77,7 @@ namespace
 
   TEST(eop_02__is_circular_nonterminating_orbit)
   {
-    ASSERT(is_circular_nonterminating_orbit(19u, foo));
+    ASSERT_TRUE(is_circular_nonterminating_orbit(19u, foo));
 
     ASSERT_FALSE(is_circular_nonterminating_orbit(12u, foo));
   }
@@ -88,7 +88,7 @@ namespace
     ASSERT_FALSE(is_circular(45u, foo, foo_pred));
 
 
-    ASSERT(is_circular(19u, foo, foo_pred));
+    ASSERT_TRUE(is_circular(19u, foo, foo_pred));
 
     ASSERT_FALSE(is_circular(16u, foo, foo_pred));
   }
