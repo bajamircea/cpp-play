@@ -15,6 +15,7 @@ def write_makefile(out):
         ("fibonacci_lib", []),
         ("fibonacci_lib_test", ["fibonacci_lib", "test_lib", "test_main_lib"]),
         ("how_vector_works", []),
+        ("sedgewick_lib_test", ["test_lib", "test_main_lib"]),
         ("test_lib", []),
         ("test_main_lib", []),
     ]

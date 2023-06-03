@@ -342,6 +342,42 @@ release : $(BIN_DIR)/release/how_vector_works
 
 DEP_FILES += $(release_how_vector_works_OBJ_FILES:.o=.d)
 
+# Rules for sedgewick_lib_test
+
+sedgewick_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/sedgewick_lib_test/*.cpp)
+
+debug_sedgewick_lib_test_OBJ_FILES := $(sedgewick_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_sedgewick_lib_test_OBJ_FILES) : $(INT_DIR)/debug/sedgewick_lib_test/%.o : $(SRC_DIR)/sedgewick_lib_test/%.cpp $(INT_DIR)/debug/sedgewick_lib_test/%.d | $(INT_DIR)/debug/sedgewick_lib_test
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/test/sedgewick_lib_test : $(debug_sedgewick_lib_test_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+$(INT_DIR)/debug/sedgewick_lib_test/success.run : $(BIN_DIR)/debug/test/sedgewick_lib_test | $(INT_DIR)/debug/sedgewick_lib_test
+	$^
+	touch $@
+
+debug : $(INT_DIR)/debug/sedgewick_lib_test/success.run
+
+DEP_FILES += $(debug_sedgewick_lib_test_OBJ_FILES:.o=.d)
+
+release_sedgewick_lib_test_OBJ_FILES := $(sedgewick_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_sedgewick_lib_test_OBJ_FILES) : $(INT_DIR)/release/sedgewick_lib_test/%.o : $(SRC_DIR)/sedgewick_lib_test/%.cpp $(INT_DIR)/release/sedgewick_lib_test/%.d | $(INT_DIR)/release/sedgewick_lib_test
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/release/test/sedgewick_lib_test : $(release_sedgewick_lib_test_OBJ_FILES) $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release/test
+	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
+
+$(INT_DIR)/release/sedgewick_lib_test/success.run : $(BIN_DIR)/release/test/sedgewick_lib_test | $(INT_DIR)/release/sedgewick_lib_test
+	$^
+	touch $@
+
+release : $(INT_DIR)/release/sedgewick_lib_test/success.run
+
+DEP_FILES += $(release_sedgewick_lib_test_OBJ_FILES:.o=.d)
+
 # Rules for test_lib
 
 test_lib_CPP_FILES := $(wildcard $(SRC_DIR)/test_lib/*.cpp)
@@ -438,6 +474,9 @@ $(INT_DIR)/debug/fibonacci_lib_test : | $(INT_DIR)/debug
 $(INT_DIR)/debug/how_vector_works : | $(INT_DIR)/debug
 	mkdir $@
 
+$(INT_DIR)/debug/sedgewick_lib_test : | $(INT_DIR)/debug
+	mkdir $@
+
 $(INT_DIR)/debug/test_lib : | $(INT_DIR)/debug
 	mkdir $@
 
@@ -478,6 +517,9 @@ $(INT_DIR)/release/fibonacci_lib_test : | $(INT_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release/how_vector_works : | $(INT_DIR)/release
+	mkdir $@
+
+$(INT_DIR)/release/sedgewick_lib_test : | $(INT_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release/test_lib : | $(INT_DIR)/release
