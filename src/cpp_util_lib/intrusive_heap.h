@@ -21,18 +21,10 @@ namespace cpp_util
   // You would store intrusive_heap somewhere (e.g. in the io_service).
   // You the heap access is parametrised with:
   // - your node type
-  // - the pointer to the intrusive_heap_ptrs member
+  // - the pointers to parent, left, right
   // - the comparison operation
 
-  template<typename Node>
-  struct intrusive_heap_ptrs
-  {
-    Node * left {nullptr};
-    Node * right {nullptr};
-    Node * parent {nullptr};
-  };
-
-  template<typename Node, intrusive_heap_ptrs<Node> Node::*ptrs, typename Compare>
+  template<typename Node, Node * Node::*parent, Node * Node::*left, Node * Node::*right, typename Compare>
   class intrusive_heap
   {
     Node * min_node_ = nullptr;
@@ -61,77 +53,113 @@ namespace cpp_util
 
     void insert(Node * new_node) noexcept
     {
+      new_node->*left = nullptr;
+      new_node->*right = nullptr;
+
+      if (empty())
+      {
+        size_ = 1;
+        min_node_ = new_node;
+        new_node->*parent = nullptr;
+        return;
+      }
+
       // Assume new node is added
       ++size_;
 
-      // Position of the most significat bit in size_ indicate level in tree,
-      // the following bits indicate 0 for left, 1 for right
-      std::size_t mask = (size_ > 1) ?
-        ((std::size_t)1 << (std::bit_width(size_) - 2)) : (std::size_t)0;
+      Node * new_node_parent = min_node_;
 
-      // Traverse path to new node initial location and insert
-      Node * parent = min_node_;
-      Node ** link_to_new = &min_node_;
-      while (mask != 0)
+      // e.g.
+      // if the size_ is now 5 (0110)
+      // - bit_width is 3
+      // - mask needs to be for the bit at position 2 (i.e. 3 - 1)
+      //   size_ now is at least 2, bit_width also is at least 2,
+      //   so it's fine to decrement
+      // - we go right to find the new parent
+      std::size_t mask = ((std::size_t)1 << (std::bit_width(size_) - 2));
+      while (mask != 1)
       {
-        parent = *link_to_new;
-        auto & parent_ptrs = parent->*ptrs;
         if (size_ & mask)
         {
-          link_to_new = &parent_ptrs.right;
+          new_node_parent = new_node_parent->*right;
         }
         else
         {
-          link_to_new = &parent_ptrs.left;
+          new_node_parent = new_node_parent->*left;
         }
         mask >>= 1;
       }
 
-      auto & new_node_ptrs = new_node->*ptrs;
-      new_node_ptrs.left = nullptr;
-      new_node_ptrs.right = nullptr;
-      new_node_ptrs.parent = parent;
-      *link_to_new = new_node;
+      new_node->*parent = new_node_parent;
+
+      if (size_ & mask)
+      {
+        new_node_parent->*right = new_node; 
+      }
+      else
+      {
+        new_node_parent->*left = new_node;
+      }
 
       Compare compare;
       // Walk up and fix min heap property
-      while (new_node_ptrs.parent != nullptr)
+      do
       {
-        parent = new_node_ptrs.parent;
-        if (!compare(*new_node, *parent))
+        if (compare(*new_node_parent, *new_node))
         {
           break;
         }
-        node_swap(parent, new_node);
-      }
+        node_swap(new_node_parent, new_node);
+        new_node_parent = new_node->*parent;
+      } while(new_node_parent != nullptr);
     }
 
     void remove(Node * node) noexcept
     {
-      // Position of the most significat bit in size_ indicate level in tree,
-      // the following bits indicate 0 for left, 1 for right
-      std::size_t mask = (size_ > 1) ?
-        ((std::size_t)1 << (std::bit_width(size_) - 2)) : (std::size_t)0;
+      assert(size_ > 0);
 
-      // Traverse path to last node location
-      Node ** link_to_last = &min_node_;
-      while (mask != 0)
+      if (size_ == 1)
       {
-        auto & last_ptrs = (*link_to_last)->*ptrs;
+        size_ = 0;
+        min_node_ = nullptr;
+        return;
+      }
+
+      Node * last_node_parent = min_node_;
+
+      // e.g.
+      // if the size_ is now 5 (0110)
+      // - bit_width is 3
+      // - mask needs to be for the bit at position 2 (i.e. 3 - 1)
+      //   size_ now is at least 2, bit_width also is at least 2,
+      //   so it's fine to decrement
+      // - we go right to find the new parent
+      std::size_t mask = ((std::size_t)1 << (std::bit_width(size_) - 2));
+      while (mask != 1)
+      {
         if (size_ & mask)
         {
-          link_to_last = &last_ptrs.right;
+          last_node_parent = last_node_parent->*right;
         }
         else
         {
-          link_to_last = &last_ptrs.left;
+          last_node_parent = last_node_parent->*left;
         }
         mask >>= 1;
       }
 
-      // Unlink last node
-      Node * last = *link_to_last;
-      *link_to_last = nullptr;
+      Node * last;
+
+      if (size_ & mask)
+      {
+        last = last_node_parent->*right;
+        last_node_parent->*right = nullptr; 
+      }
+      else
+      {
+        last = last_node_parent->*left;
+        last_node_parent->*left = nullptr; 
+      }
       --size_;
 
       if (node == last)
@@ -139,30 +167,30 @@ namespace cpp_util
         return;
       }
 
-      auto & last_ptrs = last->*ptrs;
-
       // Replace node with last
-      last_ptrs = node->*ptrs;
-      fix_links_from_children(last);
+      last->*parent = node->*parent;
+      last->*left = node->*left;
+      last->*right = node->*right;
       fix_link_from_parent(last, node);
+      fix_links_from_children(last);
 
       Compare compare;
       // Walk down and fix min heap property
       while (true)
       {
         Node * crt_min = last;
-        if (last_ptrs.left != nullptr)
+        if (last->*left != nullptr)
         {
-          if (compare(*last_ptrs.left, *crt_min))
+          if (compare(*(last->*left), *crt_min))
           {
-            crt_min = last_ptrs.left;
+            crt_min = last->*left;
           }
         }
-        if (last_ptrs.right != nullptr)
+        if (last->*right != nullptr)
         {
-          if (compare(*last_ptrs.right, *crt_min))
+          if (compare(*(last->*right), *crt_min))
           {
-            crt_min = last_ptrs.right;
+            crt_min = last->*right;
           }
         }
         if (crt_min == last)
@@ -179,70 +207,63 @@ namespace cpp_util
     }
 
   private:
-    void node_swap(Node * parent, Node * child) noexcept
+    void node_swap(Node * old_parent, Node * new_parent) noexcept
     {
-      auto & parent_ptrs = parent->*ptrs;
-      auto & child_ptrs = child->*ptrs;
-
       Node * sibling;
-      if (parent_ptrs.left == child)
+      if (old_parent->*left == new_parent)
       {
-        sibling = parent_ptrs.right;
-        parent_ptrs.left = child_ptrs.left;
-        parent_ptrs.right = child_ptrs.right;
-        child_ptrs.left = parent;
-        child_ptrs.right = sibling;
+        sibling = old_parent->*right;
+        old_parent->*left = new_parent->*left;
+        old_parent->*right = new_parent->*right;
+        new_parent->*left = old_parent;
+        new_parent->*right = sibling;
       }
       else
       {
-        sibling = parent_ptrs.left;
-        parent_ptrs.left = child_ptrs.left;
-        parent_ptrs.right = child_ptrs.right;
-        child_ptrs.left = sibling;
-        child_ptrs.right = parent;
+        sibling = old_parent->*left;
+        old_parent->*left = new_parent->*left;
+        old_parent->*right = new_parent->*right;
+        new_parent->*left = sibling;
+        new_parent->*right = old_parent;
       }
-      child_ptrs.parent = parent_ptrs.parent;
-      parent_ptrs.parent = child;
+      new_parent->*parent = old_parent->*parent;
+      old_parent->*parent = new_parent;
 
       if (sibling != nullptr)
       {
-        (sibling->*ptrs).parent = child;
+        sibling->*parent = new_parent;
       }
 
-      fix_links_from_children(parent);
-      fix_link_from_parent(child, parent);
+      fix_links_from_children(old_parent);
+      fix_link_from_parent(new_parent, old_parent);
     }
 
     void fix_links_from_children(Node * node) noexcept
     {
-      auto & node_ptrs = node->*ptrs;
-      if (node_ptrs.left != nullptr)
+      if (node->*left != nullptr)
       {
-        (node_ptrs.left->*ptrs).parent = node;
+        node->*left->*parent = node;
       }
-      if (node_ptrs.right != nullptr)
+      if (node->*right != nullptr)
       {
-        (node_ptrs.right->*ptrs).parent = node;
+        node->*right->*parent = node;
       }
     }
 
     void fix_link_from_parent(Node * new_node, Node * old_node) noexcept
     {
-      if ((new_node->*ptrs).parent == nullptr)
+      Node * parent_parent = new_node->*parent;
+      if (parent_parent == nullptr)
       {
         min_node_ = new_node;
       }
+      else if (parent_parent->left == old_node)
+      {
+        parent_parent->left = new_node;
+      }
       else
       {
-        auto & new_parent_ptrs = (new_node->*ptrs).parent->*ptrs;
-        if (new_parent_ptrs.left == old_node)
-        {
-          new_parent_ptrs.left = new_node;
-        }
-        else
-        {
-          new_parent_ptrs.right = new_node;
-        }
+        parent_parent->right = new_node;
       }
     }
   };

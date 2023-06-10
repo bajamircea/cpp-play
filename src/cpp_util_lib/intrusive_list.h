@@ -4,7 +4,7 @@
 
 namespace cpp_util
 {
-  // Intrusive list container
+  // Intrusive list
   //
   // Note: useful to use by deleting a node based on a reference to that node
   // - intrusive
@@ -14,116 +14,13 @@ namespace cpp_util
   // - end iterator is nullptr
   // - header points to head and tail
   // - no dummy node
-  // - cached size
-  template<typename Node>
-  struct intrusive_list_ptrs
-  {
-    Node * next {nullptr};
-    Node * prev {nullptr};
-  };
-
-  template<typename Node, intrusive_list_ptrs<Node> Node::*ptrs>
+  template<typename Node, Node * Node::*next, Node * Node::*prev>
   class intrusive_list
   {
     Node * head_;
     Node * tail_;
-    std::size_t size_;
   public:
-    class const_iterator;
-
-    class iterator
-    {
-      Node * crt_; // nullptr for the end
-    public:
-      iterator() noexcept : crt_{ nullptr }
-      {
-      }
-
-      explicit iterator(Node * crt) noexcept : crt_{ crt }
-      {
-      }
-
-      Node & operator*()
-      {
-        return *crt_;
-      }
-
-      iterator & operator++()
-      {
-        crt_ = (crt_->*ptrs).next;
-        return *this;
-      }
-
-      friend bool operator==(const iterator & x, const iterator & y)
-      {
-        return x.crt_ == y.crt_;
-      }
-
-      friend bool operator!=(const iterator & x, const iterator & y)
-      {
-        return !(x == y);
-      }
-
-      friend class list;
-      friend class const_iterator;
-    };
-
-    class const_iterator
-    {
-      const Node * crt_; // nullptr for the end
-    public:
-      const_iterator() noexcept : crt_{ nullptr }
-      {
-      }
-
-      explicit const_iterator(const Node * crt) noexcept : crt_{ crt }
-      {
-      }
-
-      const Node & operator*()
-      {
-        return *crt_;
-      }
-
-      const_iterator & operator++()
-      {
-        crt_ = crt_->*ptrs.next;
-        return *this;
-      }
-
-      friend bool operator==(const const_iterator & x, const const_iterator & y)
-      {
-        return x.crt_ == y.crt_;
-      }
-
-      friend bool operator!=(const const_iterator & x, const const_iterator & y)
-      {
-        return !(x == y);
-      }
-
-      // mix and match comparisons
-      friend bool operator==(const iterator & x, const const_iterator & y)
-      {
-        return x.crt_ == y.crt_;
-      }
-
-      friend bool operator!=(const iterator & x, const const_iterator & y)
-      {
-        return !(x == y);
-      }
-
-      friend bool operator==(const const_iterator & x, const iterator & y)
-      {
-        return x.crt_ == y.crt_;
-      }
-
-      friend bool operator!=(const const_iterator & x, const iterator & y)
-      {
-        return !(x == y);
-      }
-    };
-
-    intrusive_list() noexcept : head_{ nullptr }, tail_{ nullptr }, size_{ 0 }
+    intrusive_list() noexcept : head_{ nullptr }, tail_{ nullptr }
     {
     }
 
@@ -133,21 +30,18 @@ namespace cpp_util
     intrusive_list(const intrusive_list &) = delete;
     intrusive_list & operator=(const intrusive_list &) = delete;
 
-    intrusive_list(intrusive_list && other) noexcept : head_{ other.head_ }, tail_{ other.tail_ }, size_{ other.size_ }
+    intrusive_list(intrusive_list && other) noexcept : head_{ other.head_ }, tail_{ other.tail_ }
     {
       other.head_ = nullptr;
       other.tail_ = nullptr;
-      other.size_ = 0;
     }
 
     intrusive_list & operator=(intrusive_list && other) noexcept
     {
       head_ = other.head_;
       tail_ = other.tail_;
-      size_ = other.size_;
       other.head_ = nullptr;
       other.tail_ = nullptr;
-      other.size_ = 0;
     }
 
     bool empty() const noexcept
@@ -155,79 +49,49 @@ namespace cpp_util
       return head_ == nullptr;
     }
 
-    size_t size() const noexcept
-    {
-      return size_;
-    }
-
-    iterator begin() noexcept
-    {
-      return iterator(head_);
-    }
-
-    const_iterator begin() const noexcept
-    {
-      return const_iterator(head_);
-    }
-
-    const_iterator cbegin() const noexcept
-    {
-      return const_iterator(head_);
-    }
-
-    iterator end() noexcept
-    {
-      return iterator();
-    }
-
-    const_iterator end() const noexcept
-    {
-      return const_iterator();
-    }
-
-    const_iterator cend() const noexcept
-    {
-      return const_iterator();
-    }
-
     void push_back(Node * what) noexcept
     {
-      (what->*ptrs).next = nullptr; // linear list, end is nullptr
-      (what->*ptrs).prev = tail_; // points to tail (could be nullptr)
+      what->*next = nullptr;
+      what->*prev = tail_;
       if (nullptr == tail_)
       {
         head_ = what;
-        tail_ = what;
       }
       else
       {
-        (tail_->*ptrs).next = what;
-        tail_ = what;
+        tail_->*next = what;
       }
-      ++size_;
+      tail_ = what;
     }
 
     void remove(Node * what) noexcept
     {
       if (what == head_)
       {
-        head_ = (what->*ptrs).next;
+        head_ = what->*next;
       }
       else
       {
-        ((what->*ptrs).prev->*ptrs).next = (what->*ptrs).next;
+        what->*prev->*next = what->*next;
       }
       if (what == tail_)
       {
-        tail_ = (what->*ptrs).prev;
+        tail_ = what->*prev;
       }
       else
       {
-        ((what->*ptrs).next->*ptrs).prev = (what->*ptrs).prev;
+        what->*next->*prev = what->*prev;
       }
-      (what->*ptrs).next = nullptr;
-      (what->*ptrs).prev = nullptr;
-      --size_;
+    }
+
+    Node * front() noexcept
+    {
+      return head_;
+    }
+
+    Node * back() noexcept
+    {
+      return tail_;
     }
   };
-};
+}

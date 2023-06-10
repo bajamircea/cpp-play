@@ -8,8 +8,10 @@ namespace
 {
   struct heap_node
   {
+    heap_node * parent;
+    heap_node * left;
+    heap_node * right;
     std::string key;
-    cpp_util::intrusive_heap_ptrs<heap_node> ptrs;
   };
 
   struct heap_node_compare
@@ -20,65 +22,119 @@ namespace
     }
   };
 
+  using heap = cpp_util::intrusive_heap<heap_node, &heap_node::parent, &heap_node::left, &heap_node::right, heap_node_compare>;
+
   TEST(intrusive_heap_simple)
   {
-    cpp_util::intrusive_heap<heap_node, &heap_node::ptrs, heap_node_compare> heap;
+    heap x;
 
-    heap_node foo_node{ "foo" };
-    heap_node bar_node{ "bar" };
-    heap_node buzz_node{ "buzz" };
-    heap_node wozz_node{ "wozz" };
+    ASSERT_TRUE(x.empty());
+    ASSERT_EQ(0, x.size());
+    ASSERT_EQ(nullptr, x.min_node());
 
-    ASSERT_TRUE(heap.empty());
-    ASSERT_EQ(0, heap.size());
-    ASSERT_EQ(nullptr, heap.min_node());
+    heap_node foo;
+    foo.key = "foo";
+    heap_node bar;
+    bar.key = "bar";
+    heap_node buzz;
+    buzz.key = "buzz";
+    heap_node wozz;
+    wozz.key = "wozz";
 
-    heap.insert(&foo_node);
+    x.insert(&foo);
 
-    ASSERT_FALSE(heap.empty());
-    ASSERT_EQ(1, heap.size());
-    ASSERT_EQ(&foo_node, heap.min_node());
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(1, x.size());
+    ASSERT_EQ(&foo, x.min_node());
+    ASSERT_EQ(nullptr, foo.parent);
+    ASSERT_EQ(nullptr, foo.left);
+    ASSERT_EQ(nullptr, foo.right);
 
-    heap.insert(&bar_node);
+    x.insert(&bar);
 
-    ASSERT_FALSE(heap.empty());
-    ASSERT_EQ(2, heap.size());
-    ASSERT_EQ(&bar_node, heap.min_node());
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(2, x.size());
+    ASSERT_EQ(&bar, x.min_node());
+    ASSERT_EQ(&bar, foo.parent);
+    ASSERT_EQ(nullptr, foo.left);
+    ASSERT_EQ(nullptr, foo.right);
+    ASSERT_EQ(nullptr, bar.parent);
+    ASSERT_EQ(&foo, bar.left);
+    ASSERT_EQ(nullptr, bar.right);
 
-    heap.insert(&buzz_node);
+    x.insert(&buzz);
 
-    ASSERT_FALSE(heap.empty());
-    ASSERT_EQ(3, heap.size());
-    ASSERT_EQ(&bar_node, heap.min_node());
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(3, x.size());
+    ASSERT_EQ(&bar, x.min_node());
+    ASSERT_EQ(&bar, foo.parent);
+    ASSERT_EQ(nullptr, foo.left);
+    ASSERT_EQ(nullptr, foo.right);
+    ASSERT_EQ(nullptr, bar.parent);
+    ASSERT_EQ(&foo, bar.left);
+    ASSERT_EQ(&buzz, bar.right);
+    ASSERT_EQ(&bar, buzz.parent);
+    ASSERT_EQ(nullptr, buzz.left);
+    ASSERT_EQ(nullptr, buzz.right);
 
-    heap.insert(&wozz_node);
+    x.insert(&wozz);
 
-    ASSERT_FALSE(heap.empty());
-    ASSERT_EQ(4, heap.size());
-    ASSERT_EQ(&bar_node, heap.min_node());
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(4, x.size());
+    ASSERT_EQ(&bar, x.min_node());
+    ASSERT_EQ(&bar, foo.parent);
+    ASSERT_EQ(&wozz, foo.left);
+    ASSERT_EQ(nullptr, foo.right);
+    ASSERT_EQ(nullptr, bar.parent);
+    ASSERT_EQ(&foo, bar.left);
+    ASSERT_EQ(&buzz, bar.right);
+    ASSERT_EQ(&bar, buzz.parent);
+    ASSERT_EQ(nullptr, buzz.left);
+    ASSERT_EQ(nullptr, buzz.right);
+    ASSERT_EQ(&foo, wozz.parent);
+    ASSERT_EQ(nullptr, wozz.left);
+    ASSERT_EQ(nullptr, wozz.right);
 
-    heap.pop_min();
+    x.pop_min();
 
-    ASSERT_FALSE(heap.empty());
-    ASSERT_EQ(3, heap.size());
-    ASSERT_EQ(&buzz_node, heap.min_node());
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(3, x.size());
+    ASSERT_EQ(&buzz, x.min_node());
+    ASSERT_EQ(&buzz, foo.parent);
+    ASSERT_EQ(nullptr, foo.left);
+    ASSERT_EQ(nullptr, foo.right);
+    ASSERT_EQ(nullptr, buzz.parent);
+    ASSERT_EQ(&foo, buzz.left);
+    ASSERT_EQ(&wozz, buzz.right);
+    ASSERT_EQ(&buzz, wozz.parent);
+    ASSERT_EQ(nullptr, wozz.left);
+    ASSERT_EQ(nullptr, wozz.right);
 
-    heap.pop_min();
+    x.pop_min();
 
-    ASSERT_FALSE(heap.empty());
-    ASSERT_EQ(2, heap.size());
-    ASSERT_EQ(&foo_node, heap.min_node());
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(2, x.size());
+    ASSERT_EQ(&foo, x.min_node());
+    ASSERT_EQ(nullptr, foo.parent);
+    ASSERT_EQ(&wozz, foo.left);
+    ASSERT_EQ(nullptr, foo.right);
+    ASSERT_EQ(&foo, wozz.parent);
+    ASSERT_EQ(nullptr, wozz.left);
+    ASSERT_EQ(nullptr, wozz.right);
 
-    heap.pop_min();
+    x.pop_min();
 
-    ASSERT_FALSE(heap.empty());
-    ASSERT_EQ(1, heap.size());
-    ASSERT_EQ(&wozz_node, heap.min_node());
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(1, x.size());
+    ASSERT_EQ(&wozz, x.min_node());
+    ASSERT_EQ(nullptr, wozz.parent);
+    ASSERT_EQ(nullptr, wozz.left);
+    ASSERT_EQ(nullptr, wozz.right);
 
-    heap.pop_min();
+    x.pop_min();
 
-    ASSERT_TRUE(heap.empty());
-    ASSERT_EQ(0, heap.size());
-    ASSERT_EQ(nullptr, heap.min_node());
+    ASSERT_TRUE(x.empty());
+    ASSERT_EQ(0, x.size());
+    ASSERT_EQ(nullptr, x.min_node());
   }
 } // anonymous namespace

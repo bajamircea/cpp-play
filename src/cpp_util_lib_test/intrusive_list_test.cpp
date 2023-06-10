@@ -6,112 +6,71 @@ namespace
 {
   struct list_node
   {
+    list_node * next;
+    list_node * prev;
     int value;
-    cpp_util::intrusive_list_ptrs<list_node> ptrs;
   };
 
-  using lst = cpp_util::intrusive_list<list_node, &list_node::ptrs>;
+  using list = cpp_util::intrusive_list<list_node, &list_node::next, &list_node::prev>;
 
-  TEST(empty_list)
+  TEST(intrusive_list_simple)
   {
-    lst x;
+    list x;
+
     ASSERT_TRUE(x.empty());
-    ASSERT_EQ(0, x.size());
 
-    int i{ 0 };
-    for ([[maybe_unused]]list_node & elem : x)
-    {
-      ++i;
-    }
-    ASSERT_EQ(0, i);
-  }
-
-  TEST(one_elem)
-  {
-    lst x;
-    list_node y;
-    y.value = 42;
-    ASSERT_EQ(nullptr, y.ptrs.next);
-    ASSERT_EQ(nullptr, y.ptrs.prev);
-
-    x.push_back(&y);
-    ASSERT_EQ(nullptr, y.ptrs.next);
-    ASSERT_EQ(nullptr, y.ptrs.prev);
-
+    list_node e0;
+    e0.value = 40;
+    x.push_back(&e0);
     ASSERT_FALSE(x.empty());
-    ASSERT_EQ(1, x.size());
+    ASSERT_EQ(&e0, x.front());
+    ASSERT_EQ(&e0, x.back());
+    ASSERT_EQ(nullptr, e0.next);
+    ASSERT_EQ(nullptr, e0.prev);
 
-    int i{ 0 };
-    for (list_node & elem : x)
-    {
-      ASSERT_EQ(42, elem.value);
-      ++i;
-    }
-    ASSERT_EQ(1, i);
-
-    x.remove(&y);
-    ASSERT_EQ(nullptr, y.ptrs.next);
-    ASSERT_EQ(nullptr, y.ptrs.prev);
-
-    ASSERT_TRUE(x.empty());
-    ASSERT_EQ(0, x.size());
-
-    i = 0;
-    for ([[maybe_unused]]list_node & elem : x)
-    {
-      ++i;
-    }
-    ASSERT_EQ(0, i);
-  }
-
-  TEST(two_elem)
-  {
-    lst x;
-    list_node y;
-    y.value = 42;
-    ASSERT_EQ(nullptr, y.ptrs.next);
-    ASSERT_EQ(nullptr, y.ptrs.prev);
-
-    list_node z;
-    z.value = 43;
-    ASSERT_EQ(nullptr, z.ptrs.next);
-    ASSERT_EQ(nullptr, z.ptrs.prev);
-
-    x.push_back(&y);
-    x.push_back(&z);
-
-    ASSERT_NE(nullptr, y.ptrs.next);
-    ASSERT_EQ(nullptr, y.ptrs.prev);
-    ASSERT_EQ(nullptr, z.ptrs.next);
-    ASSERT_NE(nullptr, z.ptrs.prev);
-
+    list_node e1;
+    e1.value = 41;
+    x.push_back(&e1);
     ASSERT_FALSE(x.empty());
-    ASSERT_EQ(2, x.size());
+    ASSERT_EQ(&e0, x.front());
+    ASSERT_EQ(&e1, x.back());
+    ASSERT_EQ(&e1, e0.next);
+    ASSERT_EQ(nullptr, e0.prev);
+    ASSERT_EQ(nullptr, e1.next);
+    ASSERT_EQ(&e0, e1.prev);
 
-    int i{ 0 };
-    for (list_node & elem : x)
-    {
-      ASSERT_EQ(42 + i, elem.value);
-      ++i;
-    }
-    ASSERT_EQ(2, i);
+    list_node e2;
+    e2.value = 42;
+    x.push_back(&e2);
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(&e0, x.front());
+    ASSERT_EQ(&e2, x.back());
+    ASSERT_EQ(&e1, e0.next);
+    ASSERT_EQ(nullptr, e0.prev);
+    ASSERT_EQ(&e2, e1.next);
+    ASSERT_EQ(&e0, e1.prev);
+    ASSERT_EQ(nullptr, e2.next);
+    ASSERT_EQ(&e1, e2.prev);
 
-    x.remove(&y);
-    ASSERT_EQ(nullptr, y.ptrs.next);
-    ASSERT_EQ(nullptr, y.ptrs.prev);
+    x.remove(&e1);
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(&e0, x.front());
+    ASSERT_EQ(&e2, x.back());
+    ASSERT_EQ(&e2, e0.next);
+    ASSERT_EQ(nullptr, e0.prev);
+    ASSERT_EQ(nullptr, e2.next);
+    ASSERT_EQ(&e0, e2.prev);
 
-    x.remove(&z);
-    ASSERT_EQ(nullptr, z.ptrs.next);
-    ASSERT_EQ(nullptr, z.ptrs.prev);
+    x.remove(&e0);
+    ASSERT_FALSE(x.empty());
+    ASSERT_EQ(&e2, x.front());
+    ASSERT_EQ(&e2, x.back());
+    ASSERT_EQ(nullptr, e2.next);
+    ASSERT_EQ(nullptr, e2.prev);
 
+    x.remove(&e2);
     ASSERT_TRUE(x.empty());
-    ASSERT_EQ(0, x.size());
-
-    i = 0;
-    for ([[maybe_unused]]list_node & elem : x)
-    {
-      ++i;
-    }
-    ASSERT_EQ(0, i);
+    ASSERT_EQ(nullptr, x.front());
+    ASSERT_EQ(nullptr, x.back());
   }
 }
