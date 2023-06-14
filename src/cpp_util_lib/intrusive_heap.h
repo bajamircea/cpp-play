@@ -69,13 +69,20 @@ namespace cpp_util
 
       Node * new_node_parent = min_node_;
 
-      // e.g.
-      // if the size_ is now 5 (0110)
-      // - bit_width is 3
-      // - mask needs to be for the bit at position 2 (i.e. 3 - 1)
-      //   size_ now is at least 2, bit_width also is at least 2,
-      //   so it's fine to decrement
-      // - we go right to find the new parent
+      // size_ now is at least 2
+      // e.g. given if the size_ is now 5 (0...0101 in binary)
+      // - the position of most significant 1 bit is
+      //   returned by bit_width (3 in the example case)
+      //   and indicates the depth/level of the new node
+      // - then the following bits indicate the route to the node
+      //   with a 0 indicating left and a 1 indicating right
+      // - we use a 1 bit mask against the size, in this case (0...0010),
+      //   i.e. a 1 shifted 1 position (i.e. 3 - 2, which we can do as
+      //   bit_width is at least 2)
+      // - we first stop short of the last bit (mask 0...0001) to reach
+      //   the parent (in this case we just do one left), then we use
+      //   this last bit to insert to left or right of parent (right in
+      //   this case)
       std::size_t mask = ((std::size_t)1 << (std::bit_width(size_) - 2));
       while (mask != 1)
       {
@@ -127,13 +134,7 @@ namespace cpp_util
 
       Node * last_node_parent = min_node_;
 
-      // e.g.
-      // if the size_ is now 5 (0110)
-      // - bit_width is 3
-      // - mask needs to be for the bit at position 2 (i.e. 3 - 1)
-      //   size_ now is at least 2, bit_width also is at least 2,
-      //   so it's fine to decrement
-      // - we go right to find the new parent
+      // see insert function comment about the mask
       std::size_t mask = ((std::size_t)1 << (std::bit_width(size_) - 2));
       while (mask != 1)
       {
