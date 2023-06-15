@@ -75,8 +75,9 @@ namespace cpp_util
       //   returned by bit_width (3 in the example case)
       //   and indicates the depth/level of the new node
       // - then the following bits indicate the route to the node
-      //   with a 0 indicating left and a 1 indicating right
-      // - we use a 1 bit mask against the size, in this case (0...0010),
+      //   with a 0 indicating left edge and a 1 indicating right edge
+      // - we use a 1 bit mask against the size to test those bits,
+      //   starting with a bit mask 0...0010 in binary for this example.
       //   i.e. a 1 shifted 1 position (i.e. 3 - 2, which we can do as
       //   bit_width is at least 2)
       // - we first stop short of the last bit (mask 0...0001) to reach
