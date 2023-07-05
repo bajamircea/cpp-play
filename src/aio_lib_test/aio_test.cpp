@@ -365,6 +365,6 @@ namespace
     io.run();
 
     std::vector<std::string> expected{"in foo", "start 3", "start 2", "start 1", "end 1", "end 2", "end 3"};
-    //ASSERT_EQ(expected, recorder);
+    ASSERT_EQ(expected, recorder);
   }
 } // anonymous namespace

@@ -34,14 +34,14 @@ namespace
   }
 
   template<std::random_access_iterator I, typename T = std::iterator_traits<I>::value_type>
-  I rank(I first, I last, const T & value)
+  ptrdiff_t rank(I first, I last, const T & value)
   {
     I it = lower_bound(first, last, value);
-    if ((it != last) && (value < *it))
+    if ((it == last) || (value < *it))
     {
-      return last;
+      return -1;
     }
-    return it;
+    return (it - first);
   }
 
   // p025
@@ -73,18 +73,18 @@ namespace
 
     auto fourty_two = lower_bound(std::begin(data), std::end(data), 42);
     ASSERT_EQ(42, *fourty_two);
-    ASSERT_EQ(fourty_two, rank(std::begin(data), std::end(data), 42));
+    ASSERT_EQ(1, rank(std::begin(data), std::end(data), 42));
     ASSERT_EQ(fourty_two, lower_bound(std::begin(data), std::end(data), 42));
 
     auto fourty_three = lower_bound(std::begin(data), std::end(data), 43);
     ASSERT_EQ(52, *fourty_three);
-    ASSERT_EQ(std::end(data), rank(std::begin(data), std::end(data), 43));
+    ASSERT_EQ(-1, rank(std::begin(data), std::end(data), 43));
     ASSERT_EQ(fourty_three, lower_bound(std::begin(data), std::end(data), 43));
 
 
     auto two_cents = lower_bound(std::begin(data), std::end(data), 200);
     ASSERT_EQ(std::end(data), two_cents);
-    ASSERT_EQ(std::end(data), rank(std::begin(data), std::end(data), 200));
+    ASSERT_EQ(-1, rank(std::begin(data), std::end(data), 200));
     ASSERT_EQ(two_cents, lower_bound(std::begin(data), std::end(data), 200));
   }
 } // anonymous namespace

@@ -4,9 +4,9 @@
 
 namespace cstdio::file
 {
-  file_raii open(const char * file_name, const char * mode)
+  file_handle open(const char * file_name, const char * mode)
   {
-    file_raii result{ std::fopen(file_name, mode) };
+    file_handle result{ std::fopen(file_name, mode) };
     if (!result.is_valid())
     {
       error::throw_errno("fopen");
@@ -38,7 +38,7 @@ namespace cstdio::file
     return (0 != std::feof(h));
   }
 
-  void close(file_raii & x)
+  void close(file_handle & x)
   {
     int result = std::fclose(x.release());
     if (result != 0)

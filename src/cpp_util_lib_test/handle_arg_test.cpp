@@ -2,7 +2,7 @@
 
 #include "../cpp_util_lib/handle_arg.h"
 
-#include "../cpp_util_lib/raii_with_invalid_value.h"
+#include "../cpp_util_lib/unique_handle.h"
 
 #include <vector>
 
@@ -10,23 +10,16 @@ namespace
 {
   std::vector<int> g_values_used;
 
-  namespace detail
+  struct test_handle_traits
   {
-    struct test_traits
-    {
-      using handle = int;
+    using handle_type = int;
+    static constexpr auto invalid_value() noexcept { return -1; }
+    static void close(handle_type) noexcept {}
+  };
 
-      static constexpr auto invalid_value = -1;
+  using test_handle = cpp_util::unique_handle<test_handle_traits>;
 
-      static void close_handle(handle) noexcept
-      {
-      }
-    };
-  }
-
-  using test_raii = cpp_util::raii_with_invalid_value<detail::test_traits>;
-
-  using test_arg = cpp_util::handle_arg<test_raii>;
+  using test_arg = cpp_util::handle_arg<test_handle>;
 
   void foo(test_arg x)
   {
@@ -38,7 +31,7 @@ namespace
     g_values_used.clear();
 
     {
-      test_raii x(0);
+      test_handle x(0);
       foo(x);
       foo(1);
     }
