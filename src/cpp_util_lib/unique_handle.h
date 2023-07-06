@@ -4,46 +4,7 @@
 
 namespace cpp_util
 {
-/*
-  Usage:
-  ======
-
-  struct file_handle_traits {
-    using handle_type = FILE *;
-    static constexpr auto invalid_value() noexcept { return nullptr; }
-    static void close_handle(handle_type h) noexcept {
-      static_cast<void>(std::fclose(h));
-    }
-  };
-  using file_handle = cpp_util::unique_handle<file_handle_traits>;
-  using file_arg = cpp_util::handle_arg<file_handle>;
-
-  struct windows_file_handle_traits {
-    using handle_type = HANDLE;
-    static auto invalid_value() noexcept { return INVALID_HANDLE_VALUE; }
-    static void close_handle(handle_type h) noexcept {
-      static_cast<void>(::CloseHandle(h));
-    }
-  };
-  using windows_file_handle = cpp_util::unique_handle<windows_file_handle_traits>;
-
-  struct window_dc_traits {
-    struct handle_type {
-      HWND hwnd;
-      HDC hdc;
-    };
-    static auto invalid_value() noexcept {
-      return handle_type{ nullptr, nullptr };
-    }
-    static constexpr auto is_valid(const handle_type & h) noexcept {
-      return h.hdc != nullptr;
-    }
-    static void close_handle(const handle_type & h) noexcept {
-      static_cast<void>(::ReleaseDC(h.hwnd, h.hdc));
-    }
-  };
-  using window_dc = cpp_util::unique_handle<window_dc_traits>;
-*/
+  // see unique_handle.md
 
   template<typename Traits>
   concept unique_handle_traits = requires(typename Traits::handle_type h)
