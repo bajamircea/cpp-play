@@ -11,7 +11,7 @@ namespace cstdio
   {
     using handle_type = FILE *;
     static constexpr auto invalid_value() noexcept { return nullptr; }
-    static void close(handle_type h) noexcept
+    static void close_handle(handle_type h) noexcept
     {
       static_cast<void>(std::fclose(h));
     }

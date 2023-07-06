@@ -7,12 +7,13 @@ namespace cpp_util
   // see unique_handle.md
 
   template<typename Traits>
-  concept unique_handle_traits = requires(typename Traits::handle_type h)
+  concept unique_handle_traits = requires(
+    typename Traits::handle_type h, const typename Traits::handle_type ch)
   {
     { Traits::invalid_value() } noexcept;
     { typename Traits::handle_type(Traits::invalid_value()) } noexcept;
     { h = Traits::invalid_value() } noexcept;
-    { Traits::close(h) } noexcept;
+    { Traits::close_handle(ch) } noexcept;
   };
 
   template<unique_handle_traits Traits>
@@ -115,7 +116,7 @@ namespace cpp_util
     {
       if (is_valid())
       {
-        Traits::close(h_);
+        Traits::close_handle(h_);
       }
     }
   };

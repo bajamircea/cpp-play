@@ -14,7 +14,7 @@ namespace
   {
     using handle_type = int;
     static constexpr auto invalid_value() noexcept { return -1; }
-    static void close(handle_type) noexcept {}
+    static void close_handle(handle_type) noexcept {}
   };
 
   using test_handle = cpp_util::unique_handle<test_handle_traits>;

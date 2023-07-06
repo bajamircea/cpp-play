@@ -12,7 +12,7 @@ namespace
   {
     using handle_type = int;
     static constexpr auto invalid_value() noexcept { return -1; }
-    static void close(handle_type h) noexcept
+    static void close_handle(handle_type h) noexcept
     {
       g_values_closed.push_back(h);
     }
@@ -112,7 +112,7 @@ namespace
   {
     using handle_type = void *;
     static auto invalid_value() noexcept { return reinterpret_cast<handle_type>(-1); }
-    static void close(handle_type) noexcept
+    static void close_handle(handle_type) noexcept
     {
       g_values_closed.push_back(42);
     }
@@ -134,7 +134,7 @@ namespace
   {
     using handle_type = bool;
     static constexpr auto invalid_value() noexcept { return false; }
-    static void close(handle_type h) noexcept
+    static void close_handle(handle_type h) noexcept
     {
       g_values_closed.push_back(43);
     }
