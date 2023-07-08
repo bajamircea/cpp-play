@@ -42,7 +42,7 @@
             "type": "shell",
             "command": "make",
             "args": [
-                "bin/debug/test/cpp_util_lib_test"
+                "bin/debug/test/sedgewick_lib_test"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
