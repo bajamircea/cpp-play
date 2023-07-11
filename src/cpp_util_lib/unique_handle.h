@@ -45,7 +45,9 @@ namespace cpp_util
     }
 
     template<typename Arg1, typename Arg2, typename ... Args>
-    unique_handle(Arg1 && arg1, Arg2 && arg2, Args && ... args) noexcept :
+      requires(std::is_nothrow_constructible_v<handle_type, Arg1, Arg2, Args...>)
+    unique_handle(Arg1 && arg1, Arg2 && arg2, Args && ... args) noexcept
+      :
       h_{ std::forward<Arg1>(arg1), std::forward<Arg2>(arg2), std::forward<Args>(args) ... }
     {
     }
@@ -92,7 +94,7 @@ namespace cpp_util
     {
       constexpr bool has_method_is_valid = requires(const handle_type h)
       {
-        { Traits::is_invalid(h) } noexcept -> std::convertible_to<bool>;
+        { Traits::is_valid(h) } noexcept -> std::convertible_to<bool>;
       };
 
       if constexpr (has_method_is_valid)

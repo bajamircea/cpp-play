@@ -68,8 +68,8 @@ namespace coro::st
         scope_node scope_node_;
 
       public:
-        template<typename ...Args>
-        promise_type(context & context, Args&& ...):
+        template<typename Arg>
+        promise_type(context & context, Arg&):
           context_{ context }
         {
         }
@@ -191,7 +191,7 @@ namespace coro::st
       }
     }
 
-    static spawn_task spawn_coro(context &, task<void> t)
+    spawn_task spawn_coro(task<void> t)
     {
       co_await std::move(t);
     }
@@ -199,7 +199,7 @@ namespace coro::st
   public:
     void spawn(task<void> && t)
     {
-      spawn_coro(*this, std::move(t));
+      spawn_coro(std::move(t));
     }
 
     sleep_await sleep(std::chrono::steady_clock::duration sleep_duration)

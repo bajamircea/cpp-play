@@ -30,7 +30,7 @@ namespace coro
       return false;
     }
 
-    std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> promise_coro) noexcept
+    auto await_suspend(std::coroutine_handle<Promise> promise_coro) noexcept
     {
       return promise_coro.promise().final_await_suspend();
     }
@@ -53,8 +53,6 @@ namespace coro
     task_promise() noexcept : continuation_coro_{}, result_{}
     {
     }
-    task_promise(const task_promise &) = delete;
-    task_promise& operator=(const task_promise &) = delete;
 
     task<T> get_return_object() noexcept;
 
@@ -108,8 +106,6 @@ namespace coro
     task_promise() noexcept : continuation_coro_{}, exception_{}
     {
     }
-    task_promise(const task_promise &) = delete;
-    task_promise& operator=(const task_promise &) = delete;
 
     task<void> get_return_object() noexcept;
 

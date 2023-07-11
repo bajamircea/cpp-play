@@ -5,4 +5,5 @@
     "files.associations": {
         "/usr/include/**": "cpp",
     },
+    "C_Cpp.errorSquiggles": "disabled",
 }

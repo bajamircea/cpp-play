@@ -136,7 +136,7 @@ using windows_any_handle = cpp_util::unique_handle<windows_any_handle_traits>;
 
 - Custom `handle_type` that has muliple values required for `close_handle`
 - Shows the option to use `const handle_type & h` for `is_valid` and `close_handle`
-- Also the constructor of `unique_handle` that accepts multiple arguments is
+- The constructor of `unique_handle` that accepts multiple arguments is
   useful in this scenario
 
 ```cpp
@@ -158,7 +158,7 @@ struct window_dc_handle_traits {
 using window_dc_handle = cpp_util::unique_handle<window_dc_handle_traits>;
 ```
 
-## Cleanup action to perform
+## Cleanup action
 
 - sometimes the `unique_handle` just ensures some cleanup gets done
 - shown here with a `bool` as the `handle_type`
@@ -226,6 +226,37 @@ revert_to_self_handle impersonate_anonymous()
 }
 ```
 
+# Cleanup action with data
+
+- Sometimes cleanup also requires some data: demonstrating a combination of 
+  data (`ULONG flags`) and `bool`.
+- The constructor of `unique_handle` that accepts multiple arguments is
+  useful in this scenario
+
+```cpp
+struct http_terminate_handle_traits {
+  struct handle_type {
+    ULONG flags;
+    bool enabled;
+  };
+  static constexpr auto invalid_value() noexcept { return handle_type{ 0, false }; }
+  static constexpr bool is_valid(const handle_type& h) noexcept { return h.enabled; }
+  static void close_handle(const handle_type& h) noexcept {
+    static_cast<void>(::HttpTerminate(h.flags, nullptr));
+  }
+};
+using http_terminate_handle = cpp_util::unique_handle<http_terminate_handle_traits>;
+
+// this design assumes there are several functions that return a `http_terminate_handle`
+// showing below one of them
+http_terminate_handle initialize_v2_server() {
+  const ULONG flags = HTTP_INITIALIZE_SERVER;
+  auto result = ::HttpInitialize(g_http_api_version_2, flags, nullptr);
+  throw_http_on_error(result, "HttpInitialize");
+  return http_terminate_handle(flags, true);
+}
+```
+
 # Wrap `std::coroutine_handle`
 
 - e.g. for use in a `task` that owns (and destroys) it
@@ -241,4 +272,54 @@ struct scoped_coroutine_handle_traits
 };
 template<typename Promise>
 using scoped_coroutine_handle = cpp_util::unique_handle<scoped_coroutine_handle_traits<Promise>>;
+```
+
+# Traits allow for options
+
+- `SC_HANDLE` is another example of a ambiguous usage in a C API: it could be a service, or it
+  could be a service manager (required to open a service)
+
+- one can design an API wrapper that accepts this ambiguity:
+```cpp
+struct service_handle_traits {
+  using handle_type = SC_HANDLE;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::CloseServiceHandle(h));
+  }
+};
+using service_handle = cpp_util::unique_handle<service_handle_traits>;
+
+service_handle open_service_manager(DWORD dwDesiredAccess);
+
+service_handle open_service(
+  const service_handle& service_manager_handle, const std::wstring & service_name, DWORD desired_access);
+```
+
+- or one can design an API wrapper that disambigutes between the usages.
+  NOTE: the traits approach creates different types for `service_manager_handle`
+  and `service_handle` even if the traits body is the same.
+```cpp
+struct service_manager_handle_traits {
+  using handle_type = SC_HANDLE;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::CloseServiceHandle(h));
+  }
+};
+using service_manager_handle = cpp_util::unique_handle<service_manager_handle_traits>;
+
+service_manager_handle open_service_manager(DWORD dwDesiredAccess);
+
+struct service_handle_traits {
+  using handle_type = SC_HANDLE;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::CloseServiceHandle(h));
+  }
+};
+using service_handle = cpp_util::unique_handle<service_handle_raii_traits>;
+
+service_handle open_service(
+  const service_manager_handle& service_manager_handle, const std::wstring & service_name, DWORD desired_access);
 ```

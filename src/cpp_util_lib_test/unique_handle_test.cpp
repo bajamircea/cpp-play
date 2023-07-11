@@ -182,4 +182,32 @@ namespace
     ASSERT_EQ((std::vector{44}), g_values_closed);
   }
 
+  struct test_bool_data_handle_traits
+  {
+    struct handle_type {
+      int data;
+      bool enabled;
+    };
+    static constexpr auto invalid_value() noexcept { return handle_type{0, false}; }
+    static bool is_valid(const handle_type& h) noexcept
+    {
+      return h.enabled;
+    }
+    static void close_handle(const handle_type& h) noexcept
+    {
+      g_values_closed.push_back(h.data);
+    }
+  };
+  using test_bool_data_handle = cpp_util::unique_handle<test_bool_data_handle_traits>;
+
+  TEST(unique_handle_bool_data)
+  {
+    g_values_closed.clear();
+
+    {
+      test_bool_data_handle x(45, true);
+    }
+
+    ASSERT_EQ((std::vector{45}), g_values_closed);
+  }
 } // anonymous namespace
