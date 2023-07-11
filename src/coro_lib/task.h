@@ -6,6 +6,7 @@
 #include <coroutine>
 #include <exception>
 #include <stdexcept>
+#include <type_traits>
 #include <variant>
 
 namespace coro
@@ -21,197 +22,183 @@ namespace coro
   template<typename Promise>
   using scoped_coroutine_handle = cpp_util::unique_handle<scoped_coroutine_handle_traits<Promise>>;
 
-  template<typename T>
-  class task
+  template<typename Promise>
+  struct task_promise_final_await
   {
-  public:
-    class promise_type {
-      friend task;
-      std::coroutine_handle<> parent_coro_;
-      std::variant<std::monostate, T, std::exception_ptr> data_;
-
-    public:
-      promise_type() noexcept : parent_coro_{}, data_{}
-      {
-      }
-      promise_type(const promise_type &) = delete;
-      promise_type& operator=(const promise_type &) = delete;
-
-      task get_return_object() noexcept
-      {
-        return task(std::coroutine_handle<promise_type>::from_promise(*this));
-      }
-
-      std::suspend_always initial_suspend() noexcept
-      {
-        return {};
-      }
-      
-      struct final_await
-      {
-        [[nodiscard]] constexpr bool await_ready() const noexcept
-        {
-          return false;
-        }
-
-        std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> task_coro) noexcept
-        {
-          return task_coro.promise().parent_coro_;
-        }
-
-        [[noreturn]] constexpr void await_resume() const noexcept
-        {
-          // unreachable()
-          std::terminate();
-        }
-      };
-
-      friend final_await;
-
-      final_await final_suspend() noexcept
-      {
-        return {};
-      }
-
-      template<typename U>
-      void return_value(U && x)
-      {
-        data_.template emplace<1>(std::forward<U>(x));
-      }
-
-      void unhandled_exception() noexcept
-      {
-        data_.template emplace<2>(std::current_exception());
-      }
-    };
-  private:
-    scoped_coroutine_handle<promise_type> scoped_coro_;
-
-    task(std::coroutine_handle<promise_type> task_coro) noexcept : scoped_coro_(task_coro)
-    {
-    }
-  public:
     [[nodiscard]] constexpr bool await_ready() const noexcept
     {
       return false;
     }
 
-    std::coroutine_handle<> await_suspend(std::coroutine_handle<> parent_coro) noexcept
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> promise_coro) noexcept
     {
-      assert(!promise().parent_coro_);
-      promise().parent_coro_ = parent_coro;
-      return scoped_coro_.get();
+      return promise_coro.promise().final_await_suspend();
     }
 
-    T await_resume()
+    [[noreturn]] constexpr void await_resume() const noexcept
     {
-      switch(promise().data_.index())
+      std::terminate();
+    }
+  };
+
+  template<typename T>
+  class task;
+
+  template<typename T>
+  struct task_promise
+  {
+    std::coroutine_handle<> continuation_coro_;
+    std::variant<std::monostate, T, std::exception_ptr> result_;
+
+    task_promise() noexcept : continuation_coro_{}, result_{}
+    {
+    }
+    task_promise(const task_promise &) = delete;
+    task_promise& operator=(const task_promise &) = delete;
+
+    task<T> get_return_object() noexcept;
+
+    std::suspend_always initial_suspend() noexcept
+    {
+      return {};
+    }
+
+    task_promise_final_await<task_promise> final_suspend() noexcept
+    {
+      return {};
+    }
+
+    std::coroutine_handle<> final_await_suspend() noexcept
+    {
+      return continuation_coro_;
+    }
+
+    template<typename U>
+      requires std::convertible_to<U, T>
+    void return_value(U && x) noexcept(std::is_nothrow_constructible_v<T, U>)
+    {
+      result_.template emplace<1>(std::forward<U>(x));
+    }
+
+    void unhandled_exception() noexcept
+    {
+      result_.template emplace<2>(std::current_exception());
+    }
+
+    T get_result()
+    {
+      switch(result_.index())
       {
         case 1:
-          return std::move(std::get<1>(promise().data_));
+          return std::move(std::get<1>(result_));
         case 2:
-          std::rethrow_exception(std::get<2>(promise().data_));
+          std::rethrow_exception(std::get<2>(result_));
         default:
-          throw std::logic_error("Missing return value from task coroutine");
+          std::terminate();
       }
-    }
-  private:
-    promise_type & promise() noexcept
-    {
-      return scoped_coro_.handle_reference().promise();
     }
   };
 
   template<>
-  class task<void>
+  struct task_promise<void>
   {
-  public:
-    class promise_type {
-      friend task;
-      std::coroutine_handle<> parent_coro_;
-      std::exception_ptr exception_;
+    std::coroutine_handle<> continuation_coro_;
+    std::exception_ptr exception_;
 
-    public:
-      promise_type() noexcept : parent_coro_{}, exception_{}
-      {
-      }
-      promise_type(const promise_type &) = delete;
-      promise_type& operator=(const promise_type &) = delete;
-
-      task get_return_object() noexcept
-      {
-        return task(std::coroutine_handle<promise_type>::from_promise(*this));
-      }
-
-      std::suspend_always initial_suspend() noexcept
-      {
-        return {};
-      }
-      
-      struct final_await
-      {
-        [[nodiscard]] constexpr bool await_ready() const noexcept
-        {
-          return false;
-        }
-
-        std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> task_coro) noexcept
-        {
-          return task_coro.promise().parent_coro_;
-        }
-
-        constexpr void await_resume() const noexcept
-        {
-          static_assert(true, "lazy final await_resume should not be called");
-        }
-      };
-
-      friend final_await;
-
-      final_await final_suspend() noexcept
-      {
-        return {};
-      }
-
-      void return_void()
-      {
-      }
-
-      void unhandled_exception() noexcept
-      {
-        exception_ = std::current_exception();
-      }
-    };
-  private:
-    scoped_coroutine_handle<promise_type> scoped_coro_;
-
-    task(std::coroutine_handle<promise_type> task_coro) noexcept : scoped_coro_(task_coro)
+    task_promise() noexcept : continuation_coro_{}, exception_{}
     {
     }
-  public:
+    task_promise(const task_promise &) = delete;
+    task_promise& operator=(const task_promise &) = delete;
+
+    task<void> get_return_object() noexcept;
+
+    std::suspend_always initial_suspend() noexcept
+    {
+      return {};
+    }
+
+    task_promise_final_await<task_promise> final_suspend() noexcept
+    {
+      return {};
+    }
+
+    std::coroutine_handle<> final_await_suspend() noexcept
+    {
+      return continuation_coro_;
+    }
+
+    void return_void() noexcept
+    {
+    }
+
+    void unhandled_exception() noexcept
+    {
+      exception_ = std::current_exception();
+    }
+
+    void get_result()
+    {
+      if (exception_)
+      {
+        std::rethrow_exception(exception_);
+      }
+    }
+  };
+
+  template<typename Task>
+  struct task_awaiter
+  {
+    std::coroutine_handle<typename Task::promise_type> task_coro;
+
     [[nodiscard]] constexpr bool await_ready() const noexcept
     {
       return false;
     }
 
-    std::coroutine_handle<> await_suspend(std::coroutine_handle<> parent_coro) noexcept
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<> continuation_coro) noexcept
     {
-      assert(!promise().parent_coro_);
-      promise().parent_coro_ = parent_coro;
-      return scoped_coro_.get();
+      assert(!task_coro.promise().continuation_coro_);
+      task_coro.promise().continuation_coro_ = continuation_coro;
+      return task_coro;
     }
 
-    void await_resume()
+    auto await_resume()
     {
-      if (promise().exception_)
-      {
-        std::rethrow_exception(promise().exception_);
-      }
-    }
-  private:
-    promise_type & promise() noexcept
-    {
-      return scoped_coro_.handle_reference().promise();
+      return task_coro.promise().get_result();
     }
   };
+
+  template<typename T>
+  class [[nodiscard]] task
+  {
+  public:
+    using result_type = T;
+    using promise_type = task_promise<T>;
+
+  private:
+    scoped_coroutine_handle<promise_type> task_coro_;
+
+    friend struct task_promise<T>;
+
+    task(std::coroutine_handle<promise_type> task_coro) noexcept : task_coro_(task_coro)
+    {
+    }
+  public:
+    auto operator co_await() &&
+    {
+      return task_awaiter<task>{task_coro_.get()};
+    }
+  };
+
+  template<typename T>
+  task<T> task_promise<T>::get_return_object() noexcept
+  {
+      return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)};
+  }
+
+  task<void> task_promise<void>::get_return_object() noexcept
+  {
+      return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)};
+  }
 }

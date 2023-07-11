@@ -14,12 +14,15 @@ namespace cpp_util
     { typename Traits::handle_type(Traits::invalid_value()) } noexcept;
     { h = Traits::invalid_value() } noexcept;
     { Traits::close_handle(ch) } noexcept;
+    { typename Traits::handle_type(std::move(h)) } noexcept;
+    { typename Traits::handle_type(ch) } noexcept;
   };
 
   template<unique_handle_traits Traits>
   class [[nodiscard]] unique_handle
   {
   public:
+    using traits_type = Traits;
     using handle_type = typename Traits::handle_type;
 
   private:
@@ -31,7 +34,12 @@ namespace cpp_util
     {
     }
 
-    explicit unique_handle(handle_type h) noexcept :
+    explicit unique_handle(const handle_type& h) noexcept :
+      h_{ h }
+    {
+    }
+
+    explicit unique_handle(handle_type&& h) noexcept :
       h_{ std::move(h) }
     {
     }
@@ -75,14 +83,15 @@ namespace cpp_util
       return &h_;
     }
 
-    handle_type & handle_reference() noexcept
+    handle_type & ref() noexcept
     {
       return h_;
     }
 
     bool is_valid() const noexcept
     {
-      constexpr bool has_method_is_valid = requires(handle_type h) {
+      constexpr bool has_method_is_valid = requires(const handle_type h)
+      {
         { Traits::is_invalid(h) } noexcept -> std::convertible_to<bool>;
       };
 

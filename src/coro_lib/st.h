@@ -193,7 +193,7 @@ namespace coro::st
 
     static spawn_task spawn_coro(context &, task<void> t)
     {
-      co_await t;
+      co_await std::move(t);
     }
 
   public:

@@ -19,6 +19,10 @@ namespace
   };
   using simple_test_handle = cpp_util::unique_handle<simple_test_handle_traits>;
 
+  static_assert(std::is_same_v<simple_test_handle::handle_type, int>);
+  static_assert(std::is_same_v<simple_test_handle::traits_type, simple_test_handle_traits>);
+  static_assert(-1 == simple_test_handle::traits_type::invalid_value());
+
   TEST(unique_handle_simple)
   {
     g_values_closed.clear();
@@ -134,7 +138,7 @@ namespace
   {
     using handle_type = bool;
     static constexpr auto invalid_value() noexcept { return false; }
-    static void close_handle(handle_type h) noexcept
+    static void close_handle(handle_type) noexcept
     {
       g_values_closed.push_back(43);
     }
@@ -150,6 +154,32 @@ namespace
     }
 
     ASSERT_EQ((std::vector{43}), g_values_closed);
+  }
+
+  enum class test_cleanup_action {
+    off,
+    on
+  };
+  struct test_enum_handle_traits
+  {
+    using handle_type = test_cleanup_action;
+    static constexpr auto invalid_value() noexcept { return test_cleanup_action::off; }
+    static void close_handle(handle_type) noexcept
+    {
+      g_values_closed.push_back(44);
+    }
+  };
+  using test_enum_handle = cpp_util::unique_handle<test_enum_handle_traits>;
+
+  TEST(unique_handle_enum)
+  {
+    g_values_closed.clear();
+
+    {
+      test_enum_handle x(test_cleanup_action::on);
+    }
+
+    ASSERT_EQ((std::vector{44}), g_values_closed);
   }
 
 } // anonymous namespace
