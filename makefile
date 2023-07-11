@@ -50,42 +50,6 @@ debug release :
 
 DEP_FILES :=
 
-# Rules for aio_lib_test
-
-aio_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/aio_lib_test/*.cpp)
-
-debug_aio_lib_test_OBJ_FILES := $(aio_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
-
-$(debug_aio_lib_test_OBJ_FILES) : $(INT_DIR)/debug/aio_lib_test/%.o : $(SRC_DIR)/aio_lib_test/%.cpp $(INT_DIR)/debug/aio_lib_test/%.d | $(INT_DIR)/debug/aio_lib_test
-	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
-
-$(BIN_DIR)/debug/test/aio_lib_test : $(debug_aio_lib_test_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
-	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
-
-$(INT_DIR)/debug/aio_lib_test/success.run : $(BIN_DIR)/debug/test/aio_lib_test | $(INT_DIR)/debug/aio_lib_test
-	$^
-	touch $@
-
-debug : $(INT_DIR)/debug/aio_lib_test/success.run
-
-DEP_FILES += $(debug_aio_lib_test_OBJ_FILES:.o=.d)
-
-release_aio_lib_test_OBJ_FILES := $(aio_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
-
-$(release_aio_lib_test_OBJ_FILES) : $(INT_DIR)/release/aio_lib_test/%.o : $(SRC_DIR)/aio_lib_test/%.cpp $(INT_DIR)/release/aio_lib_test/%.d | $(INT_DIR)/release/aio_lib_test
-	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
-
-$(BIN_DIR)/release/test/aio_lib_test : $(release_aio_lib_test_OBJ_FILES) $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release/test
-	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
-
-$(INT_DIR)/release/aio_lib_test/success.run : $(BIN_DIR)/release/test/aio_lib_test | $(INT_DIR)/release/aio_lib_test
-	$^
-	touch $@
-
-release : $(INT_DIR)/release/aio_lib_test/success.run
-
-DEP_FILES += $(release_aio_lib_test_OBJ_FILES:.o=.d)
-
 # Rules for clrs_lib_test
 
 clrs_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/clrs_lib_test/*.cpp)
@@ -121,6 +85,70 @@ $(INT_DIR)/release/clrs_lib_test/success.run : $(BIN_DIR)/release/test/clrs_lib_
 release : $(INT_DIR)/release/clrs_lib_test/success.run
 
 DEP_FILES += $(release_clrs_lib_test_OBJ_FILES:.o=.d)
+
+# Rules for coro_lib_perf
+
+coro_lib_perf_CPP_FILES := $(wildcard $(SRC_DIR)/coro_lib_perf/*.cpp)
+
+debug_coro_lib_perf_OBJ_FILES := $(coro_lib_perf_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_coro_lib_perf_OBJ_FILES) : $(INT_DIR)/debug/coro_lib_perf/%.o : $(SRC_DIR)/coro_lib_perf/%.cpp $(INT_DIR)/debug/coro_lib_perf/%.d | $(INT_DIR)/debug/coro_lib_perf
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/coro_lib_perf : $(debug_coro_lib_perf_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+debug : $(BIN_DIR)/debug/coro_lib_perf
+
+DEP_FILES += $(debug_coro_lib_perf_OBJ_FILES:.o=.d)
+
+release_coro_lib_perf_OBJ_FILES := $(coro_lib_perf_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_coro_lib_perf_OBJ_FILES) : $(INT_DIR)/release/coro_lib_perf/%.o : $(SRC_DIR)/coro_lib_perf/%.cpp $(INT_DIR)/release/coro_lib_perf/%.d | $(INT_DIR)/release/coro_lib_perf
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/release/coro_lib_perf : $(release_coro_lib_perf_OBJ_FILES) $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release
+	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
+
+release : $(BIN_DIR)/release/coro_lib_perf
+
+DEP_FILES += $(release_coro_lib_perf_OBJ_FILES:.o=.d)
+
+# Rules for coro_lib_test
+
+coro_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/coro_lib_test/*.cpp)
+
+debug_coro_lib_test_OBJ_FILES := $(coro_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_coro_lib_test_OBJ_FILES) : $(INT_DIR)/debug/coro_lib_test/%.o : $(SRC_DIR)/coro_lib_test/%.cpp $(INT_DIR)/debug/coro_lib_test/%.d | $(INT_DIR)/debug/coro_lib_test
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/test/coro_lib_test : $(debug_coro_lib_test_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+$(INT_DIR)/debug/coro_lib_test/success.run : $(BIN_DIR)/debug/test/coro_lib_test | $(INT_DIR)/debug/coro_lib_test
+	$^
+	touch $@
+
+debug : $(INT_DIR)/debug/coro_lib_test/success.run
+
+DEP_FILES += $(debug_coro_lib_test_OBJ_FILES:.o=.d)
+
+release_coro_lib_test_OBJ_FILES := $(coro_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
+
+$(release_coro_lib_test_OBJ_FILES) : $(INT_DIR)/release/coro_lib_test/%.o : $(SRC_DIR)/coro_lib_test/%.cpp $(INT_DIR)/release/coro_lib_test/%.d | $(INT_DIR)/release/coro_lib_test
+	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/release/test/coro_lib_test : $(release_coro_lib_test_OBJ_FILES) $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release/test
+	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
+
+$(INT_DIR)/release/coro_lib_test/success.run : $(BIN_DIR)/release/test/coro_lib_test | $(INT_DIR)/release/coro_lib_test
+	$^
+	touch $@
+
+release : $(INT_DIR)/release/coro_lib_test/success.run
+
+DEP_FILES += $(release_coro_lib_test_OBJ_FILES:.o=.d)
 
 # Rules for cpp_util_lib_test
 
@@ -447,10 +475,13 @@ $(BIN_DIR)/debug/test : | $(BIN_DIR)/debug
 $(INT_DIR)/debug : | $(INT_DIR)
 	mkdir $@
 
-$(INT_DIR)/debug/aio_lib_test : | $(INT_DIR)/debug
+$(INT_DIR)/debug/clrs_lib_test : | $(INT_DIR)/debug
 	mkdir $@
 
-$(INT_DIR)/debug/clrs_lib_test : | $(INT_DIR)/debug
+$(INT_DIR)/debug/coro_lib_perf : | $(INT_DIR)/debug
+	mkdir $@
+
+$(INT_DIR)/debug/coro_lib_test : | $(INT_DIR)/debug
 	mkdir $@
 
 $(INT_DIR)/debug/cpp_util_lib_test : | $(INT_DIR)/debug
@@ -492,10 +523,13 @@ $(BIN_DIR)/release/test : | $(BIN_DIR)/release
 $(INT_DIR)/release : | $(INT_DIR)
 	mkdir $@
 
-$(INT_DIR)/release/aio_lib_test : | $(INT_DIR)/release
+$(INT_DIR)/release/clrs_lib_test : | $(INT_DIR)/release
 	mkdir $@
 
-$(INT_DIR)/release/clrs_lib_test : | $(INT_DIR)/release
+$(INT_DIR)/release/coro_lib_perf : | $(INT_DIR)/release
+	mkdir $@
+
+$(INT_DIR)/release/coro_lib_test : | $(INT_DIR)/release
 	mkdir $@
 
 $(INT_DIR)/release/cpp_util_lib_test : | $(INT_DIR)/release

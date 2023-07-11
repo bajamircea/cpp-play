@@ -6,8 +6,9 @@ def write_makefile(out):
     configs = ["debug", "release"]
 
     projects = [
-        ("aio_lib_test", ["test_lib", "test_main_lib"]),
         ("clrs_lib_test", ["test_lib", "test_main_lib"]),
+        ("coro_lib_perf", ["test_lib", "test_main_lib"]),
+        ("coro_lib_test", ["test_lib", "test_main_lib"]),
         ("cpp_util_lib_test", ["test_lib", "test_main_lib"]),
         ("cstdio_lib", []),
         ("cstdio_lib_test", ["cstdio_lib", "test_lib", "test_main_lib"]),
