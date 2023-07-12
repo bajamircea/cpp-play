@@ -63,6 +63,8 @@ void usage()
 ## POSIX close
 
 - invalid value is not always 0 or `nullptr`
+- shows why choice of `close_handle`: there are all sort of `close` functions already,
+  less tricks required to ensure we call the right one
 
 ```cpp
 // e.g. in a posixlib namespace:
@@ -115,7 +117,8 @@ using file_handle = cpp_util::unique_handle<file_handle_traits>;
 
 - `is_valid` allows multiple "invalid" values
 - This approach is useful to avoid to disambiguate, if we're convinced that there are truly
-  multiple "invalid" values (e.g. that a C API that returns `NULL` will not return `INVALID_HANDLE_VALUE` as a valid handle)
+  multiple "invalid" values (e.g. that a C API that returns `NULL` will not return
+  `INVALID_HANDLE_VALUE` as a valid handle)
 
 ```cpp
 // e.g. also in a winlib namespace:
@@ -146,16 +149,24 @@ struct window_dc_handle_traits {
     HDC hdc;
   };
   static auto invalid_value() noexcept {
-    return handle_type{ nullptr, nullptr };
+    return handle_type{ NULL, NULL };
   }
   static constexpr auto is_valid(const handle_type & h) noexcept {
-    return h.hdc != nullptr;
+    return h.hdc != NULL;
   }
   static void close_handle(const handle_type & h) noexcept {
     static_cast<void>(::ReleaseDC(h.hwnd, h.hdc));
   }
 };
 using window_dc_handle = cpp_util::unique_handle<window_dc_handle_traits>;
+
+window_dc_handle get_dc(HWND hwnd) {
+  window_dc_handle return_value{hwnd, ::GetDC(hwnd)};
+  if (!return_value.is_valid()) {
+    throw std::runtime_error("GetDC failed");
+  }
+  return return_value;
+}
 ```
 
 ## Cleanup action
@@ -293,7 +304,7 @@ using service_handle = cpp_util::unique_handle<service_handle_traits>;
 service_handle open_service_manager(DWORD dwDesiredAccess);
 
 service_handle open_service(
-  const service_handle& service_manager_handle, const std::wstring & service_name, DWORD desired_access);
+  const service_handle& smgr, const std::wstring & service_name, DWORD desired_access);
 ```
 
 - or one can design an API wrapper that disambigutes between the usages.
@@ -321,5 +332,5 @@ struct service_handle_traits {
 using service_handle = cpp_util::unique_handle<service_handle_raii_traits>;
 
 service_handle open_service(
-  const service_manager_handle& service_manager_handle, const std::wstring & service_name, DWORD desired_access);
+  const service_manager_handle& smgr, const std::wstring & service_name, DWORD desired_access);
 ```
