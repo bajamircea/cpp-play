@@ -83,18 +83,18 @@ namespace coro::st
         {
           ready_node ready_node_;
 
-        [[nodiscard]] constexpr bool await_ready() const noexcept
-        {
-          return false;
-        }
+          [[nodiscard]] constexpr bool await_ready() const noexcept
+          {
+            return false;
+          }
 
           void await_suspend(std::coroutine_handle<promise_type> handle) noexcept
           {
             ready_node_.coroutine = handle;
             auto & promise = handle.promise();
             promise.scope_node_.coroutine = handle;
-            promise.context_.ready_.push(&ready_node_);
-            promise.context_.scope_.push_back(&promise.scope_node_);
+            promise.context_.ready_queue_.push(&ready_node_);
+            promise.context_.scope_list_.push_back(&promise.scope_node_);
           }
 
           constexpr void await_resume() const noexcept {}
@@ -112,11 +112,11 @@ namespace coro::st
             return false;
           }
 
-          bool await_suspend(std::coroutine_handle<promise_type> handle) noexcept
+          void await_suspend(std::coroutine_handle<promise_type> handle) noexcept
           {
             auto & promise = handle.promise();
-            promise.context_.scope_.remove(&promise.scope_node_);
-            return false;
+            promise.context_.scope_list_.remove(&promise.scope_node_);
+            handle.destroy();
           }
 
           constexpr void await_resume() const noexcept {}
@@ -127,11 +127,11 @@ namespace coro::st
           return {};
         }
 
-        void return_void() noexcept
+        constexpr void return_void() const noexcept
         {
         }
 
-        void unhandled_exception() noexcept
+        [[noreturn]] /*constexpr*/ void unhandled_exception() const noexcept
         {
           std::terminate();
         }
@@ -162,7 +162,7 @@ namespace coro::st
       void await_suspend(std::coroutine_handle<> handle) noexcept
       {
         node_.coroutine = handle;
-        context_.timers_.insert(&node_);
+        context_.timers_heap_.insert(&node_);
       }
 
       constexpr void await_resume() const noexcept
@@ -170,9 +170,9 @@ namespace coro::st
       }
     };
 
-    ready_queue ready_;
-    timer_heap timers_;
-    scope_list scope_;
+    ready_queue ready_queue_;
+    timer_heap timers_heap_;
+    scope_list scope_list_;
 
   public:
     context()
@@ -182,7 +182,7 @@ namespace coro::st
     context & operator=(const context &) = delete;
     ~context()
     {
-      scope_node * crt = scope_.back();
+      scope_node * crt = scope_list_.back();
       while (crt != nullptr)
       {
         scope_node * tmp = crt;
@@ -211,29 +211,29 @@ namespace coro::st
     {
       while (true)
       {
-        if (ready_.empty() && timers_.empty())
+        if (ready_queue_.empty() && timers_heap_.empty())
         {
           return;
         }
-        cpp_util::intrusive_queue local_ready = std::move(ready_);
+        cpp_util::intrusive_queue local_ready = std::move(ready_queue_);
         while(!local_ready.empty())
         {
           auto* ready_node = local_ready.pop();
           ready_node->coroutine.resume();
         }
-        while (timers_.min_node() != nullptr)
+        while (timers_heap_.min_node() != nullptr)
         {
           auto now = std::chrono::steady_clock::now();
-          auto* timer_node = timers_.min_node();
+          auto* timer_node = timers_heap_.min_node();
           if (timer_node->deadline > now)
           {
-            if (ready_.empty())
+            if (ready_queue_.empty())
             {
               std::this_thread::sleep_for(timer_node->deadline - now);
             }
             break;
           }
-          timers_.pop_min();
+          timers_heap_.pop_min();
           timer_node->coroutine.resume();
         }
       }
