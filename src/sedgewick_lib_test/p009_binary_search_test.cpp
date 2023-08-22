@@ -23,6 +23,7 @@ namespace
       I mid = first + half_length;
       if (*mid < value)
       {
+        first = mid;
         ++first;
       }
       else

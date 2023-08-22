@@ -141,6 +141,7 @@ using windows_any_handle = cpp_util::unique_handle<windows_any_handle_traits>;
 - Shows the option to use `const handle_type & h` for `is_valid` and `close_handle`
 - The constructor of `unique_handle` that accepts multiple arguments is
   useful in this scenario
+- `.ref()` might be useful to get a reference to these bigger `handle_type` structs.
 
 ```cpp
 struct window_dc_handle_traits {
@@ -274,7 +275,7 @@ http_terminate_handle initialize_v2_server() {
 
 ```cpp
 template<typename Promise>
-struct scoped_coroutine_handle_traits
+struct unique_coroutine_handle_traits
 {
   using handle_type = std::coroutine_handle<Promise>;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -282,7 +283,7 @@ struct scoped_coroutine_handle_traits
   static void close_handle(handle_type h) noexcept { h.destroy(); }
 };
 template<typename Promise>
-using scoped_coroutine_handle = cpp_util::unique_handle<scoped_coroutine_handle_traits<Promise>>;
+using unique_coroutine_handle = cpp_util::unique_handle<unique_coroutine_handle_traits<Promise>>;
 ```
 
 # Traits allow for options

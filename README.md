@@ -2,10 +2,26 @@
 
 This is a play area on an variety of C++ topics
 
+## Unique handle
+
+[The ultimate RAII helper for dealing with C handles](src/cpp_util_lib/unique_handle.md)
+
+## C++20 coroutine prodding
+
+[See src/coro_lib, src/coro_lib_test, src/coro_lib_perf](src/coro_lib/)
+
+## How vector works
+
+[Prodding the std::vector](src/how_vector_works/README.md)
+
+## Fibonacci
+
+[What would it mean to do Sean Parent's sub 1s Fibonacci calculation for 1 million?](src/fibonacci/README.md)
+
 ## Project structure
 
 - `build` - see `generate_makefile.py` which generates/overrides the makefile
-- `src` - the source folder underneath there folders which are are:
+- `src` - the source folder, underneath there folders which are are:
   - `xyz` - plain executable projects
   - `xyz_lib` - static libraries
   - `xyz_test` - unit tests
@@ -17,12 +33,3 @@ This is a play area on an variety of C++ topics
   - under `debug` and `release`
 - `int` - intermediate build folder for object files
 - `.vscode` - settings for building, debuging and indentation
-
-
-## How vector works
-
-[See more details](src/how_vector_works/README.md)
-
-## Fibonacci
-
-[See more details](src/fibonacci/README.md)

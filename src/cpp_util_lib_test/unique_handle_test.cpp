@@ -198,6 +198,8 @@ namespace
       g_values_closed.push_back(h.data);
     }
   };
+  // assert custom is_valid works
+  static_assert(cpp_util::unique_handle_custom_is_valid_traits<test_bool_data_handle_traits>);
   using test_bool_data_handle = cpp_util::unique_handle<test_bool_data_handle_traits>;
 
   TEST(unique_handle_bool_data)
