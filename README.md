@@ -16,7 +16,8 @@ This is a play area on an variety of C++ topics
 
 ## Fibonacci
 
-[What would it mean to do Sean Parent's sub 1s Fibonacci calculation for 1 million?](src/fibonacci/README.md)
+What would it mean to do Sean Parent's sub 1 second Fibonacci calculation
+for 1 million [from scratch?](src/fibonacci/README.md)
 
 ## Project structure
 
