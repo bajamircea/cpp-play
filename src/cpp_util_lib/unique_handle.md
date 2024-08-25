@@ -62,7 +62,7 @@ void usage()
 
 ## POSIX close
 
-- invalid value is not always 0 or `nullptr`
+- invalid value is not always `0` or `nullptr`
 - shows why choice of `close_handle`: there are all sort of `close` functions already,
   less tricks required to ensure we call the right one
 
@@ -116,6 +116,7 @@ using file_handle = cpp_util::unique_handle<file_handle_traits>;
 ## Windows any handle
 
 - `is_valid` allows multiple "invalid" values
+- uses `static_assert` to make sure the traits meet the more speciffic concept
 - This approach is useful to avoid to disambiguate, if we're convinced that there are truly
   multiple "invalid" values (e.g. that a C API that returns `NULL` will not return
   `INVALID_HANDLE_VALUE` as a valid handle)
@@ -132,6 +133,8 @@ struct windows_any_handle_traits {
     static_cast<void>(::CloseHandle(h));
   }
 };
+static_assert(cpp_util::unique_handle_custom_is_valid_traits<windows_any_handle_traits>);
+
 using windows_any_handle = cpp_util::unique_handle<windows_any_handle_traits>;
 ```
 
