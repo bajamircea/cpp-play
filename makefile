@@ -21,14 +21,14 @@ INT_DIR = int
 TMP_DIR = tmp
 
 # Compiler flags
-CXX = g++-10
+CXX = g++
 ## -MMD creates dependency list, but ignores system includes
 ## -MF specifies where to create the dependency file name
 ## -MP creates phony targets for headers (deals with deleted headers after
 ##  obj file has been compiled)
 ## -MT specifies the dependency target (path qualified obj file name)
 DEP_FLAGS = -MT $@ -MMD -MP -MF $(@:.o=.d)
-STD_FLAGS = --std=c++20 -pthread -fno-rtti -fcoroutines
+STD_FLAGS = --std=c++23 -fno-rtti -fcoroutines
 WARN_FLAGS = -Wall -Werror
 debug_FLAGS = -g
 release_FLAGS = -O3 -march=native
