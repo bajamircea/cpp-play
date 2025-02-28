@@ -14,56 +14,39 @@ namespace
     recorder.push_back(message);
   }
 
-  coro::task<int> buzz(coro::st::context & ctx, int i)
+  coro::co<void> bar(coro::st::context & ctx, int i)
   {
     record("start " + std::to_string(i));
     co_await ctx.sleep(std::chrono::seconds(0));
     record("end " + std::to_string(i));
-    co_return i;
   }
 
-  coro::task<void> bar(coro::st::context & ctx, int& result)
-  {
-    record("start bar");
-    for (int i = 0 ; i < 3 ; ++i)
-    {
-      result += co_await buzz(ctx, i);
-    }
-    record("end bar");
-  }
-
-  coro::task<void> foo(coro::st::context & ctx, int& result)
+  coro::co<void> foo(coro::st::context & ctx)
   {
     record("start foo");
-    ctx.spawn(bar(ctx, result));
+    for (int i = 0 ; i < 3 ; ++i)
+    {
+      co_await bar(ctx, i);
+    }
     record("end foo");
-    co_return;
   }
 
-  TEST(st_test)
+  TEST(st_test_timers)
   {
     recorder.clear();
 
     coro::st::context ctx;
 
-    int result = 0;
-    ctx.spawn(foo(ctx, result));
-
-    ASSERT_TRUE(recorder.empty());
-
-    ctx.run();
+    ctx.run(coro::deferred_co(foo, std::ref(ctx)));
 
     std::vector<std::string> expected{
-      "start foo", "end foo",
-      "start bar",
+      "start foo",
       "start 0", "end 0",
       "start 1", "end 1",
       "start 2", "end 2",
-      "end bar",
+      "end foo",
     };
 
-    std::variant<int, std::string> x;
-    ASSERT_EQ(3, result);
     ASSERT_EQ(expected, recorder);
   }
 } // anonymous namespace

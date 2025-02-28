@@ -8,21 +8,22 @@ namespace cpp_util
 {
   // Intrusive node based min heap
   //
+  // The node is a user defined struct which additionally has three pointers
+  // (for parent, left and right).
+  // A heap is parametrised with:
+  // - your node type
+  // - the pointers to parent, left, right
+  // - the comparison operation
+  //
   // e.g. to use for coroutine timers, where each suspended coroutine waiting
   // for the timer to expire declares a node (on the coroutine frame), and all
-  // theese nodes are chained in such a way that it's possible to perform (in
+  // these nodes are chained in such a way that it's possible to perform (in
   // acceptable time complexity and noexcept):
   // - insert a new node in O(lg(N)) (e.g. a new coroutine waiting for a timer)
   // - get the smallest node in O(1) (e.g. the next duration we need to wait for)
   // - pop the smallest node in O(lg(N)) (e.g. after its duration has elapsed)
   // - remove a node in O(lg(N)) (e.g. when the timer is cancelled)
-  //
-  // The node would have intrusive_heap_ptrs as a member.
-  // You would store intrusive_heap somewhere (e.g. in the io_service).
-  // You the heap access is parametrised with:
-  // - your node type
-  // - the pointers to parent, left, right
-  // - the comparison operation
+  // You would store the intrusive_heap somewhere (e.g. in the io_service).
 
   template<typename Node, Node * Node::*parent, Node * Node::*left, Node * Node::*right, typename Compare>
   class intrusive_heap

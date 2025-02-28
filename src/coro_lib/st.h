@@ -1,8 +1,10 @@
 #pragma once
 
-#include "../coro_lib/task.h"
+#include "co.h"
+#include "deferred_co.h"
+#include "promise_base.h"
+
 #include "../cpp_util_lib/intrusive_heap.h"
-#include "../cpp_util_lib/intrusive_list.h"
 #include "../cpp_util_lib/intrusive_queue.h"
 
 #include <chrono>
@@ -13,43 +15,31 @@ namespace coro::st
   struct ready_node
   {
     ready_node() noexcept = default;
-    ready_node(const ready_node &) = delete;
-    ready_node & operator=(const ready_node &) = delete;
+    ready_node(const ready_node&) = delete;
+    ready_node& operator=(const ready_node&) = delete;
 
-    ready_node * next;
+    ready_node* next;
     std::coroutine_handle<> coroutine;
   };
 
   using ready_queue = cpp_util::intrusive_queue<ready_node, &ready_node::next>;
 
-  struct scope_node
-  {
-    scope_node() noexcept = default;
-    scope_node(const scope_node &) = delete;
-    scope_node & operator=(const scope_node &) = delete;
-
-    scope_node * next;
-    scope_node * prev;
-    std::coroutine_handle<> coroutine;
-  };
-  using scope_list = cpp_util::intrusive_list<scope_node, &scope_node::next, &scope_node::prev>;
-
   struct timer_node
   {
     timer_node() noexcept = default;
-    timer_node(const timer_node &) = delete;
-    timer_node & operator=(const timer_node &) = delete;
+    timer_node(const timer_node&) = delete;
+    timer_node& operator=(const timer_node&) = delete;
 
-    timer_node * parent;
-    timer_node * left;
-    timer_node * right;
+    timer_node* parent;
+    timer_node* left;
+    timer_node* right;
     std::coroutine_handle<> coroutine;
     std::chrono::steady_clock::time_point deadline;
   };
 
   struct compare_timer_node_by_deadline
   {
-    bool operator()(const timer_node & left, const timer_node & right)
+    bool operator()(const timer_node& left, const timer_node& right) noexcept
     {
       return left.deadline < right.deadline;
     }
@@ -57,98 +47,68 @@ namespace coro::st
 
   using timer_heap = cpp_util::intrusive_heap<timer_node, &timer_node::parent, &timer_node::left, &timer_node::right, compare_timer_node_by_deadline>;
 
-  class context
+  template<typename T>
+  class [[nodiscard]] trampoline_co
   {
-    class spawn_task
+  public:
+    using co_return_type = T;
+
+    class promise_type : public promise_base<T>
     {
+      friend trampoline_co;
+
     public:
-      class promise_type
+      promise_type() noexcept = default;
+
+      promise_type(const promise_type&) = delete;
+      promise_type& operator=(const promise_type&) = delete;
+
+      trampoline_co get_return_object() noexcept
       {
-        context & context_;
-        scope_node scope_node_;
+        return trampoline_co{std::coroutine_handle<promise_type>::from_promise(*this)};
+      }
 
-      public:
-        template<typename Arg>
-        promise_type(context & context, Arg&):
-          context_{ context }
-        {
-        }
-
-        spawn_task get_return_object() noexcept
-        {
-          return spawn_task{};
-        }
-
-        struct initial_await
-        {
-          ready_node ready_node_;
-
-          [[nodiscard]] constexpr bool await_ready() const noexcept
-          {
-            return false;
-          }
-
-          void await_suspend(std::coroutine_handle<promise_type> handle) noexcept
-          {
-            ready_node_.coroutine = handle;
-            auto & promise = handle.promise();
-            promise.scope_node_.coroutine = handle;
-            promise.context_.ready_queue_.push(&ready_node_);
-            promise.context_.scope_list_.push_back(&promise.scope_node_);
-          }
-
-          constexpr void await_resume() const noexcept {}
-        };
-        
-        initial_await initial_suspend() noexcept
-        {
-          return {};
-        }
-
-        struct final_await
-        {
-          [[nodiscard]] constexpr bool await_ready() const noexcept
-          {
-            return false;
-          }
-
-          void await_suspend(std::coroutine_handle<promise_type> handle) noexcept
-          {
-            auto & promise = handle.promise();
-            promise.context_.scope_list_.remove(&promise.scope_node_);
-            handle.destroy();
-          }
-
-          constexpr void await_resume() const noexcept {}
-        };
-
-        final_await final_suspend() noexcept
-        {
-          return {};
-        }
-
-        constexpr void return_void() const noexcept
-        {
-        }
-
-        [[noreturn]] /*constexpr*/ void unhandled_exception() const noexcept
-        {
-          std::terminate();
-        }
-      };
-
-    private:
-      explicit spawn_task() noexcept
+      std::suspend_never initial_suspend() noexcept
       {
+        return {};
+      }
+
+      std::suspend_always final_suspend() noexcept
+      {
+        return {};
       }
     };
 
-    struct sleep_await
+  private:
+    scoped_coroutine_handle<promise_type> scoped_child_coro_;
+
+    trampoline_co(std::coroutine_handle<promise_type> child_coro) noexcept : scoped_child_coro_{ child_coro }
+    {
+    }
+
+  public:
+    trampoline_co(const trampoline_co&) = delete;
+    trampoline_co& operator=(const trampoline_co&) = delete;
+
+    bool done() const noexcept
+    {
+      return scoped_child_coro_.get().done();
+    }
+
+    T get_result()
+    {
+      return scoped_child_coro_.get().promise().get_result();
+    }
+  };
+
+  class context
+  {
+    struct sleep_awaiter
     {
       context & context_;
       timer_node node_;
 
-      sleep_await(context & context, std::chrono::steady_clock::time_point deadline) :
+      sleep_awaiter(context & context, std::chrono::steady_clock::time_point deadline) :
         context_{ context }
       {
         node_.deadline = deadline;
@@ -172,49 +132,32 @@ namespace coro::st
 
     ready_queue ready_queue_;
     timer_heap timers_heap_;
-    scope_list scope_list_;
 
   public:
-    context()
-    {
-    }
+    context() noexcept = default;
+
     context(const context &) = delete;
     context & operator=(const context &) = delete;
-    ~context()
-    {
-      scope_node * crt = scope_list_.back();
-      while (crt != nullptr)
-      {
-        scope_node * tmp = crt;
-        crt = crt->prev;
-        tmp->coroutine.destroy();
-      }
-    }
 
-    spawn_task spawn_coro(task<void> t)
+    template<typename DeferredCoFn>
+    trampoline_co<typename DeferredCoFn::co_return_type> trampoline(DeferredCoFn&& co_fn)
     {
-      co_await std::move(t);
+      co_return co_await co_fn();
     }
 
   public:
-    void spawn(task<void> && t)
+    sleep_awaiter sleep(std::chrono::steady_clock::duration sleep_duration)
     {
-      spawn_coro(std::move(t));
+      return sleep_awaiter(*this, std::chrono::steady_clock::now() + sleep_duration);
     }
 
-    sleep_await sleep(std::chrono::steady_clock::duration sleep_duration)
+    template<typename DeferredCoFn>
+    DeferredCoFn::co_return_type run(DeferredCoFn&& co_fn)
     {
-      return sleep_await(*this, std::chrono::steady_clock::now() + sleep_duration);
-    }
+      auto co = trampoline(std::forward<DeferredCoFn>(co_fn));
 
-    void run()
-    {
-      while (true)
+      while (!co.done())
       {
-        if (ready_queue_.empty() && timers_heap_.empty())
-        {
-          return;
-        }
         cpp_util::intrusive_queue local_ready = std::move(ready_queue_);
         while(!local_ready.empty())
         {
@@ -237,6 +180,8 @@ namespace coro::st
           timer_node->coroutine.resume();
         }
       }
+
+      return co.get_result();
     }
   };
 }
