@@ -29,7 +29,7 @@ namespace
   //   co_await std::move(x);
   // }
 
-  TEST(co_test_compiles)
+  TEST(co_compiles)
   {
     ASSERT_NE(nullptr, &buzz);
   }

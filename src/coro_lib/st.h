@@ -121,106 +121,54 @@ namespace coro::st
     template<typename DeferredCoFn>
     DeferredCoFn::co_return_type run(DeferredCoFn&& co_fn)
     {
-      auto co = trampoline(std::forward<DeferredCoFn>(co_fn));
+      auto root_co = trampoline(std::forward<DeferredCoFn>(co_fn));
 
-      while (!co.done())
+      while (!root_co.done())
       {
         do_work();
       }
 
-      return co.get_result();
+      return root_co.get_result();
+    }
+
+    void hazmat_push_ready_node(ready_node& node, std::coroutine_handle<> handle)
+    {
+      node.coroutine = handle;
+      ready_queue_.push(&node);
+    }
+
+    void hazmat_insert_timer_node(timer_node& node, std::coroutine_handle<> handle)
+    {
+      node.coroutine = handle;
+      timers_heap_.insert(&node);
     }
 
   private:
     void do_work() {
       cpp_util::intrusive_queue local_ready = std::move(ready_queue_);
-      while(!local_ready.empty())
+      while (!local_ready.empty())
       {
         auto* ready_node = local_ready.pop();
         ready_node->coroutine.resume();
       }
-      while (timers_heap_.min_node() != nullptr)
+      if (timers_heap_.min_node() != nullptr)
       {
         auto now = std::chrono::steady_clock::now();
-        auto* timer_node = timers_heap_.min_node();
-        if (timer_node->deadline > now)
+        do
         {
-          if (ready_queue_.empty())
+          auto* timer_node = timers_heap_.min_node();
+          if (timer_node->deadline > now)
           {
-            std::this_thread::sleep_for(timer_node->deadline - now);
+            if (ready_queue_.empty())
+            {
+              std::this_thread::sleep_for(timer_node->deadline - now);
+            }
+            break;
           }
-          break;
-        }
-        timers_heap_.pop_min();
-        timer_node->coroutine.resume();
+          timers_heap_.pop_min();
+          timer_node->coroutine.resume();
+        } while(timers_heap_.min_node() != nullptr);
       }
-    }
-
-  private:
-    struct ready_awaiter
-    {
-      context& context_;
-      ready_node node_;
-
-      ready_awaiter(context& context) :
-        context_{ context }
-      {
-      }
-
-      [[nodiscard]] constexpr bool await_ready() const noexcept
-      {
-        return false;
-      }
-
-      void await_suspend(std::coroutine_handle<> handle) noexcept
-      {
-        node_.coroutine = handle;
-        context_.ready_queue_.push(&node_);
-      }
-
-      constexpr void await_resume() const noexcept
-      {
-      }
-    };
-
-  public:
-    ready_awaiter doze()
-    {
-      return ready_awaiter(*this);
-    }
-
-  private:
-    struct sleep_awaiter
-    {
-      context& context_;
-      timer_node node_;
-
-      sleep_awaiter(context& context, std::chrono::steady_clock::time_point deadline) :
-        context_{ context }
-      {
-        node_.deadline = deadline;
-      }
-
-      [[nodiscard]] constexpr bool await_ready() const noexcept
-      {
-        return false;
-      }
-
-      void await_suspend(std::coroutine_handle<> handle) noexcept
-      {
-        node_.coroutine = handle;
-        context_.timers_heap_.insert(&node_);
-      }
-
-      constexpr void await_resume() const noexcept
-      {
-      }
-    };
-
-  public:
-    sleep_awaiter sleep(std::chrono::steady_clock::duration sleep_duration)
-    {
-      return sleep_awaiter(*this, std::chrono::steady_clock::now() + sleep_duration);
     }
   };
 }

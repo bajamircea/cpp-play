@@ -33,7 +33,7 @@ namespace
   //   co_await std::move(x);
   // }
 
-  TEST(deferred_co_test_compiles)
+  TEST(deferred_co_compiles)
   {
     ASSERT_NE(nullptr, &buzz);
   }
