@@ -3,6 +3,7 @@
 #include "../coro_lib/st.h"
 
 #include <string>
+#include <stdexcept>
 
 namespace
 {
@@ -24,5 +25,15 @@ namespace
     }));
 
     ASSERT_EQ(42, result);
+  }
+
+  TEST(st_exception)
+  {
+    coro::st::context ctx;
+
+    ASSERT_THROW_WHAT(ctx.run(coro::deferred_co([]() -> coro::co<void> {
+      throw std::runtime_error("Ups!");
+      co_return;
+    })), std::runtime_error, "Ups!");
   }
 } // anonymous namespace

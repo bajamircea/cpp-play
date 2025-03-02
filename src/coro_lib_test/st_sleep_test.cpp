@@ -18,6 +18,17 @@ namespace
     ASSERT_EQ(42, result);
   }
 
+  TEST(st_sleep_doze_exception)
+  {
+    coro::st::context ctx;
+
+    ASSERT_THROW_WHAT(ctx.run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<void> {
+      co_await coro::st::doze(ctx);
+      throw std::runtime_error("Ups!");
+      co_return;
+    }, std::ref(ctx))), std::runtime_error, "Ups!");
+  }
+
   TEST(st_sleep_sleep)
   {
     coro::st::context ctx;
@@ -28,6 +39,17 @@ namespace
     }, std::ref(ctx)));
 
     ASSERT_EQ(42, result);
+  }
+
+  TEST(st_sleep_sleep_exception)
+  {
+    coro::st::context ctx;
+
+    ASSERT_THROW_WHAT(ctx.run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<void> {
+      co_await coro::st::sleep(ctx, std::chrono::seconds(0));
+      throw std::runtime_error("Ups!");
+      co_return;
+    }, std::ref(ctx))), std::runtime_error, "Ups!");
   }
 
   coro::co<std::string> bar(coro::st::context & ctx, int i)
