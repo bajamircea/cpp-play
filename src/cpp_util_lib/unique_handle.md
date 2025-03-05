@@ -7,7 +7,7 @@ Shows simple/typical usage pattern for `unique_handle` and `handle_arg`
 ```cpp
 // e.g. in a cstdio namespace:
 struct file_handle_traits {
-  using handle_type = FILE *;
+  using handle_type = FILE*;
   static constexpr auto invalid_value() noexcept { return nullptr; }
   static void close_handle(handle_type h) noexcept {
     static_cast<void>(std::fclose(h));
@@ -19,7 +19,7 @@ using file_arg = cpp_util::handle_arg<file_handle>;
 // Construction API wrappers return a unique_handle to take care
 // of the resource. Shown with fopen here, but often there are
 // multiple such functions (e.g. wrapper for freopen)
-file_handle open(const char * file_name, const char * mode)
+file_handle open_file(const char* file_name, const char* mode)
 {
   file_handle result{ std::fopen(file_name, mode) };
   if (!result.is_valid())
@@ -32,7 +32,7 @@ file_handle open(const char * file_name, const char * mode)
 // Usage functions. The `handle_arg` is used to avoid overloads that
 // take the `unique_handle` or a raw `handle_type`. E.g. this allows usage
 // with a non-owned raw `handle_type` such as `stdout` or `stderr`
-void write(file_arg h, const char * buffer, size_t size)
+void write_file(file_arg h, const char * buffer, size_t size)
 {
   size_t write_count{ std::fwrite(buffer , 1, size, h) };
   if (write_count != size)
@@ -43,7 +43,7 @@ void write(file_arg h, const char * buffer, size_t size)
 
 // To handle errors in the closing function use the `close` idiom
 // that throws exceptions outside destructors. See usage below.
-void close(file_handle & x)
+void close_file(file_handle & x)
 {
   int result = std::fclose(x.release());
   if (result != 0)
@@ -54,28 +54,37 @@ void close(file_handle & x)
 
 void usage()
 {
-  auto file = open("foo", "wb");
-  write(file, "bar", 3);
-  close(file);
+  // Exception here does not return a RAII unique_handle
+  auto file = open_file("foo", "wb");
+
+  // Exception here will ensure fclose is called
+  write_file(file, "bar", 3);
+  write_file(file, "buzz", 4);
+
+  // To handle flush failures,
+  // take ownership of the handle and check result of fclose.
+  // RAII unique_handle destructor will no longer call fclose
+  close_file(file);
 }
 ```
 
 ## POSIX close
 
+- handle is not always a pointer
 - invalid value is not always `0` or `nullptr`
 - shows why choice of `close_handle`: there are all sort of `close` functions already,
   less tricks required to ensure we call the right one
 
 ```cpp
 // e.g. in a posixlib namespace:
-struct file_handle_traits {
+struct posix_file_handle_traits {
   using handle_type = int;
   static constexpr auto invalid_value() noexcept { return -1; }
   static void close_handle(handle_type h) noexcept {
     static_cast<void>(close(h));
   }
 };
-using file_handle = cpp_util::unique_handle<file_handle_traits>;
+using posix_file_handle = cpp_util::unique_handle<posix_file_handle_traits>;
 ```
 
 ## Windows typical handle
@@ -117,9 +126,11 @@ using file_handle = cpp_util::unique_handle<file_handle_traits>;
 
 - `is_valid` allows multiple "invalid" values
 - uses `static_assert` to make sure the traits meet the more speciffic concept
-- This approach is useful to avoid to disambiguate, if we're convinced that there are truly
+- This approach works if we're convinced that there are truly
   multiple "invalid" values (e.g. that a C API that returns `NULL` will not return
-  `INVALID_HANDLE_VALUE` as a valid handle)
+  `INVALID_HANDLE_VALUE` as a valid handle). E.g. useful to have a vector/array
+  of `HANDLE`s that are passed to `::WaitForMultipleObjects`, agnostic of the precise
+  invalid value.
 
 ```cpp
 // e.g. also in a winlib namespace:
@@ -155,10 +166,10 @@ struct window_dc_handle_traits {
   static auto invalid_value() noexcept {
     return handle_type{ NULL, NULL };
   }
-  static constexpr auto is_valid(const handle_type & h) noexcept {
+  static constexpr auto is_valid(const handle_type& h) noexcept {
     return h.hdc != NULL;
   }
-  static void close_handle(const handle_type & h) noexcept {
+  static void close_handle(const handle_type& h) noexcept {
     static_cast<void>(::ReleaseDC(h.hwnd, h.hdc));
   }
 };
@@ -241,6 +252,8 @@ revert_to_self_handle impersonate_anonymous()
 }
 ```
 
+The cleanup action can be cancelled using `reset()`.
+
 # Cleanup action with data
 
 - Sometimes cleanup also requires some data: demonstrating a combination of 
@@ -289,9 +302,56 @@ template<typename Promise>
 using unique_coroutine_handle = cpp_util::unique_handle<unique_coroutine_handle_traits<Promise>>;
 ```
 
-# Traits allow for options
+# Templated example
 
-- `SC_HANDLE` is another example of a ambiguous usage in a C API: it could be a service, or it
+- Shows usage where a templated version is used for `::WTSFreeMemory`.
+  Similar cases exist for `LocalFree`, `CoTaskMemFree`.
+- It also shows a case where the `handle_pointer()` method is used
+  for API that takes a pointer to the handle, albeit a complex one
+  where a `reinterpret_cast` is also used. For a simpler case see
+  `RegOpenKeyExW`.
+
+```cpp
+template<typename T>
+struct wts_free_memory_raii_traits {
+  using handle_type = T;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept { ::WTSFreeMemory(h); }
+};
+template<typename T>
+using wts_free_memory_raii = cpp_util::unique_handle<wts_free_memory_raii_traits<T>>;
+
+template<typename T>
+wts_free_memory_raii<T> query_session_information(DWORD sessionId, WTS_INFO_CLASS wtsInfoClass)
+{
+  wts_free_memory_raii<T> return_value;
+  DWORD bytesReturned = 0;
+  BOOL result = ::WTSQuerySessionInformationW(
+    WTS_CURRENT_SERVER_HANDLE, sessionId, wtsInfoClass,
+    reinterpret_cast<LPWSTR>(return_value.handle_pointer()),
+    &bytesReturned);
+  error::throw_if_false_getlasterror(result, "WTSQuerySessionInformation");
+
+  return return_value;
+}
+
+void usage()
+{
+  // ...
+  std::wstring wts_user_name = query_session_information<WCHAR*>(session_id, WTSUserName).get();
+
+  connect_state state = to_connect_state(*query_session_information<WTS_CONNECTSTATE_CLASS*>(session_id, WTSConnectState).get());
+  // ...
+}
+```
+
+# Why traits instead of taking template parameters
+
+1. allows the case where the invalid value is a `reinterpret_cast`
+
+2. allows options for disambiguation, see choices for `SC_HANDLE` below
+
+- `SC_HANDLE` is one of the many examples of a ambiguous usage in a C API: it could be a service, or it
   could be a service manager (required to open a service)
 
 - one can design an API wrapper that accepts this ambiguity:
@@ -338,3 +398,21 @@ using service_handle = cpp_util::unique_handle<service_handle_raii_traits>;
 service_handle open_service(
   const service_manager_handle& smgr, const std::wstring & service_name, DWORD desired_access);
 ```
+
+3. Makes this disambiguation controlled by the C++ code as shown for `SC_HANDLE` when compared with an implementation where the three elements (handle type, invalid value and function to close handle) are taken as template arguments.
+
+Q: are type1 and type2 different types?
+```cpp
+using type1 = some_other_raii_handle<void*, nullptr, LocalMemFree>;
+using type2 = some_other_raii_handle<PSECURITY_DESCRIPTOR, NULL, LocalMemFree>;
+```
+
+A: Don't know, it depends on what `PSECURITY_DESCRIPTOR` and `NULL` are.
+
+C handles are opaque. `PSECURITY_DESCRIPTOR` could be:
+- a pointer to a `struct` called `SECURITY_DESCRIPTOR`
+- a `void*`
+- an integer
+- a pointer sized integral type
+- a struct containing a pointer sized member
+- something else, none of the above
