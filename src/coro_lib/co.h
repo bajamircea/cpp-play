@@ -1,10 +1,11 @@
 #pragma once
 
-#include "scoped_coroutine_handle.h"
+#include "unique_coroutine_handle.h"
 #include "promise_base.h"
 
 #include <cassert>
 #include <coroutine>
+#include <utility>
 
 namespace coro
 {
@@ -62,18 +63,39 @@ namespace coro
     };
 
   private:
-    scoped_coroutine_handle<promise_type> scoped_child_coro_;
+    unique_coroutine_handle<promise_type> unique_child_coro_;
 
-    co(std::coroutine_handle<promise_type> child_coro) noexcept : scoped_child_coro_{ child_coro }
+    co(std::coroutine_handle<promise_type> child_coro) noexcept : unique_child_coro_{ child_coro }
     {
     }
 
     co(const co&) = delete;
     co& operator=(const co&) = delete;
 
-    struct co_awaiter
+    auto await_suspend_impl(std::coroutine_handle<> parent_coro) noexcept
     {
-      std::coroutine_handle<promise_type> child_coro_;
+      std::coroutine_handle<promise_type> child_coro = unique_child_coro_.get();
+      assert(!child_coro.promise().parent_coro_);
+      child_coro.promise().parent_coro_ = parent_coro;
+      return child_coro;
+    }
+
+      T await_resume_impl()
+      {
+        return unique_child_coro_.get().promise().get_result();
+      }
+
+    class [[nodiscard]] awaiter
+    {
+      co& impl_;
+
+    public:
+      awaiter(co& impl) noexcept : impl_{ impl }
+      {
+      }
+
+      awaiter(const awaiter&) = delete;
+      awaiter& operator=(const awaiter&) = delete;
 
       [[nodiscard]] constexpr bool await_ready() const noexcept
       {
@@ -82,21 +104,20 @@ namespace coro
 
       auto await_suspend(std::coroutine_handle<> parent_coro) noexcept
       {
-        assert(!child_coro_.promise().parent_coro_);
-        child_coro_.promise().parent_coro_ = parent_coro;
-        return child_coro_;
+        return impl_.await_suspend_impl(parent_coro);
       }
 
       T await_resume()
       {
-        return child_coro_.promise().get_result();
+        return impl_.await_resume_impl();
       }
     };
 
-  public:
-    friend co_awaiter operator co_await(co x)
+    friend awaiter;
+
+    [[nodiscard]] friend awaiter operator co_await(co x) noexcept
     {
-      return co_awaiter{ x.scoped_child_coro_.get() };
+      return { x };
     }
   };
 }

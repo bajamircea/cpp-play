@@ -29,6 +29,18 @@ namespace
     }, std::ref(ctx))), std::runtime_error, "Ups!");
   }
 
+  // coro::co<void> async_defer_does_not_compile(coro::st::context & ctx)
+  // {
+  //   auto x = coro::st::async_defer(ctx);
+  //   co_await std::move(x);
+  // }
+
+  // coro::co<void> async_defer_does_not_compile2(coro::st::context & ctx)
+  // {
+  //   coro::st::async_defer(ctx);
+  //   co_return;
+  // }
+
   TEST(st_sleep_sleep)
   {
     coro::st::context ctx;
@@ -51,6 +63,18 @@ namespace
       co_return;
     }, std::ref(ctx))), std::runtime_error, "Ups!");
   }
+
+  // coro::co<void> async_sleep_does_not_compile(coro::st::context & ctx)
+  // {
+  //   auto x = coro::st::async_sleep(ctx, std::chrono::seconds(0));
+  //   co_await std::move(x);
+  // }
+
+  // coro::co<void> async_sleep_does_not_compile2(coro::st::context & ctx)
+  // {
+  //   coro::st::async_sleep(ctx, std::chrono::seconds(0));
+  //   co_return;
+  // }
 
   coro::co<std::string> async_bar(coro::st::context & ctx, int i)
   {

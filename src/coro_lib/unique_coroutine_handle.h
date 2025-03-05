@@ -7,7 +7,7 @@
 namespace coro
 {
   template<typename Promise>
-  struct scoped_coroutine_handle_traits
+  struct unique_coroutine_handle_traits
   {
     using handle_type = std::coroutine_handle<Promise>;
     static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -15,5 +15,5 @@ namespace coro
     static void close_handle(handle_type h) noexcept { h.destroy(); }
   };
   template<typename Promise>
-  using scoped_coroutine_handle = cpp_util::unique_handle<scoped_coroutine_handle_traits<Promise>>;
+  using unique_coroutine_handle = cpp_util::unique_handle<unique_coroutine_handle_traits<Promise>>;
 }

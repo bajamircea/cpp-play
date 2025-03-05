@@ -15,6 +15,7 @@ namespace coro::st
   struct ready_node
   {
     ready_node() noexcept = default;
+
     ready_node(const ready_node&) = delete;
     ready_node& operator=(const ready_node&) = delete;
 
@@ -27,6 +28,7 @@ namespace coro::st
   struct timer_node
   {
     timer_node() noexcept = default;
+
     timer_node(const timer_node&) = delete;
     timer_node& operator=(const timer_node&) = delete;
 
@@ -80,9 +82,9 @@ namespace coro::st
     };
 
   private:
-    scoped_coroutine_handle<promise_type> scoped_child_coro_;
+    unique_coroutine_handle<promise_type> unique_child_coro_;
 
-    trampoline_co(std::coroutine_handle<promise_type> child_coro) noexcept : scoped_child_coro_{ child_coro }
+    trampoline_co(std::coroutine_handle<promise_type> child_coro) noexcept : unique_child_coro_{ child_coro }
     {
     }
 
@@ -92,12 +94,12 @@ namespace coro::st
 
     bool done() const noexcept
     {
-      return scoped_child_coro_.get().done();
+      return unique_child_coro_.get().done();
     }
 
     T get_result()
     {
-      return scoped_child_coro_.get().promise().get_result();
+      return unique_child_coro_.get().promise().get_result();
     }
   };
 

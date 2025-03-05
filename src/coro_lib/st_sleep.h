@@ -7,37 +7,67 @@
 
 namespace coro::st
 {
-  struct defer_awaiter
+  class [[nodiscard]] defer_awaiter
   {
     context& ctx_;
     ready_node node_;
-
+    
+  public:
     defer_awaiter(context& ctx) noexcept :
       ctx_{ ctx }
     {
     }
 
-    [[nodiscard]] constexpr bool await_ready() const noexcept
-    {
-      return false;
-    }
+    defer_awaiter(const defer_awaiter&) = delete;
+    defer_awaiter& operator=(const defer_awaiter&) = delete;
 
-    void await_suspend(std::coroutine_handle<> handle) noexcept
+  private:
+    void await_suspend_impl(std::coroutine_handle<> handle) noexcept
     {
       ctx_.hazmat_push_ready_node(node_, handle);
     }
 
-    constexpr void await_resume() const noexcept
+    class [[nodiscard]] awaiter
     {
+      defer_awaiter& impl_;
+
+    public:
+      awaiter(defer_awaiter& impl) noexcept : impl_{ impl }
+      {
+      }
+
+      awaiter(const awaiter&) = delete;
+      awaiter& operator=(const awaiter&) = delete;
+
+      [[nodiscard]] constexpr bool await_ready() const noexcept
+      {
+        return false;
+      }
+
+      void await_suspend(std::coroutine_handle<> handle) noexcept
+      {
+        return impl_.await_suspend_impl(handle);
+      }
+
+      constexpr void await_resume() const noexcept
+      {
+      }
+    };
+
+    friend awaiter;
+
+    [[nodiscard]] friend awaiter operator co_await(defer_awaiter x) noexcept
+    {
+      return { x };
     }
   };
 
-  defer_awaiter async_defer(context& ctx) noexcept
+  [[nodiscard]] defer_awaiter async_defer(context& ctx) noexcept
   {
-    return defer_awaiter(ctx);
+    return defer_awaiter{ ctx };
   }
 
-  class sleep_awaiter
+  class [[nodiscard]] sleep_awaiter
   {
     context& ctx_;
     timer_node node_;
@@ -58,10 +88,17 @@ namespace coro::st
       ctx_.hazmat_insert_timer_node(node_, handle);
     }
 
-  private:
-    struct awaiter
+    class [[nodiscard]] awaiter
     {
-      sleep_awaiter& impl;
+      sleep_awaiter& impl_;
+
+    public:
+      awaiter(sleep_awaiter& impl) noexcept : impl_{ impl }
+      {
+      }
+
+      awaiter(const awaiter&) = delete;
+      awaiter& operator=(const awaiter&) = delete;
 
       [[nodiscard]] constexpr bool await_ready() const noexcept
       {
@@ -70,7 +107,7 @@ namespace coro::st
 
       void await_suspend(std::coroutine_handle<> handle) noexcept
       {
-        return impl.await_suspend_impl(handle);
+        return impl_.await_suspend_impl(handle);
       }
 
       constexpr void await_resume() const noexcept
@@ -80,14 +117,14 @@ namespace coro::st
 
     friend awaiter;
 
-    friend awaiter operator co_await(sleep_awaiter x)
+    [[nodiscard]] friend awaiter operator co_await(sleep_awaiter x) noexcept
     {
-      return awaiter{ x };
+      return { x };
     }
   };
 
   [[nodiscard]] sleep_awaiter async_sleep(context& ctx, std::chrono::steady_clock::duration sleep_duration) noexcept
   {
-    return sleep_awaiter(ctx, std::chrono::steady_clock::now() + sleep_duration);
+    return { ctx, std::chrono::steady_clock::now() + sleep_duration };
   }
 }
