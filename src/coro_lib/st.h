@@ -131,13 +131,13 @@ namespace coro::st
       return root_co.get_result();
     }
 
-    void hazmat_push_ready_node(ready_node& node, std::coroutine_handle<> handle)
+    void hazmat_push_ready_node(ready_node& node, std::coroutine_handle<> handle) noexcept
     {
       node.coroutine = handle;
       ready_queue_.push(&node);
     }
 
-    void hazmat_insert_timer_node(timer_node& node, std::coroutine_handle<> handle)
+    void hazmat_insert_timer_node(timer_node& node, std::coroutine_handle<> handle) noexcept
     {
       node.coroutine = handle;
       timers_heap_.insert(&node);

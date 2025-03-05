@@ -6,31 +6,37 @@
 
 namespace
 {
-  coro::co<void> foo()
+  coro::co<void> async_foo()
   {
     co_return;
   }
 
-  coro::co<std::string> bar()
+  coro::co<std::string> async_bar()
   {
     co_return "abc";
   }
 
-  coro::co<std::string> buzz()
+  coro::co<std::string> async_buzz()
   {
-    co_await foo();
-    auto x = co_await bar();
+    co_await async_foo();
+    auto x = co_await async_bar();
     co_return x;
   }
 
-  // coro::co<void> does_not_compile()
+  // coro::co<void> async_does_not_compile()
   // {
-  //   auto x = foo();
+  //   auto x = async_foo();
   //   co_await std::move(x);
+  // }
+
+  // coro::co<void> async_does_not_compile2()
+  // {
+  //   async_foo();
+  //   co_return;
   // }
 
   TEST(co_compiles)
   {
-    ASSERT_NE(nullptr, &buzz);
+    ASSERT_NE(nullptr, &async_buzz);
   }
 } // anonymous namespace
