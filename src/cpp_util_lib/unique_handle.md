@@ -89,7 +89,7 @@ using posix_file_handle = cpp_util::unique_handle<posix_file_handle_traits>;
 
 ## Windows typical handle
 
-- the `handle_type` is opaque, unlike the previous example where it's a `FILE *`.
+- in Windows `HANDLE` is opaque (that is it can be one of many things and the definition of what it is may change over time), unlike the previous example where it's a `FILE *` (i.e. a pointer to a defined C `struct`).
 
 ```cpp
 // e.g. in a winlib namespace:
@@ -105,6 +105,7 @@ using basic_handle = cpp_util::unique_handle<basic_handle_traits>;
 
 ## Windows file handle uses INVALID_HANDLE_VALUE
 
+- A file handle in Windows is also a `HANDLE`, but it's invalid value is `INVALID_HANDLE_VALUE`
 - `INVALID_HANDLE_VALUE` uses `reinterpret_cast`, so `invalid_handle` is not `constexpr`.
 - Often the underlying `handle_type` is reused by the underlying C API with different meanings.
   The traits approach creates different types to disambiguate betweeen those meanings when
@@ -151,10 +152,10 @@ using windows_any_handle = cpp_util::unique_handle<windows_any_handle_traits>;
 
 ## Windows device context associated to (GUI) window
 
-- Custom `handle_type` that has muliple values required for `close_handle`
+- Custom `handle_type` that has muliple values required for `close_handle`. Note however that, although not unheard of, this is much rarer case in using C APIs, most functions only need a single value.
 - Shows the option to use `const handle_type & h` for `is_valid` and `close_handle`
 - The constructor of `unique_handle` that accepts multiple arguments is
-  useful in this scenario
+  useful in this scenario.
 - `.ref()` might be useful to get a reference to these bigger `handle_type` structs.
 
 ```cpp
@@ -252,7 +253,8 @@ revert_to_self_handle impersonate_anonymous()
 }
 ```
 
-The cleanup action can be cancelled using `reset()`.
+The cleanup action can be cancelled early using `reset()`.
+
 
 # Cleanup action with data
 
@@ -416,3 +418,74 @@ C handles are opaque. `PSECURITY_DESCRIPTOR` could be:
 - a pointer sized integral type
 - a struct containing a pointer sized member
 - something else, none of the above
+
+
+# Compounding cleanup for the same handle
+
+- This is a rarer case where multiple cleanups are required for the same handle, one can store two instances of the `unique_handle`, or can compond both into one that can be passed arround withouth having to store the handle twice.
+
+```cpp
+struct win_http_handle_traits {
+  using handle_type = HINTERNET;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::WinHttpCloseHandle(h));
+  }
+};
+using win_http_handle = cpp_util::unique_handle<win_http_handle_traits>;
+
+struct unregister_callback_handle_traits {
+  using handle_type = HINTERNET;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    WINHTTP_STATUS_CALLBACK callback_result{ ::WinHttpSetStatusCallback(h, /*...*/) };
+    // throw will terminate, this is a fatal error
+    throw_if_getlasterror(WINHTTP_INVALID_STATUS_CALLBACK == callback_result, "WinHttpSetStatusCallback");
+  }
+};
+using unregister_callback_handle = cpp_util::unique_handle<unregister_callback_handle_traits>;
+
+// compond handle cleans up both of the above
+struct win_http_session_handle_traits {
+  using handle_type = HINTERNET;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    // the destructors (in reverse order) will do the cleanup
+    win_http_handle a(h);
+    unregister_callback_handle b(h);
+  }
+};
+using win_http_session_handle = cpp_util::unique_handle<win_http_session_handle_traits>;
+
+win_http_session_handle transfer_to_win_http_session_handle(
+  win_http_handle && http_handle,
+  unregister_callback_handle && unregister_callback) noexcept
+{
+  // throw will terminate
+  throw_if((unregister_callback.get() != http_handle.get()) || !(http_handle.is_valid()),
+    "transfer_to_win_http_session_handle");
+  static_cast<void>(unregister_callback.release());
+  win_http_session_handle return_value{ http_handle.release() };
+  return return_value;
+}
+
+// Users only care about win_http_session which stores a single HINTERNET
+win_http_session open_session() {
+  win_http_handle handle{ ::WinHttpOpen(/*...*/) }
+  throw_if_getlasterror(!handle.is_valid(), "WinHttpOpen");
+
+  // ...
+
+  WINHTTP_STATUS_CALLBACK callback_result{ ::WinHttpSetStatusCallback(
+    handle.get(),
+    winhttp_status_callback,
+    /*...*/) };
+  throw_if_getlasterror(WINHTTP_INVALID_STATUS_CALLBACK == callback_result, "WinHttpSetStatusCallback");
+  unregister_callback_handle unregister_callback(handle.get());
+
+  // ...
+
+  return win_http_session(transfer_to_win_http_session_handle(
+    std::move(handle), std::move(unregister_callback)));
+}
+```
