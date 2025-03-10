@@ -11,33 +11,33 @@ namespace
     coro::st::context ctx;
 
     int result = ctx.run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<int> {
-      co_await coro::st::async_defer(ctx);
+      co_await coro::st::async_yield(ctx);
       co_return 42;
     }, std::ref(ctx)));
 
     ASSERT_EQ(42, result);
   }
 
-  TEST(st_sleep_defer_exception)
+  TEST(st_sleep_yield_exception)
   {
     coro::st::context ctx;
 
     ASSERT_THROW_WHAT(ctx.run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<void> {
-      co_await coro::st::async_defer(ctx);
+      co_await coro::st::async_yield(ctx);
       throw std::runtime_error("Ups!");
       co_return;
     }, std::ref(ctx))), std::runtime_error, "Ups!");
   }
 
-  // coro::co<void> async_defer_does_not_compile(coro::st::context & ctx)
+  // coro::co<void> async_yield_does_not_compile(coro::st::context & ctx)
   // {
-  //   auto x = coro::st::async_defer(ctx);
+  //   auto x = coro::st::async_yield(ctx);
   //   co_await std::move(x);
   // }
 
-  // coro::co<void> async_defer_does_not_compile2(coro::st::context & ctx)
+  // coro::co<void> async_yield_does_not_compile2(coro::st::context & ctx)
   // {
-  //   coro::st::async_defer(ctx);
+  //   coro::st::async_yield(ctx);
   //   co_return;
   // }
 
