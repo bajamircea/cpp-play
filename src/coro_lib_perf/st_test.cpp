@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+// TODO: add some performance tests once we can do when all
+
 namespace
 {
   TEST(st_test)

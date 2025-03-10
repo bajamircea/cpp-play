@@ -5,6 +5,8 @@
 #include <chrono>
 #include <thread>
 
+// TODO: rename defer to yield
+
 namespace coro::st
 {
   class [[nodiscard]] defer_awaiter
