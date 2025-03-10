@@ -125,7 +125,8 @@ using file_handle = cpp_util::unique_handle<file_handle_traits>;
 
 ## Windows any handle
 
-- `is_valid` allows multiple "invalid" values
+- `is_valid` allows multiple "invalid" values (or, see further exaples,
+  customization on what it means to be valid)
 - uses `static_assert` to make sure the traits meet the more speciffic concept
 - This approach works if we're convinced that there are truly
   multiple "invalid" values (e.g. that a C API that returns `NULL` will not return
@@ -438,7 +439,7 @@ struct unregister_callback_handle_traits {
   using handle_type = HINTERNET;
   static constexpr auto invalid_value() noexcept { return nullptr; }
   static void close_handle(handle_type h) noexcept {
-    WINHTTP_STATUS_CALLBACK callback_result{ ::WinHttpSetStatusCallback(h, /*...*/) };
+    WINHTTP_STATUS_CALLBACK callback_result{ ::WinHttpSetStatusCallback(h, NULL, /*...*/) };
     // throw will terminate, this is a fatal error
     throw_if_getlasterror(WINHTTP_INVALID_STATUS_CALLBACK == callback_result, "WinHttpSetStatusCallback");
   }
@@ -465,27 +466,24 @@ win_http_session_handle transfer_to_win_http_session_handle(
   throw_if((unregister_callback.get() != http_handle.get()) || !(http_handle.is_valid()),
     "transfer_to_win_http_session_handle");
   static_cast<void>(unregister_callback.release());
-  win_http_session_handle return_value{ http_handle.release() };
-  return return_value;
+  return win_http_session_handle(http_handle.release());
 }
 
 // Users only care about win_http_session which stores a single HINTERNET
-win_http_session open_session() {
+win_http_session_handle open_session() {
   win_http_handle handle{ ::WinHttpOpen(/*...*/) }
   throw_if_getlasterror(!handle.is_valid(), "WinHttpOpen");
 
   // ...
 
-  WINHTTP_STATUS_CALLBACK callback_result{ ::WinHttpSetStatusCallback(
-    handle.get(),
-    winhttp_status_callback,
-    /*...*/) };
+  WINHTTP_STATUS_CALLBACK callback_result{
+    ::WinHttpSetStatusCallback(handle.get(), winhttp_status_callback, /*...*/) };
   throw_if_getlasterror(WINHTTP_INVALID_STATUS_CALLBACK == callback_result, "WinHttpSetStatusCallback");
   unregister_callback_handle unregister_callback(handle.get());
 
   // ...
 
-  return win_http_session(transfer_to_win_http_session_handle(
-    std::move(handle), std::move(unregister_callback)));
+  return transfer_to_win_http_session_handle(
+    std::move(handle), std::move(unregister_callback));
 }
 ```
