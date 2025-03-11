@@ -69,9 +69,19 @@ namespace coro::st
         return false;
       }
       stop_ = true;
-      for(stop_list_node* node = callbacks_.front(); node != nullptr; node = node->next)
+      while(true)
       {
-        node->fn(node->x);
+        stop_list_node* node = callbacks_.front();
+        if (node == nullptr)
+        {
+          break;
+        }
+        auto fn = node->fn;
+        void* x = node->x;
+        node->fn = nullptr;
+        node->x = nullptr;
+        callbacks_.remove(node);
+        fn(x);
       }
       return true;
     }
