@@ -3,6 +3,7 @@
 #include "co.h"
 #include "deferred_co.h"
 #include "promise_base.h"
+#include "st_stop.h"
 
 #include "../cpp_util_lib/intrusive_heap.h"
 #include "../cpp_util_lib/intrusive_queue.h"
@@ -105,25 +106,61 @@ namespace coro::st
 
   class context
   {
-    ready_queue ready_queue_;
-    timer_heap timers_heap_;
+    coro::st::stop_token token_;
+    ready_queue& ready_queue_;
+    timer_heap& timers_heap_;
 
   public:
-    context() noexcept = default;
+    context(coro::st::stop_token token, ready_queue& ready_queue, timer_heap& timers_heap) noexcept :
+      token_{ token }, ready_queue_{ ready_queue }, timers_heap_{ timers_heap }
+    {
+    }
+
+    context(coro::st::stop_token token, context& other) noexcept :
+    token_{ token }, ready_queue_{ other.ready_queue_ }, timers_heap_{ other.timers_heap_ }
+    {
+    }
 
     context(const context &) = delete;
     context & operator=(const context &) = delete;
 
-    template<typename DeferredCoFn>
-    trampoline_co<typename DeferredCoFn::co_return_type> trampoline(DeferredCoFn&& co_fn)
+    void push_ready_node(ready_node& node, std::coroutine_handle<> handle) noexcept
     {
-      co_return co_await co_fn();
+      node.coroutine = handle;
+      ready_queue_.push(&node);
+    }
+
+    void insert_timer_node(timer_node& node, std::coroutine_handle<> handle) noexcept
+    {
+      node.coroutine = handle;
+      timers_heap_.insert(&node);
+    }
+  };
+
+  class scheduler
+  {
+    ready_queue ready_queue_;
+    timer_heap timers_heap_;
+
+  public:
+    scheduler() noexcept = default;
+
+    scheduler(const scheduler &) = delete;
+    scheduler & operator=(const scheduler &) = delete;
+
+    template<typename DeferredCoFn>
+    auto trampoline(context& ctx, DeferredCoFn&& co_fn) -> trampoline_co<typename DeferredCoFn::co_return_type>
+    {
+      co_return co_await co_fn(ctx);
     }
 
     template<typename DeferredCoFn>
-    DeferredCoFn::co_return_type run(DeferredCoFn&& co_fn)
+    auto run(DeferredCoFn&& co_fn) -> DeferredCoFn::co_return_type
     {
-      auto root_co = trampoline(std::forward<DeferredCoFn>(co_fn));
+      stop_source root_stop_source;
+      context root_ctx(root_stop_source.get_token(), ready_queue_, timers_heap_);
+
+      auto root_co = trampoline(root_ctx, std::forward<DeferredCoFn>(co_fn));
 
       while (!root_co.done())
       {
@@ -131,18 +168,6 @@ namespace coro::st
       }
 
       return root_co.get_result();
-    }
-
-    void hazmat_push_ready_node(ready_node& node, std::coroutine_handle<> handle) noexcept
-    {
-      node.coroutine = handle;
-      ready_queue_.push(&node);
-    }
-
-    void hazmat_insert_timer_node(timer_node& node, std::coroutine_handle<> handle) noexcept
-    {
-      node.coroutine = handle;
-      timers_heap_.insert(&node);
     }
 
   private:

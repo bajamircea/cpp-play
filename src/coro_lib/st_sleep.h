@@ -24,7 +24,7 @@ namespace coro::st
   private:
     void await_suspend_impl(std::coroutine_handle<> handle) noexcept
     {
-      ctx_.hazmat_push_ready_node(node_, handle);
+      ctx_.push_ready_node(node_, handle);
     }
 
     class [[nodiscard]] awaiter
@@ -85,7 +85,7 @@ namespace coro::st
   private:
     void await_suspend_impl(std::coroutine_handle<> handle) noexcept
     {
-      ctx_.hazmat_insert_timer_node(node_, handle);
+      ctx_.insert_timer_node(node_, handle);
     }
 
     class [[nodiscard]] awaiter
