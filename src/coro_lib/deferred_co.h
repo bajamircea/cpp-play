@@ -7,6 +7,8 @@
 
 namespace coro
 {
+  // TODO: would it make sense to have a more specialized deferred?
+  // TODO: could I then auto detect the co_return_type?
   template<typename Ret, typename CoFn, typename... Args>
   class [[nodiscard]] deferred_co_fn
   {

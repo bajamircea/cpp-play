@@ -6,6 +6,8 @@
 
 namespace coro::st
 {
+  // TODO: create a suspend_forever
+  // TODO: add cancellation to suspend_forever
   class [[nodiscard]] yield_awaiter
   {
     context& ctx_;
