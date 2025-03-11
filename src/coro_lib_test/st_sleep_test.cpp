@@ -1,6 +1,7 @@
 #include "../test_lib/test.h"
 
 #include "../coro_lib/st_sleep.h"
+#include "../coro_lib/st_run.h"
 
 #include <stdexcept>
 #include <string>
@@ -9,17 +10,13 @@ namespace
 {
   TEST(st_sleep_trivial)
   {
-    coro::st::scheduler s;
-
-    s.run(coro::deferred_co<void>(
+    coro::st::run(coro::deferred_co<void>(
       coro::st::async_sleep, std::chrono::seconds(0)));
   }
 
   TEST(st_sleep_lambda)
   {
-    coro::st::scheduler s;
-
-    int result = s.run(coro::deferred_co<int>([](coro::st::context & ctx) -> coro::co<int> {
+    int result = coro::st::run(coro::deferred_co<int>([](coro::st::context & ctx) -> coro::co<int> {
       co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
       co_return 42;
     }));
@@ -29,9 +26,7 @@ namespace
 
   TEST(st_sleep_exception)
   {
-    coro::st::scheduler s;
-
-    ASSERT_THROW_WHAT(s.run(coro::deferred_co<void>([](coro::st::context & ctx) -> coro::co<void> {
+    ASSERT_THROW_WHAT(coro::st::run(coro::deferred_co<void>([](coro::st::context & ctx) -> coro::co<void> {
       co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
       throw std::runtime_error("Ups!");
       co_return;
@@ -69,9 +64,7 @@ namespace
 
   TEST(st_sleep_timers)
   {
-    coro::st::scheduler s;
-
-    std::string result = s.run(coro::deferred_co<std::string>(async_foo));
+    std::string result = coro::st::run(coro::deferred_co<std::string>(async_foo));
 
     ASSERT_EQ("start 012 stop", result);
   }

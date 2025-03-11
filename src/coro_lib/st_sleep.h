@@ -1,8 +1,9 @@
 #pragma once
 
-#include "st.h"
+#include "st_context.h"
 
 #include <chrono>
+#include <coroutine>
 
 namespace coro::st
 {
@@ -62,7 +63,7 @@ namespace coro::st
     }
   };
 
-  [[nodiscard]] sleep_awaiter async_sleep(context& ctx, std::chrono::steady_clock::duration sleep_duration) noexcept
+  [[nodiscard]] inline sleep_awaiter async_sleep(context& ctx, std::chrono::steady_clock::duration sleep_duration) noexcept
   {
     return { ctx, std::chrono::steady_clock::now() + sleep_duration };
   }

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "st.h"
+#include "st_context.h"
+
+#include <coroutine>
 
 namespace coro::st
 {
@@ -59,7 +61,7 @@ namespace coro::st
     }
   };
 
-  [[nodiscard]] yield_awaiter async_yield(context& ctx) noexcept
+  [[nodiscard]] inline yield_awaiter async_yield(context& ctx) noexcept
   {
     return { ctx };
   }

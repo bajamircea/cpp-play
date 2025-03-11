@@ -1,6 +1,7 @@
 #include "../test_lib/test.h"
 
 #include "../coro_lib/st_yield.h"
+#include "../coro_lib/st_run.h"
 
 #include <stdexcept>
 #include <string>
@@ -9,16 +10,12 @@ namespace
 {
   TEST(st_yield_trivial)
   {
-    coro::st::scheduler s;
-
-    s.run(coro::deferred_co<void>(coro::st::async_yield));
+    coro::st::run(coro::deferred_co<void>(coro::st::async_yield));
   }
 
   TEST(st_yield_lambda)
   {
-    coro::st::scheduler s;
-
-    int result = s.run(coro::deferred_co<int>([](coro::st::context & ctx) -> coro::co<int> {
+    int result = coro::st::run(coro::deferred_co<int>([](coro::st::context & ctx) -> coro::co<int> {
       co_await coro::st::async_yield(ctx);
       co_return 42;
     }));
@@ -28,9 +25,7 @@ namespace
 
   TEST(st_yield_exception)
   {
-    coro::st::scheduler s;
-
-    ASSERT_THROW_WHAT(s.run(coro::deferred_co<void>([](coro::st::context & ctx) -> coro::co<void> {
+    ASSERT_THROW_WHAT(coro::st::run(coro::deferred_co<void>([](coro::st::context & ctx) -> coro::co<void> {
       co_await coro::st::async_yield(ctx);
       throw std::runtime_error("Ups!");
       co_return;
@@ -68,9 +63,7 @@ namespace
 
   TEST(st_yield_yields)
   {
-    coro::st::scheduler s;
-
-    std::string result = s.run(coro::deferred_co<std::string>(async_foo));
+    std::string result = coro::st::run(coro::deferred_co<std::string>(async_foo));
 
     ASSERT_EQ("start 012 stop", result);
   }
