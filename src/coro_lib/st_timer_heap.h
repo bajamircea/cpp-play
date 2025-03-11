@@ -2,6 +2,8 @@
 
 #include "../cpp_util_lib/intrusive_heap.h"
 
+#include "st_chain_context.h"
+
 #include <chrono>
 #include <coroutine>
 
@@ -19,6 +21,7 @@ namespace coro::st
     timer_node* right{};
     std::coroutine_handle<> coroutine;
     std::chrono::steady_clock::time_point deadline;
+    chain_context* chain_ctx{};
   };
 
   struct compare_timer_node_by_deadline

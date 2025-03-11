@@ -1,41 +1,37 @@
 #pragma once
 
-#include "st_stop.h"
-#include "st_ready_queue.h"
-#include "st_timer_heap.h"
+#include "st_chain_context.h"
+#include "st_runner_context.h"
 
 namespace coro::st
 {
   class context
   {
-    coro::st::stop_token token_;
-    ready_queue& ready_queue_;
-    timer_heap& timers_heap_;
+    runner_context& runner_ctx_;
+    chain_context& chain_ctx_;
 
   public:
-    context(coro::st::stop_token token, ready_queue& ready_queue, timer_heap& timers_heap) noexcept :
-      token_{ token }, ready_queue_{ ready_queue }, timers_heap_{ timers_heap }
+    context(runner_context& runner_ctx, chain_context& chain_ctx) noexcept :
+      runner_ctx_{ runner_ctx }, chain_ctx_{ chain_ctx }
     {
     }
 
-    context(coro::st::stop_token token, context& other) noexcept :
-    token_{ token }, ready_queue_{ other.ready_queue_ }, timers_heap_{ other.timers_heap_ }
-    {
-    }
-
-    context(const context &) = delete;
-    context & operator=(const context &) = delete;
+    context(const context&) = delete;
+    context& operator=(const context&) = delete;
 
     void push_ready_node(ready_node& node, std::coroutine_handle<> handle) noexcept
     {
-      node.coroutine = handle;
-      ready_queue_.push(&node);
+      runner_ctx_.push_ready_node(node, chain_ctx_, handle);
     }
 
     void insert_timer_node(timer_node& node, std::coroutine_handle<> handle) noexcept
     {
-      node.coroutine = handle;
-      timers_heap_.insert(&node);
+      runner_ctx_.insert_timer_node(node, chain_ctx_, handle);
+    }
+
+    stop_token get_stop_token() noexcept
+    {
+      return chain_ctx_.get_stop_token();
     }
   };
 }

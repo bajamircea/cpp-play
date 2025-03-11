@@ -109,7 +109,7 @@ namespace coro::st
     Fn fn_;
     stop_list_node node_;
   public:
-    stop_callback(stop_token token, Fn && fn) : source_{ token.source_ }, fn_{ std::move(fn) }
+    stop_callback(stop_token token, Fn&& fn) : source_{ token.source_ }, fn_{ std::move(fn) }
     {
       assert(source_ != nullptr);
       if (source_->stop_requested())

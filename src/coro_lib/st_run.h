@@ -7,6 +7,7 @@
 #include "st_timer_heap.h"
 #include "st_context.h"
 
+#include <cassert>
 #include <chrono>
 #include <thread>
 
@@ -27,7 +28,8 @@ namespace coro::st
       while (!local_ready.empty())
       {
         auto* ready_node = local_ready.pop();
-        ready_node->coroutine.resume();
+        assert(ready_node->chain_ctx != nullptr);
+        ready_node->chain_ctx->on_resume(ready_node->coroutine);
       }
       if (timers_heap_.min_node() != nullptr)
       {
@@ -44,7 +46,8 @@ namespace coro::st
             break;
           }
           timers_heap_.pop_min();
-          timer_node->coroutine.resume();
+          assert(timer_node->chain_ctx != nullptr);
+          timer_node->chain_ctx->on_resume(timer_node->coroutine);
         } while(timers_heap_.min_node() != nullptr);
       }
     }
@@ -56,7 +59,15 @@ namespace coro::st
     runner_impl runner;
 
     stop_source main_stop_source;
-    context main_ctx(main_stop_source.get_token(), runner.ready_queue_, runner.timers_heap_);
+
+    runner_context runner_ctx(runner.ready_queue_, runner.timers_heap_);
+    custom_chain_context chain_ctx{
+      main_stop_source.get_token(),
+      [](std::coroutine_handle<> coroutine) noexcept {
+        coroutine.resume();
+      }
+    };
+    context main_ctx(runner_ctx, chain_ctx);
 
     auto trampoline = [](context& ctx, DeferredCoFn& co_fn)
      -> coro::trampoline_co<typename DeferredCoFn::co_return_type> {
