@@ -6,9 +6,14 @@ namespace
 {
   struct list_node
   {
-    list_node * next;
-    list_node * prev;
-    int value;
+    list_node* next{};
+    list_node* prev{};
+    int value{};
+
+    list_node() noexcept = default;
+
+    list_node(const list_node&) = delete;
+    list_node& operator=(const list_node&) = delete;
   };
 
   using list = cpp_util::intrusive_list<list_node, &list_node::next, &list_node::prev>;

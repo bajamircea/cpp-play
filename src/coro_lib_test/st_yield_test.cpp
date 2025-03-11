@@ -1,58 +1,57 @@
 #include "../test_lib/test.h"
 
-#include "../coro_lib/st_sleep.h"
+#include "../coro_lib/st_yield.h"
 
 #include <stdexcept>
 #include <string>
 
 namespace
 {
-  TEST(st_sleep_trivial)
+  TEST(st_yield_trivial)
   {
     coro::st::scheduler s;
 
-    s.run(coro::deferred_co<void>(
-      coro::st::async_sleep, std::chrono::seconds(0)));
+    s.run(coro::deferred_co<void>(coro::st::async_yield));
   }
 
-  TEST(st_sleep_lambda)
+  TEST(st_yield_lambda)
   {
     coro::st::scheduler s;
 
     int result = s.run(coro::deferred_co<int>([](coro::st::context & ctx) -> coro::co<int> {
-      co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+      co_await coro::st::async_yield(ctx);
       co_return 42;
     }));
 
     ASSERT_EQ(42, result);
   }
 
-  TEST(st_sleep_exception)
+  TEST(st_yield_exception)
   {
     coro::st::scheduler s;
 
     ASSERT_THROW_WHAT(s.run(coro::deferred_co<void>([](coro::st::context & ctx) -> coro::co<void> {
-      co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+      co_await coro::st::async_yield(ctx);
       throw std::runtime_error("Ups!");
       co_return;
     })), std::runtime_error, "Ups!");
   }
 
-  // coro::co<void> async_sleep_does_not_compile(coro::st::context & ctx)
+  // coro::co<void> async_yield_does_not_compile(coro::st::context & ctx)
   // {
-  //   auto x = coro::st::async_sleep(ctx, std::chrono::seconds(0));
+  //   auto x = coro::st::async_yield(ctx);
   //   co_await std::move(x);
   // }
 
-  // coro::co<void> async_sleep_does_not_compile2(coro::st::context & ctx)
+  // coro::co<void> async_yield_does_not_compile2(coro::st::context & ctx)
   // {
-  //   coro::st::async_sleep(ctx, std::chrono::seconds(0));
+  //   coro::st::async_yield(ctx);
   //   co_return;
   // }
 
   coro::co<std::string> async_bar(coro::st::context & ctx, int i)
   {
-    co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+    co_await coro::st::async_yield(ctx);
     co_return std::to_string(i);
   }
 
@@ -67,7 +66,7 @@ namespace
     co_return x;
   }
 
-  TEST(st_sleep_timers)
+  TEST(st_yield_yields)
   {
     coro::st::scheduler s;
 

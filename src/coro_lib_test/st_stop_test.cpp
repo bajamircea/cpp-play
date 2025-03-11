@@ -14,7 +14,7 @@ namespace
     ASSERT_FALSE(token.stop_requested());
 
     bool called{ false };
-    coro::st::stop_callback callback{ token, [&called]() {
+    coro::st::stop_callback callback{ token, [&called]() noexcept {
       called = true;
     }};
 
@@ -22,7 +22,7 @@ namespace
 
     {
       bool not_called{ false };
-      coro::st::stop_callback not_called_callback{ token, [&not_called]() {
+      coro::st::stop_callback not_called_callback{ token, [&not_called]() noexcept {
         not_called = true;
       }};
       ASSERT_FALSE(not_called);
@@ -33,7 +33,7 @@ namespace
     ASSERT_TRUE(called);
 
     bool called2{ false };
-    coro::st::stop_callback callback2{ token, [&called2]() {
+    coro::st::stop_callback callback2{ token, [&called2]() noexcept {
       called2 = true;
     }};
 

@@ -9,10 +9,15 @@ namespace coro::st
 {
   struct stop_list_node
   {
-    stop_list_node * next{ nullptr };
-    stop_list_node * prev{ nullptr };
+    stop_list_node* next{ nullptr };
+    stop_list_node* prev{ nullptr };
     void (*fn)(void* x) noexcept { nullptr };
     void* x{ nullptr };
+
+    stop_list_node() noexcept = default;
+
+    stop_list_node(const stop_list_node&) = delete;
+    stop_list_node& operator=(const stop_list_node&) = delete;
   };
 
   using stop_list = cpp_util::intrusive_list<stop_list_node, &stop_list_node::next, &stop_list_node::prev>;
@@ -31,27 +36,26 @@ namespace coro::st
 
     stop_source* source_ = nullptr;
 
-    stop_token(stop_source* source) : source_{ source }
+    stop_token(stop_source* source) noexcept : source_{ source }
     {
     }
+
   public:
-    stop_token(const stop_token&) = default;
-    stop_token& operator=(const stop_token&) = default;
+    stop_token(const stop_token&) noexcept = default;
+    stop_token& operator=(const stop_token&) noexcept = default;
 
     bool stop_requested() const noexcept;
   };
 
   class stop_source
   {
-    friend stop_token;
-
     template <typename Fn>
     friend class stop_callback;
 
     bool stop_{ false };
     stop_list callbacks_{};
   public:
-    stop_source()
+    stop_source() noexcept
     {
     }
     stop_source(const stop_source&) = delete;
