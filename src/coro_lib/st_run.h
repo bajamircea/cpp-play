@@ -55,22 +55,22 @@ namespace coro::st
   {
     runner_impl runner;
 
-    stop_source root_stop_source;
-    context root_ctx(root_stop_source.get_token(), runner.ready_queue_, runner.timers_heap_);
+    stop_source main_stop_source;
+    context main_ctx(main_stop_source.get_token(), runner.ready_queue_, runner.timers_heap_);
 
     auto trampoline = [](context& ctx, DeferredCoFn& co_fn)
      -> coro::trampoline_co<typename DeferredCoFn::co_return_type> {
       co_return co_await co_fn(ctx);
     };
 
-    auto root_co = trampoline(root_ctx, co_fn);
-    root_co.resume();
+    auto main_co = trampoline(main_ctx, co_fn);
+    main_co.resume();
 
-    while (!root_co.done())
+    while (!main_co.done())
     {
       runner.do_work();
     }
 
-    return root_co.get_result();
+    return main_co.get_result();
   }
 }
