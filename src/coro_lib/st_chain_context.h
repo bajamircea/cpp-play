@@ -14,11 +14,10 @@ namespace coro::st
     template <typename Fn>
     friend class custom_chain_context;
   public:
-    using OnResumeFnPtr = void (*)(void* x, std::coroutine_handle<> coroutine) noexcept;
+    using OnResumeFnPtr = void (*)(void* self, std::coroutine_handle<> coroutine) noexcept;
   private:
     coro::st::stop_token token_;
     OnResumeFnPtr on_resume_fn_{ nullptr };
-    void* x_{ nullptr };
 
     explicit chain_context(stop_token token) noexcept :
       token_{ token }
@@ -36,21 +35,14 @@ namespace coro::st
 
     void on_resume(std::coroutine_handle<> coroutine)
     {
-      if (on_resume_fn_ == nullptr)
-      {
-        coroutine.resume();
-      }
-      else
-      {
-        on_resume_fn_(x_, coroutine);
-      }
+      assert(on_resume_fn_ != nullptr);
+      on_resume_fn_(this, coroutine);
     }
 
   private:
-    void set_fn(OnResumeFnPtr on_resume_fn, void* x) noexcept
+    void set_fn(OnResumeFnPtr on_resume_fn) noexcept
     {
       on_resume_fn_ = on_resume_fn;
-      x_ = x;
     }
   };
 
@@ -62,7 +54,7 @@ namespace coro::st
     custom_chain_context(stop_token token, Fn&& fn) :
       chain_context{ token }, fn_{ std::move(fn) }
     {
-      set_fn(invoke, this);
+      set_fn(invoke);
     }
 
     custom_chain_context(const custom_chain_context&) = delete;

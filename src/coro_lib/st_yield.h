@@ -7,9 +7,13 @@
 namespace coro::st
 {
   // TODO: create a suspend_forever
-  // TODO: add cancellation to suspend_forever
+  // TODO: add cancellation to suspend_forever (note yield does not need it)
   class [[nodiscard]] yield_awaiter
   {
+  public:
+    using co_return_type = void;
+
+  private:
     context& ctx_;
     ready_node node_;
 

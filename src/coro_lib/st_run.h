@@ -6,6 +6,7 @@
 #include "st_ready_queue.h"
 #include "st_timer_heap.h"
 #include "st_context.h"
+#include "st_type_traits.h"
 
 #include <cassert>
 #include <chrono>
@@ -53,8 +54,9 @@ namespace coro::st
     }
   };
 
-  template<typename DeferredCoFn>
-  auto run(DeferredCoFn&& co_fn) -> DeferredCoFn::co_return_type
+  template<deferred_context_co DeferredCoFn>
+  auto run(DeferredCoFn&& co_fn)
+    -> deferred_context_co_return_type<DeferredCoFn>
   {
     runner_impl runner;
 
@@ -70,7 +72,7 @@ namespace coro::st
     context main_ctx(runner_ctx, chain_ctx);
 
     auto trampoline = [](context& ctx, DeferredCoFn& co_fn)
-     -> coro::trampoline_co<typename DeferredCoFn::co_return_type> {
+     -> coro::trampoline_co<deferred_context_co_return_type<DeferredCoFn>> {
       co_return co_await co_fn(ctx);
     };
 

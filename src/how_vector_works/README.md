@@ -309,13 +309,13 @@ combo_struct:
   is_nothrow_move_constructible:   no
 ```
 
-TODO:
+potential further work:
 check clang/libc++
 
-TODO:
+potential further work:
 read https://stackoverflow.com/questions/17730689/is-a-moved-from-vector-always-empty
 in particular, figure out how empty is a "moved from" vector, list etc.
 
-TODO:
+potential further work:
 read
 https://isocpp.org/files/papers/N4055.html

@@ -7,8 +7,6 @@
 
 namespace coro
 {
-  // TODO: would it make sense to have a more specialized deferred?
-  // TODO: could I then auto detect the co_return_type?
   template<typename Ret, typename CoFn, typename... Args>
   class [[nodiscard]] deferred_co_fn
   {
@@ -20,8 +18,6 @@ namespace coro
     ArgsDecayedTuple args_;
 
   public:
-    using co_return_type = Ret;
-
     explicit deferred_co_fn(CoFn&& co_fn, Args&&... args) :
       co_fn_{ std::forward<CoFn>(co_fn) },
       args_{ std::forward<Args>(args)... }

@@ -69,9 +69,18 @@ namespace coro
     {
     }
 
+  public:
     co(const co&) = delete;
     co& operator=(const co&) = delete;
 
+#ifdef _DEBUG
+    ~co()
+    {
+      assert(unique_child_coro_.get().promise().parent_coro_);
+    }
+#endif
+
+  private:
     auto await_suspend_impl(std::coroutine_handle<> parent_coro) noexcept
     {
       std::coroutine_handle<promise_type> child_coro = unique_child_coro_.get();
@@ -80,10 +89,10 @@ namespace coro
       return child_coro;
     }
 
-      T await_resume_impl()
-      {
-        return unique_child_coro_.get().promise().get_result();
-      }
+    T await_resume_impl()
+    {
+      return unique_child_coro_.get().promise().get_result();
+    }
 
     class [[nodiscard]] awaiter
     {

@@ -10,6 +10,10 @@ namespace coro::st
   // TODO: add cancellation to timer
   class [[nodiscard]] sleep_awaiter
   {
+  public:
+    using co_return_type = void;
+
+  private:
     context& ctx_;
     timer_node node_;
 

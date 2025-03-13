@@ -9,6 +9,7 @@
 
 namespace coro
 {
+  // TODO callback when done in final_suspend
   template<typename T>
   class [[nodiscard]] trampoline_co
   {

@@ -52,9 +52,9 @@ CXX = g++
 ##  obj file has been compiled)
 ## -MT specifies the dependency target (path qualified obj file name)
 DEP_FLAGS = -MT $@ -MMD -MP -MF $(@:.o=.d)
-STD_FLAGS = --std=c++23 -fno-rtti -fcoroutines
+STD_FLAGS = --std=c++23 -fno-rtti
 WARN_FLAGS = -Wall -Werror
-debug_FLAGS = -g
+debug_FLAGS = -g -D_DEBUG=1
 release_FLAGS = -O3 -march=native
 CXXFLAGS = $(STD_FLAGS) $(DEP_FLAGS) $(WARN_FLAGS)
 LDFLAGS = $(STD_FLAGS) $(WARN_FLAGS)
