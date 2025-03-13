@@ -1,6 +1,5 @@
 #pragma once
 
-#include "co.h"
 #include "deferred_co.h"
 #include "trampoline_co.h"
 #include "st_ready_queue.h"
@@ -54,6 +53,7 @@ namespace coro::st
     }
   };
 
+  // TODO: can I do a trick to avoid having to typing deferred_co s?
   template<is_deferred_context_co DeferredCoFn>
   auto run(DeferredCoFn&& co_fn)
     -> deferred_context_co_return_type<DeferredCoFn>

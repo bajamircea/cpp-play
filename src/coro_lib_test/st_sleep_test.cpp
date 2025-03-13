@@ -1,6 +1,8 @@
 #include "../test_lib/test.h"
 
 #include "../coro_lib/st_sleep.h"
+
+#include "../coro_lib/co.h"
 #include "../coro_lib/st_run.h"
 
 #include <stdexcept>
