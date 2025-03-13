@@ -9,7 +9,9 @@
 
 namespace coro
 {
-  // TODO callback when done in final_suspend
+  // TODO high: write test
+  using OnTrampolineDoneFnPtr = void (*)(void* x) noexcept;
+
   template<typename T>
   class [[nodiscard]] trampoline_co
   {
@@ -19,6 +21,8 @@ namespace coro
     class promise_type : public promise_base<T>
     {
       friend trampoline_co;
+      OnTrampolineDoneFnPtr on_done_fn_{ nullptr };
+      void* x_{ nullptr };
 
     public:
       promise_type() noexcept = default;
@@ -36,8 +40,31 @@ namespace coro
         return {};
       }
 
-      std::suspend_always final_suspend() noexcept
+      struct final_awaiter
       {
+        [[nodiscard]] constexpr bool await_ready() const noexcept
+        {
+          return false;
+        }
+
+        void await_suspend(std::coroutine_handle<promise_type> child_coro) noexcept
+        {
+          promise_type& promise= child_coro.promise();
+          OnTrampolineDoneFnPtr on_done_fn = promise.on_done_fn_;
+          void* x = promise.x_;
+          on_done_fn(x);
+        }
+
+        [[noreturn]] constexpr void await_resume() const noexcept
+        {
+          std::unreachable();
+          //std::terminate();
+        }
+      };
+
+      final_awaiter final_suspend() noexcept
+      {
+        assert(nullptr != on_done_fn_);
         return {};
       }
     };
@@ -52,6 +79,14 @@ namespace coro
   public:
     trampoline_co(const trampoline_co&) = delete;
     trampoline_co& operator=(const trampoline_co&) = delete;
+
+
+    void set_fn(OnTrampolineDoneFnPtr on_done_fn, void* x) noexcept
+    {
+      auto & promise = unique_child_coro_.get().promise();
+      promise.on_done_fn_ = on_done_fn;
+      promise.x_ = x;
+    }
 
     void resume() const
     {

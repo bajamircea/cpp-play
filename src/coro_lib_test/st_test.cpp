@@ -7,6 +7,8 @@
 
 namespace
 {
+  // TODO: example test (to show typical include and usage)
+  // TODO: also make st_run_test.cpp
   // TEST(st_trivial)
   // {
   //   coro::st::context ctx;

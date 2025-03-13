@@ -71,15 +71,22 @@ namespace coro::st
     };
     context main_ctx(runner_ctx, chain_ctx);
 
+    using TrampolineType = coro::trampoline_co<deferred_context_co_return_type<DeferredCoFn>>;
     auto trampoline = [](context& ctx, DeferredCoFn& co_fn)
-     -> coro::trampoline_co<deferred_context_co_return_type<DeferredCoFn>> {
+     -> TrampolineType {
       co_return co_await co_fn(ctx);
     };
 
+    bool done{ false };
+    OnTrampolineDoneFnPtr on_done = +[](void* x) noexcept {
+      bool* p_done = reinterpret_cast<bool*>(x);
+      *p_done = true;
+    };
     auto main_co = trampoline(main_ctx, co_fn);
+    main_co.set_fn(on_done, &done);
     main_co.resume();
 
-    while (!main_co.done())
+    while (!done)
     {
       runner.do_work();
     }
