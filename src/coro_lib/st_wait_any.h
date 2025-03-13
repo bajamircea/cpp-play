@@ -10,72 +10,105 @@
 
 namespace coro::st
 {
-  // struct runner_impl
-  // {
-  //   ready_queue ready_queue_;
-  //   timer_heap timers_heap_;
-
-  //   runner_impl() noexcept = default;
-
-  //   runner_impl(const runner_impl &) = delete;
-  //   runner_impl& operator=(const runner_impl &) = delete;
-
-  //   void do_work() {
-  //     cpp_util::intrusive_queue local_ready = std::move(ready_queue_);
-  //     while (!local_ready.empty())
-  //     {
-  //       auto* ready_node = local_ready.pop();
-  //       assert(ready_node->chain_ctx != nullptr);
-  //       ready_node->chain_ctx->on_resume(ready_node->coroutine);
-  //     }
-  //     if (timers_heap_.min_node() != nullptr)
-  //     {
-  //       auto now = std::chrono::steady_clock::now();
-  //       do
-  //       {
-  //         auto* timer_node = timers_heap_.min_node();
-  //         if (timer_node->deadline > now)
-  //         {
-  //           if (ready_queue_.empty())
-  //           {
-  //             std::this_thread::sleep_for(timer_node->deadline - now);
-  //           }
-  //           break;
-  //         }
-  //         timers_heap_.pop_min();
-  //         assert(timer_node->chain_ctx != nullptr);
-  //         timer_node->chain_ctx->on_resume(timer_node->coroutine);
-  //       } while(timers_heap_.min_node() != nullptr);
-  //     }
-  //   }
-  // };
-
+  // TODO create async_wait_any and async_wait_all
   template<typename T>
   struct wait_any_result
   {
     size_t index{};
-    T result{};
+    T value{};
+  };
+
+  template<typename Result>
+  class [[nodiscard]] wait_any_awaiter
+  {
+  public:
+    using co_return_type = Result;
+
+    struct chain_data
+    {
+    private:
+      context& ctx_;
+      wait_any_awaiter& awaiter_;
+      size_t index_;
+    public:
+      chain_data(context& ctx, wait_any_awaiter& awaiter, size_t index) :
+        ctx_{ ctx }, awaiter_{ awaiter }, index_{ index }
+      {
+      }
+    };
+
+  private:
+    context& ctx_;
+    stop_source wait_stop_source_;
+    ready_node node_;
+
+  public:
+    wait_any_awaiter(context& ctx) noexcept :
+      ctx_{ ctx }
+    {
+    }
+
+    wait_any_awaiter(const wait_any_awaiter&) = delete;
+    wait_any_awaiter& operator=(const wait_any_awaiter&) = delete;
+
+  private:
+    void await_suspend_impl(std::coroutine_handle<> handle) noexcept
+    {
+      ctx_.push_ready_node(node_, handle);
+    }
+
+    Result await_resume_impl() const
+    {
+      return Result{.index=0, .value=0};
+    }
+
+    class [[nodiscard]] awaiter
+    {
+      wait_any_awaiter& impl_;
+
+    public:
+      awaiter(wait_any_awaiter& impl) noexcept : impl_{ impl }
+      {
+      }
+
+      awaiter(const awaiter&) = delete;
+      awaiter& operator=(const awaiter&) = delete;
+
+      [[nodiscard]] constexpr bool await_ready() const noexcept
+      {
+        return false;
+      }
+
+      void await_suspend(std::coroutine_handle<> handle) noexcept
+      {
+        return impl_.await_suspend_impl(handle);
+      }
+
+      Result await_resume() const
+      {
+        return impl_.await_resume_impl();
+      }
+    };
+
+    friend awaiter;
+
+    [[nodiscard]] friend awaiter operator co_await(wait_any_awaiter x) noexcept
+    {
+      return { x };
+    }
   };
 
   template<is_deferred_context_co... DeferredCoFn>
-  auto async_wait_any(coro::st::context & ctx, DeferredCoFn&&... co_fns)
-    -> coro::co<
-        wait_any_result<
-          std::common_type_t<
-            deferred_context_co_return_type<DeferredCoFn>...>>>
+  [[nodiscard]] auto async_wait_any(context& ctx, DeferredCoFn&&... co_fns)
+    -> wait_any_awaiter<wait_any_result<
+        std::common_type_t<
+          deferred_context_co_return_type<DeferredCoFn>...>>>
   {
-    co_return wait_any_result{.index=0, .result=0};
+    return { ctx };
   }
 
-  // template<is_deferred_context_co DeferredCoFn>
-  // auto run(DeferredCoFn&& co_fn)
-  //   -> deferred_context_co_return_type<DeferredCoFn>
-  // {
-  //   runner_impl runner;
+  //   
 
-  //   stop_source main_stop_source;
-
-  //   runner_context runner_ctx(runner.ready_queue_, runner.timers_heap_);
   //   custom_chain_context chain_ctx{
   //     main_stop_source.get_token(),
   //     [](std::coroutine_handle<> coroutine) noexcept {

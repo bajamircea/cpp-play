@@ -26,7 +26,7 @@ namespace
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       coro::deferred_co(async_0), coro::deferred_co(async_1));
-    co_return x.index + x.result;
+    co_return x.index + x.value;
   }
 
   TEST(st_wait_any_trivial)
