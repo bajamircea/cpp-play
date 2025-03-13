@@ -13,7 +13,7 @@ namespace
     co_return;
   }
 
-  coro::co<std::string> async_bar(const int & i)
+  coro::co<std::string> async_bar(const int& i)
   {
     co_return std::to_string(i);
   }

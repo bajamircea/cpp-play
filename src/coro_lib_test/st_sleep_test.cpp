@@ -53,7 +53,7 @@ namespace
 
   coro::co<std::string> async_foo(coro::st::context & ctx)
   {
-    std::string x{ "start "};
+    std::string x{ "start " };
     for (int i = 0 ; i < 3 ; ++i)
     {
       x += co_await async_bar(ctx, i);

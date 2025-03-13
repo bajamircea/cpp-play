@@ -9,7 +9,6 @@
 
 namespace coro
 {
-  // TODO high: write test
   using OnTrampolineDoneFnPtr = void (*)(void* x) noexcept;
 
   template<typename T>
