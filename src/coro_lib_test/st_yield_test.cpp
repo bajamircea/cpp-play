@@ -10,12 +10,12 @@ namespace
 {
   TEST(st_yield_trivial)
   {
-    coro::st::run(coro::deferred_co<void>(coro::st::async_yield));
+    coro::st::run(coro::deferred_co(coro::st::async_yield));
   }
 
   TEST(st_yield_lambda)
   {
-    int result = coro::st::run(coro::deferred_co<int>([](coro::st::context & ctx) -> coro::co<int> {
+    int result = coro::st::run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<int> {
       co_await coro::st::async_yield(ctx);
       co_return 42;
     }));
@@ -25,7 +25,7 @@ namespace
 
   TEST(st_yield_exception)
   {
-    ASSERT_THROW_WHAT(coro::st::run(coro::deferred_co<void>([](coro::st::context & ctx) -> coro::co<void> {
+    ASSERT_THROW_WHAT(coro::st::run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<void> {
       co_await coro::st::async_yield(ctx);
       throw std::runtime_error("Ups!");
       co_return;
@@ -63,7 +63,7 @@ namespace
 
   TEST(st_yield_yields)
   {
-    std::string result = coro::st::run(coro::deferred_co<std::string>(async_foo));
+    std::string result = coro::st::run(coro::deferred_co(async_foo));
 
     ASSERT_EQ("start 012 stop", result);
   }

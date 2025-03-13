@@ -7,40 +7,47 @@
 
 namespace coro
 {
-  template<typename Ret, typename CoFn, typename... Args>
+  template<typename CoFn, typename... CapturedArgs>
   class [[nodiscard]] deferred_co_fn
   {
     using CoFnDecayed = std::decay_t<CoFn>;
-    using ArgsDecayedTuple = std::tuple<std::decay_t<Args>...>;
-    using ArgsSequence = std::index_sequence_for<Args...>;
+    using CapturedArgsTuple = std::tuple<std::decay_t<CapturedArgs>...>;
+    using CapturedArgsSeq = std::index_sequence_for<CapturedArgs...>;
 
     CoFnDecayed co_fn_;
-    ArgsDecayedTuple args_;
+    CapturedArgsTuple captured_args_tuple_;
 
   public:
-    explicit deferred_co_fn(CoFn&& co_fn, Args&&... args) :
+    explicit deferred_co_fn(CoFn&& co_fn, CapturedArgs&&... captured_args) :
       co_fn_{ std::forward<CoFn>(co_fn) },
-      args_{ std::forward<Args>(args)... }
+      captured_args_tuple_{ std::forward<CapturedArgs>(captured_args)... }
     {
     }
 
-    template<typename... ExtraArgs>
-    auto operator()(ExtraArgs&&... extraArgs)
+    template<typename... ExtraCallArgs>
+    auto operator()(ExtraCallArgs&&... extra_call_args)
     {
-      return invoke_impl(ArgsSequence{}, std::forward<ExtraArgs>(extraArgs)...);
+      return invoke_impl(
+        CapturedArgsSeq{},
+        std::forward<ExtraCallArgs>(extra_call_args)...);
     }
 
   private:
-    template<std::size_t... I, typename... ExtraArgs>
-    auto invoke_impl(std::index_sequence<I...>, ExtraArgs&&... extraArgs)
+    template<std::size_t... I, typename... ExtraCallArgs>
+    auto invoke_impl(std::index_sequence<I...>, ExtraCallArgs&&... extra_call_args)
     {
-      return std::invoke(co_fn_, std::forward<ExtraArgs>(extraArgs)..., std::get<I>(args_)...);
+      return std::invoke(
+        co_fn_,
+        std::forward<ExtraCallArgs>(extra_call_args)...,
+        std::get<I>(captured_args_tuple_)...);
     }
   };
 
-  template<typename Ret, typename CoFn, typename... Args>
-  auto deferred_co(CoFn&& co_fn, Args&&... args)
+  template<typename CoFn, typename... CapturedArgs>
+  auto deferred_co(CoFn&& co_fn, CapturedArgs&&... captured_args)
   {
-    return deferred_co_fn<Ret, CoFn, Args...>(std::forward<CoFn>(co_fn), std::forward<Args>(args)...);
+    return deferred_co_fn<CoFn, CapturedArgs...>(
+      std::forward<CoFn>(co_fn),
+      std::forward<CapturedArgs>(captured_args)...);
   }
 }

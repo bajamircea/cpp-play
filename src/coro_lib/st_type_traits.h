@@ -6,7 +6,7 @@
 namespace coro::st
 {
  template <typename T>
-  concept deferred_context_co = deferred_co<T, coro::st::context&>;
+  concept is_deferred_context_co = is_deferred_co<T, coro::st::context&>;
 
   template <typename T>
   concept deferred_context_co_has_non_member_operator_co_await =

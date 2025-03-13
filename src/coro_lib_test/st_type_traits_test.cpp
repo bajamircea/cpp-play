@@ -6,7 +6,6 @@
 #include "../coro_lib/deferred_co.h"
 
 #include <string>
-#include <iostream>
 
 namespace
 {
@@ -16,8 +15,8 @@ namespace
 
   TEST(co_compiles)
   {
-    auto x = coro::deferred_co<std::string>(async_foo, 0);
-    static_assert(coro::st::deferred_context_co<decltype(x)>);
+    auto x = coro::deferred_co(async_foo, 0);
+    static_assert(coro::st::is_deferred_context_co<decltype(x)>);
     static_assert(coro::st::deferred_context_co_has_non_member_operator_co_await<decltype(x)>);
     static_assert(std::is_same_v<std::string, coro::st::deferred_context_co_return_type<decltype(x)>>);
   }

@@ -54,7 +54,7 @@ namespace coro::st
     }
   };
 
-  template<deferred_context_co DeferredCoFn>
+  template<is_deferred_context_co DeferredCoFn>
   auto run(DeferredCoFn&& co_fn)
     -> deferred_context_co_return_type<DeferredCoFn>
   {
