@@ -22,10 +22,17 @@ namespace
     co_return 20;
   }
 
+  coro::co<int> async_2(coro::st::context & ctx)
+  {
+    co_return 30;
+  }
+
   coro::co<int> async_both(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
-      coro::deferred_co(async_0), coro::deferred_co(async_1));
+      coro::deferred_co(async_0),
+      coro::deferred_co(async_1),
+      coro::deferred_co(async_2));
     co_return x.index + x.value;
   }
 
@@ -34,8 +41,7 @@ namespace
     auto result = coro::st::run(
       coro::deferred_co(async_both));
     
-    // TODO: actual result 21
-    ASSERT_EQ(0, result);
+    ASSERT_EQ(21, result);
   }
 
   // TEST(st_yield_exception)

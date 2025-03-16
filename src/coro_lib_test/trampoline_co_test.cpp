@@ -38,7 +38,7 @@ namespace
       *p_done = true;
     };
     auto t = trampoline();
-    t.set_fn(on_done, &done);
+    t.set_on_done_fn(on_done, &done);
 
     ASSERT_FALSE(done);
     t.resume();

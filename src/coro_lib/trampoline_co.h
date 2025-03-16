@@ -80,7 +80,7 @@ namespace coro
     trampoline_co& operator=(const trampoline_co&) = delete;
 
 
-    void set_fn(OnTrampolineDoneFnPtr on_done_fn, void* x) noexcept
+    void set_on_done_fn(OnTrampolineDoneFnPtr on_done_fn, void* x) noexcept
     {
       auto & promise = unique_child_coro_.get().promise();
       promise.on_done_fn_ = on_done_fn;

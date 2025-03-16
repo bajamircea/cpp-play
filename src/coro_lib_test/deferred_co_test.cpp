@@ -23,6 +23,8 @@ namespace
     return {};
   }
 
+  // TODO: what if I use it with a member function, would that work?
+
   coro::co<std::string> async_buzz()
   {
     auto f = coro::deferred_co(async_foo);

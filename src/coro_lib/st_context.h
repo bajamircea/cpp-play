@@ -16,6 +16,12 @@ namespace coro::st
     {
     }
 
+    // TODO: test?
+    context(context& parent_context, chain_context& chain_ctx) noexcept :
+      runner_ctx_{ parent_context.runner_ctx_ }, chain_ctx_{ chain_ctx }
+    {
+    }
+
     context(const context&) = delete;
     context& operator=(const context&) = delete;
 

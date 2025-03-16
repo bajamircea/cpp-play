@@ -55,7 +55,7 @@ namespace coro::st
         return impl_.await_suspend_impl(handle);
       }
 
-      constexpr void await_resume() const noexcept
+      constexpr co_return_type await_resume() const noexcept
       {
       }
     };

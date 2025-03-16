@@ -43,6 +43,7 @@ namespace coro
     }
   };
 
+  // TODO: could I eliminate this and use deduction rules instead?
   template<typename CoFn, typename... CapturedArgs>
   auto deferred_co(CoFn&& co_fn, CapturedArgs&&... captured_args)
   {

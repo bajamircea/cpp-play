@@ -63,13 +63,14 @@ namespace coro::st
     stop_source main_stop_source;
 
     runner_context runner_ctx(runner.ready_queue_, runner.timers_heap_);
-    custom_chain_context chain_ctx{
+    chain_context main_chain_ctx{
       main_stop_source.get_token(),
-      [](std::coroutine_handle<> coroutine) noexcept {
+      [](void* ,std::coroutine_handle<> coroutine) noexcept {
         coroutine.resume();
-      }
+      },
+      nullptr
     };
-    context main_ctx(runner_ctx, chain_ctx);
+    context main_ctx(runner_ctx, main_chain_ctx);
 
     using TrampolineType = coro::trampoline_co<deferred_context_co_return_type<DeferredCoFn>>;
     auto trampoline = [](context& ctx, DeferredCoFn& co_fn)
@@ -77,13 +78,14 @@ namespace coro::st
       co_return co_await co_fn(ctx);
     };
 
+    // TODO use a struct so that we can caputre the token/source as well
     bool done{ false };
     OnTrampolineDoneFnPtr on_done = +[](void* x) noexcept {
       bool* p_done = reinterpret_cast<bool*>(x);
       *p_done = true;
     };
     auto main_co = trampoline(main_ctx, co_fn);
-    main_co.set_fn(on_done, &done);
+    main_co.set_on_done_fn(on_done, &done);
     main_co.resume();
 
     while (!done)
