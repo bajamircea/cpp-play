@@ -5,6 +5,7 @@
 #include "trampoline_co.h"
 #include "st_context.h"
 #include "st_type_traits.h"
+#include "st_stop_op_callback.h"
 
 #include <array>
 #include <type_traits>
@@ -109,6 +110,7 @@ namespace coro::st
 
   private:
     context& parent_ctx_;
+    stop_op_callback<wait_any_awaiter> stop_cb_;
     // TODO (low pri, see cppcoro) do I need the node?
     ready_node node_;
     stop_source wait_stop_source_;
@@ -138,7 +140,6 @@ namespace coro::st
     bool await_suspend_impl(std::coroutine_handle<> handle) noexcept
     {
       parent_handle_ = handle;
-      // TODO: add cancellation
 
       for(auto& child: children_chain_data_)
       {
@@ -150,7 +151,15 @@ namespace coro::st
       {
         return false;
       }
+      stop_cb_.enable(parent_ctx_.get_stop_token(), &wait_any_awaiter::cancel, this);
       return true;
+    }
+
+    void cancel() noexcept
+    {
+      stop_cb_.disable();
+      wait_stop_source_.request_stop();
+      parent_ctx_.push_ready_node(node_, std::coroutine_handle<>());
     }
 
     co_return_type await_resume_impl() const

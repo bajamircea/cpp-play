@@ -34,7 +34,7 @@ namespace
     co_return x.index + x.value;
   }
 
-  TEST(st_wait_any_trivial)
+  TEST(st_wait_any_sample)
   {
     auto result = coro::st::run(async_three);
     
