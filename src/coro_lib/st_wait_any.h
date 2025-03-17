@@ -10,8 +10,6 @@
 #include <optional>
 #include <type_traits>
 
-// TODO: add cancellation
-
 namespace coro::st
 {
   template<typename T>
@@ -20,6 +18,8 @@ namespace coro::st
     size_t index{};
     T value{};
   };
+
+  // TODO: what if the return type is void?
 
   template<typename T, size_t N>
   class [[nodiscard]] wait_any_awaiter
@@ -33,6 +33,7 @@ namespace coro::st
       wait_any_awaiter& awaiter_;
       chain_context chain_ctx_;
       context ctx_;
+      // TODO have an allocator so that we don't have to allocate 
       coro::trampoline_co<T> trampoline_;
     public:
       template<typename DeferredCoFn>

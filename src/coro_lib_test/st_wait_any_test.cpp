@@ -44,6 +44,11 @@ namespace
     ASSERT_EQ(21, result);
   }
 
+  // TODO: add more tests
+  // - exception
+  // - cancellation
+  // - direct resumption from await_suspend
+
   // TEST(st_yield_exception)
   // {
   //   ASSERT_THROW_WHAT(coro::st::run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<void> {
