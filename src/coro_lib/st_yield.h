@@ -6,9 +6,6 @@
 
 namespace coro::st
 {
-  // TODO: create a suspend_forever
-  // TODO: add cancellation to suspend_forever (note yield does not need it)
-  // TODO: add tests to suspend_forever (requires some async_wait_any or nursery)
   class [[nodiscard]] yield_awaiter
   {
   public:

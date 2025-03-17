@@ -13,4 +13,5 @@
 #include "st_wait_any.h"
 #include "st_run.h"
 #include "st_sleep.h"
+#include "st_suspend_forever.h"
 #include "st_yield.h"

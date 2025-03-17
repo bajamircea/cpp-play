@@ -74,7 +74,7 @@ namespace
     ASSERT_EQ(42, val);
   }
 
-  coro::co<int> async_two(coro::st::context & ctx)
+  coro::co<int> async_three(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       [](coro::st::context& ctx) -> coro::co<void>{
@@ -84,6 +84,9 @@ namespace
         }
       },
       [](coro::st::context& ctx) -> coro::co<void>{
+        co_await coro::st::async_suspend_forever(ctx);
+      },
+      [](coro::st::context& ctx) -> coro::co<void>{
         co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
       });
     co_return x.index;
@@ -91,9 +94,9 @@ namespace
 
   TEST(st_wait_any_yield_sleep)
   {
-    auto result = coro::st::run(async_two);
+    auto result = coro::st::run(async_three);
 
-    ASSERT_EQ(1, result);
+    ASSERT_EQ(2, result);
   }
 
 } // anonymous namespace
