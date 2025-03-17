@@ -7,20 +7,22 @@
 
 namespace coro
 {
-  template<typename CoFn, typename... CapturedArgs>
-  class [[nodiscard]] deferred_co
+  template<typename CoFn, typename Self, typename... CapturedArgs>
+  class [[nodiscard]] deferred_member_co
   {
     using CoFnDecayed = std::decay_t<CoFn>;
     using CapturedArgsTuple = std::tuple<std::decay_t<CapturedArgs>...>;
     using CapturedArgsSeq = std::index_sequence_for<CapturedArgs...>;
 
     CoFnDecayed co_fn_;
+    Self* self_;
     CapturedArgsTuple captured_args_tuple_;
 
   public:
-    template<typename CoFn2, typename... CapturedArgs2>
-    deferred_co(CoFn2&& co_fn, CapturedArgs2&&... captured_args) :
+    template<typename CoFn2, typename Self2, typename... CapturedArgs2>
+    deferred_member_co(CoFn2&& co_fn, Self2* self,CapturedArgs2&&... captured_args) :
       co_fn_{ std::forward<CoFn2>(co_fn) },
+      self_{ self },
       captured_args_tuple_{ std::forward<CapturedArgs2>(captured_args)... }
     {
     }
@@ -29,6 +31,7 @@ namespace coro
     auto operator()(ExtraCallArgs&&... extra_call_args)
       noexcept(std::is_nothrow_invocable_v<
         CoFnDecayed,
+        Self*,
         ExtraCallArgs...,
         CapturedArgs...>)
     {
@@ -43,12 +46,13 @@ namespace coro
     {
       return std::invoke(
         co_fn_,
+        self_,
         std::forward<ExtraCallArgs>(extra_call_args)...,
         std::get<I>(captured_args_tuple_)...);
     }
   };
 
-  template<typename CoFn, typename... CapturedArgs>
-  deferred_co(CoFn&& co_fn, CapturedArgs&&... captured_args)
-    -> deferred_co<CoFn, CapturedArgs...>;
+  template<typename CoFn, typename Self, typename... CapturedArgs>
+  deferred_member_co(CoFn&& co_fn, Self* self, CapturedArgs&&... captured_args)
+    -> deferred_member_co<CoFn, Self, CapturedArgs...>;
 }

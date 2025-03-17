@@ -27,21 +27,38 @@ namespace
     co_return 30;
   }
 
-  coro::co<int> async_both(coro::st::context & ctx)
+  coro::co<int> async_three(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
-      coro::deferred_co(async_0),
-      coro::deferred_co(async_1),
-      coro::deferred_co(async_2));
+      async_0, async_1, async_2);
     co_return x.index + x.value;
   }
 
   TEST(st_wait_any_trivial)
   {
-    auto result = coro::st::run(
-      coro::deferred_co(async_both));
+    auto result = coro::st::run(async_three);
     
     ASSERT_EQ(21, result);
+  }
+
+  coro::co<int> async_void(coro::st::context & ctx)
+  {
+    auto x = co_await coro::st::async_wait_any(ctx,
+      [](coro::st::context& ctx) -> coro::co<void>{
+        co_await coro::st::async_yield(ctx);
+        co_return;
+      },
+      [](coro::st::context&) -> coro::co<void>{
+        co_return;
+      });
+    co_return x.index;
+  }
+
+  TEST(st_wait_any_void)
+  {
+    auto result = coro::st::run(async_void);
+    
+    ASSERT_EQ(1, result);
   }
 
   // TODO: add more tests

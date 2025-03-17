@@ -29,7 +29,7 @@ namespace coro
       result_.template emplace<2>(std::current_exception());
     }
 
-    T get_result()
+    T get_result() const
     {
       switch(result_.index())
       {
@@ -59,7 +59,7 @@ namespace coro
       exception_ = std::current_exception();
     }
 
-    void get_result()
+    void get_result() const
     {
       if (exception_)
       {

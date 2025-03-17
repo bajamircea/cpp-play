@@ -89,7 +89,7 @@ namespace coro
       return child_coro;
     }
 
-    T await_resume_impl()
+    T await_resume_impl() const
     {
       return unique_child_coro_.get().promise().get_result();
     }
@@ -116,7 +116,7 @@ namespace coro
         return impl_.await_suspend_impl(parent_coro);
       }
 
-      T await_resume()
+      T await_resume() const
       {
         return impl_.await_resume_impl();
       }

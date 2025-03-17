@@ -97,7 +97,7 @@ namespace coro
       return unique_child_coro_.get().done();
     }
 
-    T get_result()
+    T get_result() const
     {
       return unique_child_coro_.get().promise().get_result();
     }

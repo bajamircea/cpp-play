@@ -35,7 +35,6 @@ namespace coro
 
   template <typename T, typename... Args>
   concept is_deferred_co =
-    std::is_class_v<T> &&
     requires (T&& t, Args&&... args) {
       t(args...);
     } &&

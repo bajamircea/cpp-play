@@ -53,7 +53,6 @@ namespace coro::st
     }
   };
 
-  // TODO: can I do a trick to avoid having to typing deferred_co s?
   template<is_deferred_context_co DeferredCoFn>
   auto run(DeferredCoFn&& co_fn)
     -> deferred_context_co_return_type<DeferredCoFn>
@@ -78,7 +77,6 @@ namespace coro::st
       co_return co_await co_fn(ctx);
     };
 
-    // TODO use a struct so that we can caputre the token/source as well
     bool done{ false };
     OnTrampolineDoneFnPtr on_done = +[](void* x) noexcept {
       bool* p_done = reinterpret_cast<bool*>(x);

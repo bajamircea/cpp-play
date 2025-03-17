@@ -7,7 +7,6 @@
 #include "st_type_traits.h"
 
 #include <array>
-#include <optional>
 #include <type_traits>
 
 namespace coro::st
@@ -19,7 +18,11 @@ namespace coro::st
     T value{};
   };
 
-  // TODO: what if the return type is void?
+  template<>
+  struct wait_any_result<void>
+  {
+    size_t index{};
+  };
 
   template<typename T, size_t N>
   class [[nodiscard]] wait_any_awaiter
@@ -33,7 +36,6 @@ namespace coro::st
       wait_any_awaiter& awaiter_;
       chain_context chain_ctx_;
       context ctx_;
-      // TODO have an allocator so that we don't have to allocate 
       coro::trampoline_co<T> trampoline_;
     public:
       template<typename DeferredCoFn>
@@ -84,6 +86,7 @@ namespace coro::st
           {
             size_t this_index = this - awaiter_.children_chain_data_;
             awaiter_.result_index_ = this_index;
+            awaiter_.wait_stop_source_.request_stop();
           }
         }
         --awaiter_.pending_count_;
@@ -98,7 +101,7 @@ namespace coro::st
         trampoline_.resume();
       }
 
-      T get_result()
+      T get_result() const
       {
         return trampoline_.get_result();
       }
@@ -106,6 +109,7 @@ namespace coro::st
 
   private:
     context& parent_ctx_;
+    // TODO (low pri, see cppcoro) do I need the node?
     ready_node node_;
     stop_source wait_stop_source_;
     std::coroutine_handle<> parent_handle_;
@@ -149,14 +153,23 @@ namespace coro::st
       return true;
     }
 
-    // TODO add back const
-    co_return_type await_resume_impl() /*const*/
+    co_return_type await_resume_impl() const
     {
       assert(result_index_ != N);
-      return co_return_type{
-        .index=result_index_,
-        .value=children_chain_data_[result_index_].get_result()
-      };
+      if constexpr (std::is_same_v<T, void>) 
+      {
+        children_chain_data_[result_index_].get_result();
+        return co_return_type{
+          .index=result_index_
+        };
+      }
+      else
+      {
+        return co_return_type{
+          .index=result_index_,
+          .value=children_chain_data_[result_index_].get_result()
+        };
+      }
     }
 
     class [[nodiscard]] awaiter
@@ -202,6 +215,6 @@ namespace coro::st
           deferred_context_co_return_type<DeferredCoFn>...>,
         sizeof...(co_fns)>
   {
-    return { ctx , std::forward<DeferredCoFn>(co_fns)...};
+    return { ctx , std::forward<DeferredCoFn>(co_fns)... };
   }
 }
