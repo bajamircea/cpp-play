@@ -4,6 +4,7 @@
 
 #include "../coro_lib/co.h"
 #include "../coro_lib/st_run.h"
+#include "../coro_lib/st_wait_any.h"
 
 #include <stdexcept>
 #include <string>
@@ -69,5 +70,29 @@ namespace
     std::string result = coro::st::run(coro::deferred_co(async_foo));
 
     ASSERT_EQ("start 012 stop", result);
+  }
+
+  coro::co<int> async_three(coro::st::context & ctx)
+  {
+    auto x = co_await coro::st::async_wait_any(ctx,
+      [](coro::st::context& ctx) -> coro::co<void>{
+        co_await coro::st::async_sleep(ctx, std::chrono::hours(24));
+        co_return;
+      },
+      [](coro::st::context& ctx) -> coro::co<void>{
+        co_await coro::st::async_sleep(ctx, std::chrono::hours(24));
+        co_return;
+      },
+      [](coro::st::context& ctx) -> coro::co<void>{
+        co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+      });
+    co_return x.index;
+  }
+
+  TEST(st_sleep_cancellation)
+  {
+    auto result = coro::st::run(async_three);
+
+    ASSERT_EQ(2, result);
   }
 } // anonymous namespace

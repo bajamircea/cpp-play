@@ -32,5 +32,10 @@ namespace coro::st
       node.chain_ctx = &chain_ctx;
       timers_heap_.insert(&node);
     }
+
+    void remove_timer_node(timer_node& node) noexcept
+    {
+      timers_heap_.remove(&node);
+    }
   };
 }

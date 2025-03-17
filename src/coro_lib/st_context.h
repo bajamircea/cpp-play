@@ -34,6 +34,11 @@ namespace coro::st
       runner_ctx_.insert_timer_node(node, chain_ctx_, handle);
     }
 
+    void remove_timer_node(timer_node& node) noexcept
+    {
+      runner_ctx_.remove_timer_node(node);
+    }
+
     stop_token get_stop_token() noexcept
     {
       return chain_ctx_.get_stop_token();

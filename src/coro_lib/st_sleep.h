@@ -1,13 +1,13 @@
 #pragma once
 
 #include "st_context.h"
+#include "st_stop_op_callback.h"
 
 #include <chrono>
 #include <coroutine>
 
 namespace coro::st
 {
-  // TODO: add cancellation to timer
   class [[nodiscard]] sleep_awaiter
   {
   public:
@@ -15,13 +15,15 @@ namespace coro::st
 
   private:
     context& ctx_;
-    timer_node node_;
+    timer_node timer_node_;
+    stop_op_callback<sleep_awaiter> stop_cb_;
+    ready_node ready_node_;
 
   public:
     sleep_awaiter(context& ctx, std::chrono::steady_clock::time_point deadline) noexcept :
       ctx_{ ctx }
     {
-      node_.deadline = deadline;
+      timer_node_.deadline = deadline;
     }
 
     sleep_awaiter(const sleep_awaiter&) = delete;
@@ -30,7 +32,15 @@ namespace coro::st
   private:
     void await_suspend_impl(std::coroutine_handle<> handle) noexcept
     {
-      ctx_.insert_timer_node(node_, handle);
+      ctx_.insert_timer_node(timer_node_, handle);
+      stop_cb_.enable(ctx_.get_stop_token(), &sleep_awaiter::cancel, this);
+    }
+
+    void cancel() noexcept
+    {
+      stop_cb_.disable();
+      ctx_.remove_timer_node(timer_node_);
+      ctx_.push_ready_node(ready_node_, std::coroutine_handle<>());
     }
 
     class [[nodiscard]] awaiter

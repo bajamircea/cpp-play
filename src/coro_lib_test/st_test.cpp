@@ -7,7 +7,6 @@
 
 namespace
 {
-  // TODO: also add test with sleep, yield etc.
   TEST(st_trivial)
   {
     coro::st::run([](coro::st::context& ctx) -> coro::co<void> {
@@ -74,4 +73,27 @@ namespace
 
     ASSERT_EQ(42, val);
   }
+
+  coro::co<int> async_two(coro::st::context & ctx)
+  {
+    auto x = co_await coro::st::async_wait_any(ctx,
+      [](coro::st::context& ctx) -> coro::co<void>{
+        while (true)
+        {
+          co_await coro::st::async_yield(ctx);
+        }
+      },
+      [](coro::st::context& ctx) -> coro::co<void>{
+        co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+      });
+    co_return x.index;
+  }
+
+  TEST(st_wait_any_yield_sleep)
+  {
+    auto result = coro::st::run(async_two);
+
+    ASSERT_EQ(1, result);
+  }
+
 } // anonymous namespace

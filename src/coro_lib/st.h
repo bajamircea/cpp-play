@@ -5,6 +5,7 @@
 #include "deferred_member_co.h"
 #include "trampoline_co.h"
 #include "st_stop.h"
+#include "st_stop_op_callback.h"
 #include "st_ready_queue.h"
 #include "st_timer_heap.h"
 #include "st_context.h"
