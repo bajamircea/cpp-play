@@ -177,7 +177,7 @@ namespace
   }
 
   template<typename U>
-  void introspect_vector_of_type(const char * type_name)
+  void introspect_vector_of_type(const char *)
   {
     using T=std::vector<U>;
     static_assert(std::is_nothrow_default_constructible_v<T>);

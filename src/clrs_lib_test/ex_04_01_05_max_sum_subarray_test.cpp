@@ -14,7 +14,7 @@ namespace
 
   max_sum_subarray_result max_sum_subarray(const int * first, const int * last)
   {
-    max_sum_subarray_result result{ first: first, last: last, sum: std::numeric_limits<int>::min() };
+    max_sum_subarray_result result{ .first=first, .last=last, .sum=std::numeric_limits<int>::min() };
     if (first == last)
     {
       return result;

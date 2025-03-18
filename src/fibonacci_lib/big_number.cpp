@@ -36,27 +36,35 @@ namespace fibonacci { namespace big_number
         static_assert(9 == dec_in_digit, "");
         return_value += make_digit(*first) * 100'000'000;
         ++first;
+        [[fallthrough]];
       case 8:
         return_value += make_digit(*first) * 10'000'000;
         ++first;
+        [[fallthrough]];
       case 7:
         return_value += make_digit(*first) * 1'000'000;
         ++first;
+        [[fallthrough]];
       case 6:
         return_value += make_digit(*first) * 100'000;
         ++first;
+        [[fallthrough]];
       case 5:
         return_value += make_digit(*first) * 10'000;
         ++first;
+        [[fallthrough]];
       case 4:
         return_value += make_digit(*first) * 1'000;
         ++first;
+        [[fallthrough]];
       case 3:
         return_value += make_digit(*first) * 100;
         ++first;
+        [[fallthrough]];
       case 2:
         return_value += make_digit(*first) * 10;
         ++first;
+        [[fallthrough]];
       case 1:
         return_value += make_digit(*first);
     }

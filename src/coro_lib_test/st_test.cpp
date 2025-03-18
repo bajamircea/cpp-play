@@ -9,14 +9,14 @@ namespace
 {
   TEST(st_trivial)
   {
-    coro::st::run([](coro::st::context& ctx) -> coro::co<void> {
+    coro::st::run([](coro::st::context&) -> coro::co<void> {
       co_return;
     });
   }
 
   TEST(st_return)
   {
-    int result = coro::st::run([](coro::st::context& ctx) -> coro::co<int> {
+    int result = coro::st::run([](coro::st::context&) -> coro::co<int> {
       co_return 42;
     });
 
@@ -25,13 +25,13 @@ namespace
 
   TEST(st_exception)
   {
-    ASSERT_THROW_WHAT(coro::st::run([](coro::st::context& ctx) -> coro::co<void> {
+    ASSERT_THROW_WHAT(coro::st::run([](coro::st::context&) -> coro::co<void> {
       throw std::runtime_error("Ups!");
       co_return;
     }), std::runtime_error, "Ups!");
   }
 
-  coro::co<int> async_foo(coro::st::context& ctx)
+  coro::co<int> async_foo(coro::st::context&)
   {
     co_return 42;
   }
@@ -43,7 +43,7 @@ namespace
     ASSERT_EQ(42, result);
   }
 
-  coro::co<int> async_bar(coro::st::context& ctx, const int& val)
+  coro::co<int> async_bar(coro::st::context&, const int& val)
   {
     co_return val + 1;
   }
@@ -59,7 +59,7 @@ namespace
     ASSERT_EQ(42, result);
   }
 
-  coro::co<void> async_buzz(coro::st::context& ctx, int& val)
+  coro::co<void> async_buzz(coro::st::context&, int& val)
   {
     val = 42;
     co_return;
@@ -74,7 +74,7 @@ namespace
     ASSERT_EQ(42, val);
   }
 
-  coro::co<int> async_three(coro::st::context & ctx)
+  coro::co<size_t> async_three(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       [](coro::st::context& ctx) -> coro::co<void>{

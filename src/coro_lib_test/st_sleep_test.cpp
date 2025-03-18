@@ -72,7 +72,7 @@ namespace
     ASSERT_EQ("start 012 stop", result);
   }
 
-  coro::co<int> async_three(coro::st::context & ctx)
+  coro::co<size_t> async_three(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       [](coro::st::context& ctx) -> coro::co<void>{

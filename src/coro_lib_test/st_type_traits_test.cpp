@@ -9,7 +9,7 @@
 
 namespace
 {
-  coro::co<std::string> async_foo(coro::st::context& ctx, const int&) {
+  coro::co<std::string> async_foo(coro::st::context&, const int&) {
     co_return "43";
   };
 

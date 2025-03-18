@@ -17,17 +17,17 @@ namespace
     co_return 10;
   }
 
-  coro::co<short> async_1(coro::st::context & ctx)
+  coro::co<short> async_1(coro::st::context &)
   {
-    co_return 20;
+    co_return (short)20;
   }
 
-  coro::co<int> async_2(coro::st::context & ctx)
+  coro::co<int> async_2(coro::st::context &)
   {
     co_return 30;
   }
 
-  coro::co<int> async_three(coro::st::context & ctx)
+  coro::co<size_t> async_three(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       async_0, async_1, async_2);
@@ -41,7 +41,7 @@ namespace
     ASSERT_EQ(21, result);
   }
 
-  coro::co<int> async_wait_void(coro::st::context & ctx)
+  coro::co<size_t> async_wait_void(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       [](coro::st::context& ctx) -> coro::co<void>{
