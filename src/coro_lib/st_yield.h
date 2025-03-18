@@ -6,36 +6,33 @@
 
 namespace coro::st
 {
-  class [[nodiscard]] yield_awaiter
+  class [[nodiscard]] yield_awaitable
   {
   public:
     using co_return_type = void;
 
   private:
     context& ctx_;
-    ready_node node_;
 
   public:
-    yield_awaiter(context& ctx) noexcept :
+    yield_awaitable(context& ctx) noexcept :
       ctx_{ ctx }
     {
     }
 
-    yield_awaiter(const yield_awaiter&) = delete;
-    yield_awaiter& operator=(const yield_awaiter&) = delete;
+    yield_awaitable(const yield_awaitable&) = delete;
+    yield_awaitable& operator=(const yield_awaitable&) = delete;
 
   private:
-    void await_suspend_impl(std::coroutine_handle<> handle) noexcept
-    {
-      ctx_.push_ready_node(node_, handle);
-    }
-
     class [[nodiscard]] awaiter
     {
-      yield_awaiter& impl_;
+      context& ctx_;
+      ready_node node_;
 
     public:
-      awaiter(yield_awaiter& impl) noexcept : impl_{ impl }
+      awaiter(context& ctx) noexcept :
+        ctx_{ ctx },
+        node_{}
       {
       }
 
@@ -49,7 +46,7 @@ namespace coro::st
 
       void await_suspend(std::coroutine_handle<> handle) noexcept
       {
-        return impl_.await_suspend_impl(handle);
+        ctx_.push_ready_node(node_, handle);
       }
 
       constexpr co_return_type await_resume() const noexcept
@@ -57,15 +54,13 @@ namespace coro::st
       }
     };
 
-    friend awaiter;
-
-    [[nodiscard]] friend awaiter operator co_await(yield_awaiter x) noexcept
+    [[nodiscard]] friend awaiter operator co_await(yield_awaitable x) noexcept
     {
-      return { x };
+      return { x.ctx_ };
     }
   };
 
-  [[nodiscard]] inline yield_awaiter async_yield(context& ctx) noexcept
+  [[nodiscard]] inline yield_awaitable async_yield(context& ctx) noexcept
   {
     return { ctx };
   }
