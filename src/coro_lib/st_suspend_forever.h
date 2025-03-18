@@ -7,7 +7,6 @@
 
 namespace coro::st
 {
-  // TODO: add tests to suspend_forever (requires some async_wait_any or nursery)
   class [[nodiscard]] suspend_forever_awaiter
   {
   public:

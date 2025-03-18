@@ -17,7 +17,7 @@ namespace
       coro::st::async_sleep, std::chrono::seconds(0)));
   }
 
-  TEST(st_sleep_lambda)
+  TEST(st_sleep_await)
   {
     int result = coro::st::run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<int> {
       co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));

@@ -41,12 +41,11 @@ namespace
     ASSERT_EQ(21, result);
   }
 
-  coro::co<int> async_void(coro::st::context & ctx)
+  coro::co<int> async_wait_void(coro::st::context & ctx)
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       [](coro::st::context& ctx) -> coro::co<void>{
         co_await coro::st::async_yield(ctx);
-        co_return;
       },
       [](coro::st::context&) -> coro::co<void>{
         co_return;
@@ -56,7 +55,7 @@ namespace
 
   TEST(st_wait_any_void)
   {
-    auto result = coro::st::run(async_void);
+    auto result = coro::st::run(async_wait_void);
     
     ASSERT_EQ(1, result);
   }

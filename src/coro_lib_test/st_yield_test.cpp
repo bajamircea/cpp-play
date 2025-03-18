@@ -15,7 +15,7 @@ namespace
     coro::st::run(coro::deferred_co(coro::st::async_yield));
   }
 
-  TEST(st_yield_lambda)
+  TEST(st_yield_await)
   {
     int result = coro::st::run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<int> {
       co_await coro::st::async_yield(ctx);
