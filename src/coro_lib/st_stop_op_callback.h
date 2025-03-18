@@ -27,8 +27,8 @@ namespace coro::st
     {
     }
 
-    stop_op_callback_impl(const stop_op_callback_impl&) = default;
-    stop_op_callback_impl& operator=(const stop_op_callback_impl&) = default;
+    stop_op_callback_impl(const stop_op_callback_impl&) noexcept = default;
+    stop_op_callback_impl& operator=(const stop_op_callback_impl&) noexcept = default;
 
     void operator()() noexcept
     {
