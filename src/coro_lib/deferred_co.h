@@ -10,6 +10,7 @@ namespace coro
   template<typename CoFn, typename... CapturedArgs>
   class [[nodiscard]] deferred_co
   {
+    // TODO: why decay here?
     using CoFnDecayed = std::decay_t<CoFn>;
     using CapturedArgsTuple = std::tuple<std::decay_t<CapturedArgs>...>;
     using CapturedArgsSeq = std::index_sequence_for<CapturedArgs...>;
@@ -23,6 +24,7 @@ namespace coro
       co_fn_{ std::forward<CoFn2>(co_fn) },
       captured_args_tuple_{ std::forward<CapturedArgs2>(captured_args)... }
     {
+      static_assert(sizeof... (CapturedArgs) == sizeof... (CapturedArgs2));
     }
 
     template<typename... ExtraCallArgs>
