@@ -23,6 +23,12 @@ namespace
     co_return x;
   }
 
+  coro::co<void> async_dangerous()
+  {
+    auto x = operator co_await(async_foo());
+    co_await x;
+  }
+
   // coro::co<void> async_does_not_compile()
   // {
   //   auto x = async_foo();
@@ -35,8 +41,15 @@ namespace
   //   co_return;
   // }
 
+  // coro::co<void> async_does_not_compile3()
+  // {
+  //   auto x = async_foo();
+  //   co_await operator co_await(x);
+  // }
+
   TEST(co_compiles)
   {
     ASSERT_NE(nullptr, &async_buzz);
+    ASSERT_NE(nullptr, &async_dangerous);
   }
 } // anonymous namespace

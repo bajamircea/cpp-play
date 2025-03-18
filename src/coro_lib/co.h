@@ -73,60 +73,49 @@ namespace coro
     co(const co&) = delete;
     co& operator=(const co&) = delete;
 
-#ifdef _DEBUG
-    ~co()
-    {
-      assert(unique_child_coro_.get().promise().parent_coro_);
-    }
-#endif
-
   private:
-    auto await_suspend_impl(std::coroutine_handle<> parent_coro) noexcept
-    {
-      std::coroutine_handle<promise_type> child_coro = unique_child_coro_.get();
-      assert(!child_coro.promise().parent_coro_);
-      child_coro.promise().parent_coro_ = parent_coro;
-      return child_coro;
-    }
-
-    T await_resume_impl() const
-    {
-      return unique_child_coro_.get().promise().get_result();
-    }
-
     class [[nodiscard]] awaiter
     {
-      co& impl_;
+      unique_coroutine_handle<promise_type> unique_child_coro_;
 
     public:
-      awaiter(co& impl) noexcept : impl_{ impl }
+      awaiter(unique_coroutine_handle<promise_type>&& unique_child_coro) noexcept :
+        unique_child_coro_{ std::move(unique_child_coro) }
       {
       }
 
       awaiter(const awaiter&) = delete;
       awaiter& operator=(const awaiter&) = delete;
 
+#ifdef _DEBUG
+      ~awaiter()
+      {
+        assert(unique_child_coro_.get().promise().parent_coro_);
+      }
+#endif
+
       [[nodiscard]] constexpr bool await_ready() const noexcept
       {
         return false;
       }
 
-      auto await_suspend(std::coroutine_handle<> parent_coro) noexcept
+      std::coroutine_handle<promise_type> await_suspend(std::coroutine_handle<> parent_coro) noexcept
       {
-        return impl_.await_suspend_impl(parent_coro);
+        std::coroutine_handle<promise_type> child_coro = unique_child_coro_.get();
+        assert(!child_coro.promise().parent_coro_);
+        child_coro.promise().parent_coro_ = parent_coro;
+        return child_coro;
       }
 
       T await_resume() const
       {
-        return impl_.await_resume_impl();
+        return unique_child_coro_.get().promise().get_result();
       }
     };
 
-    friend awaiter;
-
     [[nodiscard]] friend awaiter operator co_await(co x) noexcept
     {
-      return { x };
+      return { std::move(x.unique_child_coro_) };
     }
   };
 }
