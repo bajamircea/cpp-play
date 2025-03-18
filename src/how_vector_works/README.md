@@ -144,7 +144,7 @@ size: 3, capacity: 4
 o: 1, mc: 1, ~: 1
 size: 4, capacity: 4
 ```
-Even if the move constructor for RAII class throws, the values will still be move constructed, but the `push_back` only gives basic exception guarantees instead of the strong ones. 
+Even if the move constructor for RAII class throws, the values will still be move constructed, but the `push_back` only gives basic exception guarantees instead of the strong ones.
 
 
 # Containers with dynamically allocated sentinels

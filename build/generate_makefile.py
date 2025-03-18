@@ -82,7 +82,7 @@ DEP_FILES :=
 
 {project}_CPP_FILES := $(wildcard $(SRC_DIR)/{project}/*.cpp)
 \n'''.format(project=project))
-        
+
         for config in configs:
                 out.write('''\
 {config}_{project}_OBJ_FILES := $({project}_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/{config}/%.o)
@@ -147,7 +147,7 @@ $(INT_DIR)/{config} : | $(INT_DIR)
 $(INT_DIR)/{config}/{project} : | $(INT_DIR)/{config}
 \tmkdir $@
 \n'''.format(project=project,config=config))
-        
+
     out.write('''\
 ## To clean and build run 'make clean && make'
 clean:

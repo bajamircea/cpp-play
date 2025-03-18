@@ -164,7 +164,7 @@ namespace fibonacci { namespace big_number
   std::vector<unit> karatsuba_add_helper(const unit * lhs_first, const unit * lhs_last, const unit * rhs_first, const unit * rhs_last)
   {
     std::vector<unit> return_value;
-    
+
     unit carry = 0;
 
     for (;(lhs_first != lhs_last) && (rhs_first != rhs_last); ++lhs_first, ++rhs_first)
@@ -544,7 +544,7 @@ namespace fibonacci { namespace big_number
   unsigned_binary & unsigned_binary::operator*=(const unsigned_binary & rhs)
   {
     this->units_ = karatsuba_multiplication(this->units_, rhs.units_);
-    
+
     return *this;
   }
 
@@ -576,13 +576,13 @@ namespace fibonacci { namespace big_number
       {
         tmp = carry;
         tmp *= unit_over;
-        tmp += units_[i]; 
+        tmp += units_[i];
       }
       else
       {
         tmp = units_[i];
       }
-      
+
       carry = tmp % value;
       units_[i] = tmp / value;
     }
@@ -785,7 +785,7 @@ namespace fibonacci { namespace big_number
 
     std::size_t whole_digits = count / dec_in_digit;
     std::size_t remaining = count % dec_in_digit;
-    
+
     const char * first_group = first;
     const char * last_group;
     if (remaining != 0)

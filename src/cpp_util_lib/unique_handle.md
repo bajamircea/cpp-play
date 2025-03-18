@@ -259,7 +259,7 @@ The cleanup action can be cancelled early using `reset()`.
 
 # Cleanup action with data
 
-- Sometimes cleanup also requires some data: demonstrating a combination of 
+- Sometimes cleanup also requires some data: demonstrating a combination of
   data (`ULONG flags`) and `bool`.
 - The constructor of `unique_handle` that accepts multiple arguments is
   useful in this scenario

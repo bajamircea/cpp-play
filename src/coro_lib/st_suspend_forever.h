@@ -28,7 +28,7 @@ namespace coro::st
     class [[nodiscard]] awaiter
     {
       context& ctx_;
-      ready_node node_;  
+      ready_node node_;
       stop_op_callback<awaiter> stop_cb_;
 
     public:
@@ -60,7 +60,7 @@ namespace coro::st
       {
         stop_cb_.disable();
         ctx_.push_ready_node(node_, std::coroutine_handle<>());
-      }  
+      }
     };
 
     [[nodiscard]] friend awaiter operator co_await(suspend_forever_awaitable x) noexcept

@@ -42,7 +42,7 @@ namespace
   {
     auto f = coro::deferred_co(async_foo);
     co_await f();
-    
+
     auto b = coro::deferred_co(async_bar, 4);
     auto x = co_await b();
 

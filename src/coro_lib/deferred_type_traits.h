@@ -53,5 +53,5 @@ namespace coro
     };
 
   template <typename T, typename... Args>
-  using deferred_co_return_type = std::invoke_result_t<T, Args...>::co_return_type; 
+  using deferred_co_return_type = std::invoke_result_t<T, Args...>::co_return_type;
 }

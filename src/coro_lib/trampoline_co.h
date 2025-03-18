@@ -20,6 +20,7 @@ namespace coro
     class promise_type : public promise_base<T>
     {
       friend trampoline_co;
+
       OnTrampolineDoneFnPtr on_done_fn_{ nullptr };
       void* x_{ nullptr };
 
@@ -31,7 +32,7 @@ namespace coro
 
       trampoline_co get_return_object() noexcept
       {
-        return trampoline_co{std::coroutine_handle<promise_type>::from_promise(*this)};
+        return { std::coroutine_handle<promise_type>::from_promise(*this) };
       }
 
       std::suspend_always initial_suspend() noexcept
@@ -89,7 +90,7 @@ namespace coro
 
     void resume() const
     {
-      return unique_child_coro_.get().resume();      
+      return unique_child_coro_.get().resume();
     }
 
     bool done() const noexcept

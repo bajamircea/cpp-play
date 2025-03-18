@@ -4,7 +4,7 @@ Some engineering issues outdated or ignored. This makes it a more difficult read
 the professional programmer.
 
 Using 1-indexed instead of 0-indexed arrays is just plain outdated. The loop counter value
-is available after the loop. 
+is available after the loop.
 
 Insersion sort pseudocode re-writes values even if the array is already sorted.
 

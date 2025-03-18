@@ -37,12 +37,12 @@ struct fibonacci_matrix_multiply
              x[0] * y[0] + x[1] * y[1]};
    }
   };
-  
+
   template <typename N> std::array<N, 2> identity_element(const fibonacci_matrix_multiply<N>&)
   {
     return { N(0), N(1) };
   }
-  
+
   template <typename R, typename N> R fibonacci_pow(N n)
   {
     if (n == 0) return R(0);

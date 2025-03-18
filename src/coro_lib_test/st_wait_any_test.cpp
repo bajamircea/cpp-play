@@ -37,7 +37,7 @@ namespace
   TEST(st_wait_any_sample)
   {
     auto result = coro::st::run(async_three);
-    
+
     ASSERT_EQ(21, result);
   }
 
@@ -56,7 +56,7 @@ namespace
   TEST(st_wait_any_void)
   {
     auto result = coro::st::run(async_wait_void);
-    
+
     ASSERT_EQ(1, result);
   }
 

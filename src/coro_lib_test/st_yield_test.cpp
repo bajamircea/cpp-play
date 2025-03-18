@@ -44,7 +44,7 @@ namespace
   TEST(st_yield_dangerous)
   {
     auto result = coro::st::run(async_dangerous);
-    
+
     ASSERT_EQ(42, result);
   }
 

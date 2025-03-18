@@ -26,36 +26,36 @@ namespace coro
 
       promise_type(const promise_type&) = delete;
       promise_type& operator=(const promise_type&) = delete;
-  
+
       co get_return_object() noexcept
       {
-        return co{std::coroutine_handle<promise_type>::from_promise(*this)};
+        return { std::coroutine_handle<promise_type>::from_promise(*this) };
       }
-  
+
       std::suspend_always initial_suspend() noexcept
       {
         return {};
       }
-  
+
       struct final_awaiter
       {
         [[nodiscard]] constexpr bool await_ready() const noexcept
         {
           return false;
         }
-  
+
         auto await_suspend(std::coroutine_handle<promise_type> child_coro) noexcept
         {
           return child_coro.promise().parent_coro_;
         }
-  
+
         [[noreturn]] constexpr void await_resume() const noexcept
         {
           std::unreachable();
           //std::terminate();
         }
       };
-  
+
       final_awaiter final_suspend() noexcept
       {
         return {};

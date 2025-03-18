@@ -103,7 +103,7 @@ namespace cpp_util
 
       if (size_ & mask)
       {
-        new_node_parent->*right = new_node; 
+        new_node_parent->*right = new_node;
       }
       else
       {
@@ -156,12 +156,12 @@ namespace cpp_util
       if (size_ & mask)
       {
         last = last_node_parent->*right;
-        last_node_parent->*right = nullptr; 
+        last_node_parent->*right = nullptr;
       }
       else
       {
         last = last_node_parent->*left;
-        last_node_parent->*left = nullptr; 
+        last_node_parent->*left = nullptr;
       }
       --size_;
 

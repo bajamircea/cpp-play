@@ -27,7 +27,7 @@ namespace
   TEST(st_suspend_forever_simple)
   {
     auto result = coro::st::run(async_simple);
-    
+
     ASSERT_EQ(2, result);
   }
 
@@ -45,7 +45,7 @@ namespace
         coro::st::async_yield);
       co_return x.index;
     });
-    
+
     ASSERT_EQ(1, result);
   }
 

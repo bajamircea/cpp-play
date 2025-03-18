@@ -37,12 +37,12 @@ struct multiply_2x2
              x[2] * y[0] + x[3] * y[2], x[2] * y[1] + x[3] * y[3] };
    }
   };
-  
+
   template <typename N> std::array<N, 4> identity_element(const multiply_2x2<N>&)
   {
     return { N(1), N(0), N(0), N(1) };
   }
-  
+
   template <typename R, typename N> R fibonacci_pow(N n)
   {
     if (n == 0) return R(0);

@@ -66,7 +66,7 @@ namespace
   {
     int price[] = {100, 113, 110, 85, 105, 102, 86, 63, 81, 101, 94, 106, 101, 79, 94, 90, 97};
     int change[std::size(price) - 1];
-    fill_change(std::begin(price), std::end(price), change); 
+    fill_change(std::begin(price), std::end(price), change);
     auto result = max_sum_subarray(std::begin(change), std::end(change));
     // buy end of day 7, sell end of day 11, make 106 - 63 = 43
     ASSERT_EQ(43, result.sum);

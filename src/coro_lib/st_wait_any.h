@@ -42,7 +42,7 @@ namespace coro::st
       template<typename DeferredCoFn>
       chain_data(wait_any_awaiter& awaiter, DeferredCoFn&& co_fn) :
         awaiter_{ awaiter },
-        chain_ctx_{ awaiter_.wait_stop_source_.get_token(), invoke_on_resume, this}, 
+        chain_ctx_{ awaiter_.wait_stop_source_.get_token(), invoke_on_resume, this},
         ctx_{ awaiter_.parent_ctx_, chain_ctx_ },
         trampoline_([](context& ctx, DeferredCoFn& co_fn)
           -> coro::trampoline_co<T> {
@@ -165,7 +165,7 @@ namespace coro::st
     co_return_type await_resume_impl() const
     {
       assert(result_index_ != N);
-      if constexpr (std::is_same_v<T, void>) 
+      if constexpr (std::is_same_v<T, void>)
       {
         children_chain_data_[result_index_].get_result();
         return co_return_type{

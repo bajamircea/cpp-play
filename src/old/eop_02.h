@@ -185,7 +185,7 @@ namespace eop_02
   {
     T y = connection_point(x, f, p);
     DistanceType(F) m0 = distance(x, y, f);
-    DistanceType(F) m1 = p(y) ? 
+    DistanceType(F) m1 = p(y) ?
       distance(f(y), y, f) : 0;
     return triple<DistanceType(F), DistanceType(F), T>(m0, m1, y);
   }
