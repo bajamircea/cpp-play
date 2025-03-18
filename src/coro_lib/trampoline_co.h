@@ -15,8 +15,6 @@ namespace coro
   class [[nodiscard]] trampoline_co
   {
   public:
-    using co_return_type = T;
-
     class promise_type : public promise_base<T>
     {
       friend trampoline_co;
@@ -72,7 +70,8 @@ namespace coro
   private:
     unique_coroutine_handle<promise_type> unique_child_coro_;
 
-    trampoline_co(std::coroutine_handle<promise_type> child_coro) noexcept : unique_child_coro_{ child_coro }
+    trampoline_co(std::coroutine_handle<promise_type> child_coro) noexcept :
+      unique_child_coro_{ child_coro }
     {
     }
 
@@ -80,26 +79,29 @@ namespace coro
     trampoline_co(const trampoline_co&) = delete;
     trampoline_co& operator=(const trampoline_co&) = delete;
 
-
     void set_on_done_fn(OnTrampolineDoneFnPtr on_done_fn, void* x) noexcept
     {
-      auto & promise = unique_child_coro_.get().promise();
+      assert(nullptr != on_done_fn);
+      auto& promise = unique_child_coro_.get().promise();
       promise.on_done_fn_ = on_done_fn;
       promise.x_ = x;
     }
 
     void resume() const
     {
+      assert(nullptr != unique_child_coro_.get().promise().on_done_fn_);
       return unique_child_coro_.get().resume();
     }
 
     bool done() const noexcept
     {
+      assert(nullptr != unique_child_coro_.get().promise().on_done_fn_);
       return unique_child_coro_.get().done();
     }
 
     T get_result() const
     {
+      assert(nullptr != unique_child_coro_.get().promise().on_done_fn_);
       return unique_child_coro_.get().promise().get_result();
     }
   };

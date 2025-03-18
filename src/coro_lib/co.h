@@ -58,6 +58,7 @@ namespace coro
 
       final_awaiter final_suspend() noexcept
       {
+        assert(parent_coro_);
         return {};
       }
     };
@@ -65,7 +66,8 @@ namespace coro
   private:
     unique_coroutine_handle<promise_type> unique_child_coro_;
 
-    co(std::coroutine_handle<promise_type> child_coro) noexcept : unique_child_coro_{ child_coro }
+    co(std::coroutine_handle<promise_type> child_coro) noexcept :
+      unique_child_coro_{ child_coro }
     {
     }
 
