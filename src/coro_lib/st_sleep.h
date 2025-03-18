@@ -8,6 +8,8 @@
 
 namespace coro::st
 {
+  // TODO: make the resumption of a timer more realistic, even if shortcuts
+  // can be taken for the single threaded model
   class [[nodiscard]] sleep_awaiter
   {
   public:
