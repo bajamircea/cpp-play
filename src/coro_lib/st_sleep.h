@@ -10,47 +10,39 @@ namespace coro::st
 {
   // TODO: make the resumption of a timer more realistic, even if shortcuts
   // can be taken for the single threaded model
-  class [[nodiscard]] sleep_awaiter
+  class [[nodiscard]] sleep_awaitable
   {
   public:
     using co_return_type = void;
 
   private:
     context& ctx_;
-    timer_node timer_node_;
-    stop_op_callback<sleep_awaiter> stop_cb_;
-    ready_node ready_node_;
+    std::chrono::steady_clock::time_point deadline_;
 
   public:
-    sleep_awaiter(context& ctx, std::chrono::steady_clock::time_point deadline) noexcept :
-      ctx_{ ctx }
+    sleep_awaitable(context& ctx, std::chrono::steady_clock::time_point deadline) noexcept :
+      ctx_{ ctx },
+      deadline_{ deadline }
     {
-      timer_node_.deadline = deadline;
     }
 
-    sleep_awaiter(const sleep_awaiter&) = delete;
-    sleep_awaiter& operator=(const sleep_awaiter&) = delete;
+    sleep_awaitable(const sleep_awaitable&) = delete;
+    sleep_awaitable& operator=(const sleep_awaitable&) = delete;
 
   private:
-    void await_suspend_impl(std::coroutine_handle<> handle) noexcept
-    {
-      ctx_.insert_timer_node(timer_node_, handle);
-      stop_cb_.enable(ctx_.get_stop_token(), &sleep_awaiter::cancel, this);
-    }
-
-    void cancel() noexcept
-    {
-      stop_cb_.disable();
-      ctx_.remove_timer_node(timer_node_);
-      ctx_.push_ready_node(ready_node_, std::coroutine_handle<>());
-    }
-
     class [[nodiscard]] awaiter
     {
-      sleep_awaiter& impl_;
+      context& ctx_;
+      timer_node timer_node_;
+      ready_node ready_node_;
+      stop_op_callback<awaiter> stop_cb_;
 
     public:
-      awaiter(sleep_awaiter& impl) noexcept : impl_{ impl }
+      awaiter(context& ctx, std::chrono::steady_clock::time_point deadline) noexcept :
+        ctx_{ ctx },
+        timer_node_{ deadline },
+        ready_node_{},
+        stop_cb_{}
       {
       }
 
@@ -64,23 +56,29 @@ namespace coro::st
 
       void await_suspend(std::coroutine_handle<> handle) noexcept
       {
-        return impl_.await_suspend_impl(handle);
+        ctx_.insert_timer_node(timer_node_, handle);
+        stop_cb_.enable(ctx_.get_stop_token(), &awaiter::cancel, this);
       }
 
       constexpr co_return_type await_resume() const noexcept
       {
       }
+
+      void cancel() noexcept
+      {
+        stop_cb_.disable();
+        ctx_.remove_timer_node(timer_node_);
+        ctx_.push_ready_node(ready_node_, std::coroutine_handle<>());
+      }
     };
 
-    friend awaiter;
-
-    [[nodiscard]] friend awaiter operator co_await(sleep_awaiter x) noexcept
+    [[nodiscard]] friend awaiter operator co_await(sleep_awaitable x) noexcept
     {
-      return { x };
+      return { x.ctx_, x.deadline_ };
     }
   };
 
-  [[nodiscard]] inline sleep_awaiter async_sleep(context& ctx, std::chrono::steady_clock::duration sleep_duration) noexcept
+  [[nodiscard]] inline sleep_awaitable async_sleep_for(context& ctx, std::chrono::steady_clock::duration sleep_duration) noexcept
   {
     return { ctx, std::chrono::steady_clock::now() + sleep_duration };
   }

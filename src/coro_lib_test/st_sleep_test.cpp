@@ -14,43 +14,57 @@ namespace
   TEST(st_sleep_trivial)
   {
     coro::st::run(coro::deferred_co(
-      coro::st::async_sleep, std::chrono::seconds(0)));
+      coro::st::async_sleep_for, std::chrono::seconds(0)));
   }
 
   TEST(st_sleep_await)
   {
-    int result = coro::st::run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<int> {
-      co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+    int result = coro::st::run([](coro::st::context & ctx) -> coro::co<int> {
+      co_await coro::st::async_sleep_for(ctx, std::chrono::seconds(0));
       co_return 42;
-    }));
+    });
 
     ASSERT_EQ(42, result);
   }
 
   TEST(st_sleep_exception)
   {
-    ASSERT_THROW_WHAT(coro::st::run(coro::deferred_co([](coro::st::context & ctx) -> coro::co<void> {
-      co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+    ASSERT_THROW_WHAT(coro::st::run([](coro::st::context & ctx) -> coro::co<void> {
+      co_await coro::st::async_sleep_for(ctx, std::chrono::seconds(0));
       throw std::runtime_error("Ups!");
       co_return;
-    })), std::runtime_error, "Ups!");
+    }), std::runtime_error, "Ups!");
+  }
+
+  coro::co<int> async_dangerous(coro::st::context& ctx)
+  {
+    auto x = operator co_await(coro::st::async_sleep_for(ctx, std::chrono::seconds(0)));
+    co_await x;
+    co_return 42;
+  }
+
+  TEST(st_sleep_dangerous)
+  {
+    auto result = coro::st::run(async_dangerous);
+
+    ASSERT_EQ(42, result);
   }
 
   // coro::co<void> async_sleep_does_not_compile(coro::st::context & ctx)
   // {
-  //   auto x = coro::st::async_sleep(ctx, std::chrono::seconds(0));
+  //   auto x = coro::st::async_sleep_for(ctx, std::chrono::seconds(0));
   //   co_await std::move(x);
   // }
 
   // coro::co<void> async_sleep_does_not_compile2(coro::st::context & ctx)
   // {
-  //   coro::st::async_sleep(ctx, std::chrono::seconds(0));
+  //   coro::st::async_sleep_for(ctx, std::chrono::seconds(0));
   //   co_return;
   // }
 
   coro::co<std::string> async_bar(coro::st::context & ctx, int i)
   {
-    co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+    co_await coro::st::async_sleep_for(ctx, std::chrono::seconds(0));
     co_return std::to_string(i);
   }
 
@@ -67,7 +81,7 @@ namespace
 
   TEST(st_sleep_timers)
   {
-    std::string result = coro::st::run(coro::deferred_co(async_foo));
+    std::string result = coro::st::run(async_foo);
 
     ASSERT_EQ("start 012 stop", result);
   }
@@ -76,15 +90,15 @@ namespace
   {
     auto x = co_await coro::st::async_wait_any(ctx,
       [](coro::st::context& ctx) -> coro::co<void>{
-        co_await coro::st::async_sleep(ctx, std::chrono::hours(24));
+        co_await coro::st::async_sleep_for(ctx, std::chrono::hours(24));
         co_return;
       },
       [](coro::st::context& ctx) -> coro::co<void>{
-        co_await coro::st::async_sleep(ctx, std::chrono::hours(24));
+        co_await coro::st::async_sleep_for(ctx, std::chrono::hours(24));
         co_return;
       },
       [](coro::st::context& ctx) -> coro::co<void>{
-        co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+        co_await coro::st::async_sleep_for(ctx, std::chrono::seconds(0));
       });
     co_return x.index;
   }

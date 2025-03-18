@@ -28,14 +28,14 @@ namespace coro::st
     class [[nodiscard]] awaiter
     {
       context& ctx_;
-      stop_op_callback<awaiter> stop_cb_;
       ready_node node_;  
+      stop_op_callback<awaiter> stop_cb_;
 
     public:
       awaiter(context& ctx) noexcept :
         ctx_{ ctx },
-        stop_cb_{},
-        node_{}
+        node_{},
+        stop_cb_{}
       {
       }
 

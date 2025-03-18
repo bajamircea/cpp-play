@@ -87,7 +87,7 @@ namespace
         co_await coro::st::async_suspend_forever(ctx);
       },
       [](coro::st::context& ctx) -> coro::co<void>{
-        co_await coro::st::async_sleep(ctx, std::chrono::seconds(0));
+        co_await coro::st::async_sleep_for(ctx, std::chrono::seconds(0));
       });
     co_return x.index;
   }

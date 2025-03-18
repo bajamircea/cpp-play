@@ -12,6 +12,10 @@ namespace coro::st
   struct timer_node
   {
     timer_node() noexcept = default;
+    timer_node(std::chrono::steady_clock::time_point deadline_arg) noexcept :
+      deadline{ deadline_arg }
+    {
+    }
 
     timer_node(const timer_node&) = delete;
     timer_node& operator=(const timer_node&) = delete;
