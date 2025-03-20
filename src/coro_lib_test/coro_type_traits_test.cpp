@@ -11,6 +11,7 @@
 #include "dummy_co_has_member_co_await_private.h"
 #include "dummy_co_has_non_member_co_await.h"
 
+#include <functional>
 #include <string>
 
 namespace
@@ -60,6 +61,20 @@ namespace
     auto foo = async_foo();
     static_assert(coro::has_member_operator_co_await<decltype(foo)>);
     can_use_awaitable_with_member_co_await(foo);
+
+    auto invoked_lambda_has_member = std::invoke([]()
+      -> coro_test::dummy_co_has_member_co_await<void>
+      { co_return;
+    });
+    static_assert(coro::has_member_operator_co_await<decltype(invoked_lambda_has_member)>);
+    can_use_awaitable_with_member_co_await(invoked_lambda_has_member);
+
+    auto invoked_lambda_co = std::invoke([]()
+      -> coro::co<void>
+      { co_return;
+    });
+    static_assert(!coro::has_member_operator_co_await<decltype(invoked_lambda_co)>);
+    can_not_use_awaitable_with_member_co_await(invoked_lambda_co);
 
     auto foo_rvalue = async_foo_rvalue();
     static_assert(coro::has_member_operator_co_await<decltype(foo_rvalue)>);
@@ -142,19 +157,26 @@ namespace
 
   TEST(coro_type_traits_get_awaiter)
   {
-    // static_assert(!coro::has_get_awaiter<coro_test::dummy_co_has_member_co_await<int>>);
+    auto awaiter_member_co_await = coro::get_awaiter(async_foo());
 
-    // static_assert(!coro::has_get_awaiter<coro_test::dummy_co_has_member_co_await_rvalue<int>>);
+    auto awaitable_member_co_await_variable = async_foo();
+    auto awaiter_member_co_await2 = coro::get_awaiter(awaitable_member_co_await_variable);
 
-    // static_assert(!coro::has_get_awaiter<coro_test::dummy_co_has_member_co_await_private<int>>);
+    auto awaiter_member_co_await_rvalue = coro::get_awaiter(async_foo_rvalue());
 
-    // static_assert(!coro::has_get_awaiter<coro_test::dummy_co_has_non_member_co_await<int>>);
+    auto awaitable_member_co_await_rvalue_variable = async_foo_rvalue();
+    auto awaiter_member_co_await_rvalue2 = coro::get_awaiter(awaitable_member_co_await_rvalue_variable);
 
     auto awaiter_co = coro::get_awaiter(async_foo_co());
 
     auto awaitable_co_variable = async_foo_co();
     auto awaiter_co2 = coro::get_awaiter(awaitable_co_variable);
+  }
 
-    // static_assert(!coro::has_get_awaiter<std::string>);
+  TEST(coro_type_traits_awaitable_traits)
+  {
+    static_assert(std::is_same_v<
+      std::string,
+      coro::awaitable_traits<decltype(async_foo_co())>::await_result_t>);
   }
 } // anonymous namespace
