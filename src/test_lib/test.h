@@ -34,4 +34,6 @@ namespace test
 
 #define ASSERT_THROW(expr, ex) try{ {expr;} test::fail_current(__FILE__, __LINE__, "ASSERT_THROW failed for expression '" #expr "'"); } catch (const ex &) {}
 
+#define ASSERT_NO_THROW(expr) { bool assert_no_throw = true; try{ {expr;} assert_no_throw = false; } catch(...) {} if (assert_no_throw) { test::fail_current(__FILE__, __LINE__, "ASSERT_NO_THROW failed for expression '" #expr "'"); }
+
 #define ASSERT_THROW_WHAT(expr, ex, what_str) try{ {expr;} test::fail_current(__FILE__, __LINE__, "ASSERT_THROW_WHAT failed for expression '" #expr "'"); } catch (const ex & e) { ASSERT_EQ(what_str, std::string(e.what())); }

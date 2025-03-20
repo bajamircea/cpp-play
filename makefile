@@ -29,7 +29,8 @@ CXX = g++
 ## -MT specifies the dependency target (path qualified obj file name)
 DEP_FLAGS = -MT $@ -MMD -MP -MF $(@:.o=.d)
 STD_FLAGS = --std=c++23 -fno-rtti
-## Maybe add -Wconversion as well
+# TODO maybe add -Wconversion as well
+# TODO ADD back -fsanitize=address
 WARN_FLAGS = -Wall -Wpedantic -Wextra -Werror
 debug_FLAGS = -g -D_DEBUG=1
 release_FLAGS = -O3 -march=native
