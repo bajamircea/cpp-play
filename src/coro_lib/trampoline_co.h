@@ -11,44 +11,6 @@ namespace coro
 {
   using OnTrampolineDoneFnPtr = void (*)(void* x) noexcept;
 
-  struct coroutine_frame_abi
-  {
-    void (*resume)(void*);
-    void (*destroy)(void*);
-  };
-
-  class trampoline_frame : public coroutine_frame_abi
-  {
-    void* no_parent_;
-    OnTrampolineDoneFnPtr on_done_fn_{ nullptr };
-    void* x_{ nullptr };
-  public:
-    trampoline_frame(OnTrampolineDoneFnPtr on_done_fn, void* x) noexcept :
-      coroutine_frame_abi{ .resume=resume_impl, .destroy=destroy_impl },
-      no_parent_{ nullptr },
-      on_done_fn_{ on_done_fn },
-      x_{ x }
-    {
-      assert(nullptr != on_done_fn);
-    }
-
-    trampoline_frame(const trampoline_frame&) = delete;
-    trampoline_frame& operator=(const trampoline_frame&) = delete;
-
-  private:
-    static void resume_impl(void* frame_ptr) noexcept
-    {
-      assert(frame_ptr != nullptr);
-      trampoline_frame* self = reinterpret_cast<trampoline_frame*>(frame_ptr);
-      self->on_done_fn_(self->x_);
-    }
-
-    static void destroy_impl(void*) noexcept
-    {
-      std::terminate();
-    }
-  };
-
   template<typename T>
   class [[nodiscard]] trampoline_co
   {

@@ -121,6 +121,7 @@ namespace coro
       return std::move(x).get_awaiter();
     }
   public:
+    // TODO: hide this to access via traits maybe?
     [[nodiscard]] awaiter get_awaiter() && noexcept
     {
       return { std::move(unique_child_coro_) };

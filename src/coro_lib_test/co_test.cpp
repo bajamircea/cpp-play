@@ -25,6 +25,9 @@ namespace
 
   coro::co<void> async_dangerous()
   {
+    // Ideally should not compile as the non member
+    // `operator co_await` is private, but
+    // unfortunately it does compile
     auto x = operator co_await(async_foo());
     co_await x;
   }
