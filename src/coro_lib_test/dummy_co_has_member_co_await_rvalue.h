@@ -1,23 +1,23 @@
 #pragma once
 
-#include "unique_coroutine_handle.h"
-#include "promise_base.h"
+#include "../coro_lib/unique_coroutine_handle.h"
+#include "../coro_lib/promise_base.h"
 
 #include <cassert>
 #include <coroutine>
 #include <utility>
 
-namespace coro
+namespace coro_test
 {
   template<typename T>
-  class [[nodiscard]] co
+  class [[nodiscard]] dummy_co_has_member_co_await_rvalue
   {
   public:
     using co_return_type = T;
 
-    class promise_type : public promise_base<T>
+    class promise_type : public coro::promise_base<T>
     {
-      friend co;
+      friend dummy_co_has_member_co_await_rvalue;
 
       std::coroutine_handle<> parent_coro_;
 
@@ -27,7 +27,7 @@ namespace coro
       promise_type(const promise_type&) = delete;
       promise_type& operator=(const promise_type&) = delete;
 
-      co get_return_object() noexcept
+      dummy_co_has_member_co_await_rvalue get_return_object() noexcept
       {
         return { std::coroutine_handle<promise_type>::from_promise(*this) };
       }
@@ -64,24 +64,24 @@ namespace coro
     };
 
   private:
-    unique_coroutine_handle<promise_type> unique_child_coro_;
+    coro::unique_coroutine_handle<promise_type> unique_child_coro_;
 
-    co(std::coroutine_handle<promise_type> child_coro) noexcept :
+    dummy_co_has_member_co_await_rvalue(std::coroutine_handle<promise_type> child_coro) noexcept :
       unique_child_coro_{ child_coro }
     {
     }
 
   public:
-    co(const co&) = delete;
-    co& operator=(const co&) = delete;
+    dummy_co_has_member_co_await_rvalue(const dummy_co_has_member_co_await_rvalue&) = delete;
+    dummy_co_has_member_co_await_rvalue& operator=(const dummy_co_has_member_co_await_rvalue&) = delete;
 
   private:
     class [[nodiscard]] awaiter
     {
-      unique_coroutine_handle<promise_type> unique_child_coro_;
+      coro::unique_coroutine_handle<promise_type> unique_child_coro_;
 
     public:
-      awaiter(unique_coroutine_handle<promise_type>&& unique_child_coro) noexcept :
+      awaiter(coro::unique_coroutine_handle<promise_type>&& unique_child_coro) noexcept :
         unique_child_coro_{ std::move(unique_child_coro) }
       {
       }
@@ -116,14 +116,10 @@ namespace coro
       }
     };
 
-    [[nodiscard]] friend awaiter operator co_await(co x) noexcept
-    {
-      return std::move(x).get_awaiter();
-    }
   public:
-    [[nodiscard]] awaiter get_awaiter() && noexcept
+    [[nodiscard]] awaiter operator co_await() noexcept
     {
-      return { std::move(unique_child_coro_) };
+      return { std::move( unique_child_coro_ ) };
     }
   };
 }

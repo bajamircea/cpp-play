@@ -11,11 +11,10 @@ namespace coro
   class [[nodiscard]] deferred_co
   {
     // TODO: why decay here?
-    using CoFnDecayed = std::decay_t<CoFn>;
     using CapturedArgsTuple = std::tuple<std::decay_t<CapturedArgs>...>;
     using CapturedArgsSeq = std::index_sequence_for<CapturedArgs...>;
 
-    CoFnDecayed co_fn_;
+    CoFn co_fn_;
     CapturedArgsTuple captured_args_tuple_;
 
   public:
@@ -30,7 +29,7 @@ namespace coro
     template<typename... ExtraCallArgs>
     auto operator()(ExtraCallArgs&&... extra_call_args)
       noexcept(std::is_nothrow_invocable_v<
-        CoFnDecayed,
+        CoFn,
         ExtraCallArgs...,
         CapturedArgs...>)
     {
