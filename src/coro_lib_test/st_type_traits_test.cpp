@@ -16,8 +16,8 @@ namespace
   TEST(co_compiles)
   {
     auto x = coro::deferred_co(async_foo, 0);
-    static_assert(coro::st::is_deferred_context_co<decltype(x)>);
-    static_assert(coro::st::deferred_context_co_has_non_member_operator_co_await<decltype(x)>);
-    static_assert(std::is_same_v<std::string, coro::st::deferred_context_co_return_type<decltype(x)>>);
+    static_assert(coro::st::is_context_callable_co<decltype(x)>);
+
+    // TODO: add tests for sleep, yield etc.
   }
 } // anonymous namespace

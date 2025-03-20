@@ -3,7 +3,6 @@
 #include "co.h"
 #include "deferred_co.h"
 #include "deferred_member_co.h"
-#include "trampoline_co.h"
 #include "st_stop.h"
 #include "st_stop_op_callback.h"
 #include "st_ready_queue.h"

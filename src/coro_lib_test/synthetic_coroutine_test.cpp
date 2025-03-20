@@ -57,7 +57,7 @@ namespace
 
     std::coroutine_handle<> root_handle = root_frame.get_coroutine_handle();
 
-    auto co_awaiter = async_buzz().get_awaiter();
+    auto co_awaiter = async_buzz().hazmat_get_awaiter();
 
     ASSERT_FALSE(co_awaiter.await_ready());
     auto child_handle = co_awaiter.await_suspend(root_handle);

@@ -4,6 +4,7 @@
 
 #include "../coro_lib/co.h"
 #include "../coro_lib/st_run.h"
+#include "../coro_lib/st_type_traits.h"
 #include "../coro_lib/st_wait_any.h"
 
 #include <stdexcept>
@@ -108,5 +109,11 @@ namespace
     auto result = coro::st::run(async_three);
 
     ASSERT_EQ(2, result);
+  }
+
+  TEST(st_sleep_is_context_callable)
+  {
+    auto x = coro::deferred_co(coro::st::async_sleep_for, std::chrono::hours(24));
+    static_assert(coro::st::is_context_callable_co<decltype(x)>);
   }
 } // anonymous namespace

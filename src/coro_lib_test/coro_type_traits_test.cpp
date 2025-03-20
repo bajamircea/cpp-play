@@ -6,6 +6,9 @@
 // TODO: test deferred_co
 //#include "../coro_lib/deferred_co.h"
 
+#include "dummy_awaiter_suspend_bool.h"
+#include "dummy_awaiter_suspend_symmetric.h"
+#include "dummy_awaiter_suspend_void.h"
 #include "dummy_co_has_member_co_await.h"
 #include "dummy_co_has_member_co_await_rvalue.h"
 #include "dummy_co_has_member_co_await_private.h"
@@ -173,10 +176,54 @@ namespace
     auto awaiter_co2 = coro::get_awaiter(awaitable_co_variable);
   }
 
+  TEST(coro_type_traits_has_void_await_suspend)
+  {
+    static_assert(!coro::has_void_await_suspend<coro_test::dummy_awaiter_suspend_bool>);
+    static_assert(!coro::has_void_await_suspend<coro_test::dummy_awaiter_suspend_symmetric>);
+    static_assert(coro::has_void_await_suspend<coro_test::dummy_awaiter_suspend_void>);
+    auto awaitable_co_variable = async_foo_co();
+    auto awaiter_co2 = coro::get_awaiter(awaitable_co_variable);
+    static_assert(!coro::has_void_await_suspend<decltype(awaiter_co2)>);
+  }
+
+  TEST(coro_type_traits_has_bool_await_suspend)
+  {
+    static_assert(coro::has_bool_await_suspend<coro_test::dummy_awaiter_suspend_bool>);
+    static_assert(!coro::has_bool_await_suspend<coro_test::dummy_awaiter_suspend_symmetric>);
+    static_assert(!coro::has_bool_await_suspend<coro_test::dummy_awaiter_suspend_void>);
+    auto awaitable_co_variable = async_foo_co();
+    auto awaiter_co2 = coro::get_awaiter(awaitable_co_variable);
+    static_assert(!coro::has_bool_await_suspend<decltype(awaiter_co2)>);
+  }
+
+  TEST(coro_type_traits_has_symmetric_await_suspend)
+  {
+    static_assert(!coro::has_symmetric_await_suspend<coro_test::dummy_awaiter_suspend_bool>);
+    static_assert(coro::has_symmetric_await_suspend<coro_test::dummy_awaiter_suspend_symmetric>);
+    static_assert(!coro::has_symmetric_await_suspend<coro_test::dummy_awaiter_suspend_void>);
+    auto awaitable_co_variable = async_foo_co();
+    auto awaiter_co2 = coro::get_awaiter(awaitable_co_variable);
+    static_assert(coro::has_symmetric_await_suspend<decltype(awaiter_co2)>);
+  }
+
+  TEST(coro_type_traits_is_awaiter)
+  {
+    static_assert(coro::is_awaiter<coro_test::dummy_awaiter_suspend_bool>);
+    static_assert(coro::is_awaiter<coro_test::dummy_awaiter_suspend_symmetric>);
+    static_assert(coro::is_awaiter<coro_test::dummy_awaiter_suspend_void>);
+    auto awaitable_co_variable = async_foo_co();
+    auto awaiter_co2 = coro::get_awaiter(awaitable_co_variable);
+    static_assert(coro::is_awaiter<decltype(awaiter_co2)>);
+  }
+
   TEST(coro_type_traits_awaitable_traits)
   {
     static_assert(std::is_same_v<
       std::string,
       coro::awaitable_traits<decltype(async_foo_co())>::await_result_t>);
+
+    static_assert(std::is_same_v<
+      void,
+      coro::awaitable_traits<coro_test::dummy_awaiter_suspend_bool>::await_result_t>);
   }
 } // anonymous namespace

@@ -72,9 +72,16 @@ namespace coro::st
       }
     };
 
+  private:
     [[nodiscard]] friend awaiter operator co_await(sleep_awaitable x) noexcept
     {
-      return { x.ctx_, x.deadline_ };
+      return std::move(x).hazmat_get_awaiter();
+    }
+
+  public:
+    [[nodiscard]] awaiter hazmat_get_awaiter() && noexcept
+    {
+      return { ctx_, deadline_ };
     }
   };
 

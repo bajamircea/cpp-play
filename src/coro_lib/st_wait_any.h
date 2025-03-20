@@ -212,19 +212,27 @@ namespace coro::st
       return awaiter{ parent_ctx_, std::get<I>(co_fns_tuple_)... };
     }
 
+  private:
     [[nodiscard]] friend awaiter operator co_await(wait_any_awaitable x) noexcept
     {
-      return x.make_awaiter(std::index_sequence_for<DeferredCoFn...>{});
+      return std::move(x).hazmat_get_awaiter();
+    }
+
+  public:
+    [[nodiscard]] awaiter hazmat_get_awaiter() && noexcept
+    {
+      return make_awaiter(std::index_sequence_for<DeferredCoFn...>{});
     }
   };
 
-  template<typename... DeferredCoFn>
-  wait_any_awaitable(context& ctx, DeferredCoFn&&... co_fns)
-    -> wait_any_awaitable<DeferredCoFn...>;
+  // template<typename... DeferredCoFn>
+  // wait_any_awaitable(context& ctx, DeferredCoFn&&... co_fns)
+  //   -> wait_any_awaitable<DeferredCoFn...>;
 
-  template<is_deferred_context_co... DeferredCoFn>
-  [[nodiscard]] auto async_wait_any(context& ctx, DeferredCoFn&&... co_fns)
+  template<is_context_callable_co... DeferredCoFn>
+  [[nodiscard]] wait_any_awaitable<DeferredCoFn...>
+    async_wait_any(context& ctx, DeferredCoFn&&... co_fns)
   {
-    return wait_any_awaitable{ ctx , std::forward<DeferredCoFn>(co_fns)... };
+    return wait_any_awaitable<DeferredCoFn...>{ ctx , std::forward<DeferredCoFn>(co_fns)... };
   }
 }

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <coroutine>
 #include <type_traits>
 #include <utility>
 
 namespace coro
 {
-  // TODO: should I use std::move or static_cast<Awaitable&&>?
   template <typename Awaitable>
   concept has_member_operator_co_await =
     requires (Awaitable awaitable) {
@@ -21,7 +21,7 @@ namespace coro
   template <typename Awaitable>
   concept has_get_awaiter =
     requires (Awaitable awaitable) {
-      std::move(awaitable).get_awaiter();
+      std::move(awaitable).hazmat_get_awaiter();
   };
 
   template<typename Awaitable>
@@ -29,7 +29,7 @@ namespace coro
   {
     if constexpr (has_get_awaiter<Awaitable>)
     {
-      return std::move(awaitable).get_awaiter();
+      return std::move(awaitable).hazmat_get_awaiter();
     }
     else if constexpr (has_member_operator_co_await<Awaitable>)
     {
@@ -44,6 +44,34 @@ namespace coro
       return std::move(awaitable);
     }
   }
+
+  template<typename Awaiter>
+  concept has_void_await_suspend = requires(Awaiter a, std::coroutine_handle<> h)
+  {
+    { a.await_suspend(h) } -> std::same_as<void>;
+  };
+
+  template<typename Awaiter>
+  concept has_bool_await_suspend = requires(Awaiter a, std::coroutine_handle<> h)
+  {
+    { a.await_suspend(h) } -> std::convertible_to<bool>;
+  };
+
+  template<typename Awaiter>
+  concept has_symmetric_await_suspend = requires(Awaiter a, std::coroutine_handle<> h)
+  {
+    { a.await_suspend(h) } -> std::convertible_to<std::coroutine_handle<>>;
+  };
+
+  template<typename Awaiter>
+  concept is_awaiter = requires(Awaiter a)
+  {
+    { a.await_ready() } -> std::convertible_to<bool>;
+    a.await_resume();
+  } && (
+    has_void_await_suspend<Awaiter> ||
+    has_bool_await_suspend<Awaiter> ||
+    has_symmetric_await_suspend<Awaiter>);
 
   template<typename T, typename=void>
   struct awaitable_traits

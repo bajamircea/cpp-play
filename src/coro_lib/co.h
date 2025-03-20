@@ -118,11 +118,10 @@ namespace coro
 
     [[nodiscard]] friend awaiter operator co_await(co x) noexcept
     {
-      return std::move(x).get_awaiter();
+      return std::move(x).hazmat_get_awaiter();
     }
   public:
-    // TODO: hide this to access via traits maybe?
-    [[nodiscard]] awaiter get_awaiter() && noexcept
+    [[nodiscard]] awaiter hazmat_get_awaiter() && noexcept
     {
       return { std::move(unique_child_coro_) };
     }

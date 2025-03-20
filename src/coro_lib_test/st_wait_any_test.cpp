@@ -4,10 +4,13 @@
 
 #include "../coro_lib/co.h"
 #include "../coro_lib/st_run.h"
+#include "../coro_lib/st_type_traits.h"
 #include "../coro_lib/st_yield.h"
 
 #include <stdexcept>
 #include <string>
+
+#include <functional>
 
 namespace
 {
@@ -72,5 +75,23 @@ namespace
   //     throw std::runtime_error("Ups!");
   //     co_return;
   //   })), std::runtime_error, "Ups!");
+  // }
+
+  // TEST(st_wait_any_is_context_callable)
+  // {
+  //   auto arg0 = coro::st::async_yield;
+  //   auto arg1 = coro::st::async_yield;
+
+  //   auto x = coro::deferred_co(
+  //     coro::st::async_wait_any<decltype(arg0), decltype(arg1)>,
+  //     arg0, arg1);
+  // //   auto x = std::bind(
+  // //     coro::st::async_wait_any,
+  // //       std::placeholders::_1,
+  // //       std::bind(coro::st::async_yield, std::placeholders::_1),
+  // //       std::bind(coro::st::async_yield, std::placeholders::_1)
+  // //     );
+  //   static_assert(coro::st::is_context_callable_co<decltype(x)>);
+  
   // }
 } // anonymous namespace

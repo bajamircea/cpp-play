@@ -3,6 +3,8 @@
 #include <coroutine>
 #include <type_traits>
 
+// TODO: high refactor/unify traits. even delete this
+
 namespace coro
 {
   namespace impl
@@ -43,13 +45,6 @@ namespace coro
       {
         co_await t(args...);
       };
-    };
-
-  template <typename T, typename... Args>
-  concept deferred_co_has_non_member_operator_co_await =
-    is_deferred_co<T, Args...> &&
-    requires(T&& t, Args&&... args) {
-      operator co_await(t(args...));
     };
 
   template <typename T, typename... Args>

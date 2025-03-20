@@ -4,8 +4,9 @@
 
 #include "../coro_lib/co.h"
 #include "../coro_lib/st_run.h"
-#include "../coro_lib/st_yield.h"
+#include "../coro_lib/st_type_traits.h"
 #include "../coro_lib/st_wait_any.h"
+#include "../coro_lib/st_yield.h"
 
 #include <stdexcept>
 #include <string>
@@ -61,4 +62,11 @@ namespace
   //   co_return;
   // }
 
+  TEST(st_suspend_forever_is_context_callable)
+  {
+    static_assert(coro::st::is_context_callable_co<decltype(coro::st::async_suspend_forever)>);
+
+    auto x = coro::deferred_co(coro::st::async_suspend_forever);
+    static_assert(coro::st::is_context_callable_co<decltype(x)>);
+  }
 } // anonymous namespace

@@ -4,6 +4,7 @@
 
 #include "../coro_lib/co.h"
 #include "../coro_lib/st_run.h"
+#include "../coro_lib/st_type_traits.h"
 
 #include <stdexcept>
 #include <string>
@@ -82,5 +83,13 @@ namespace
     std::string result = coro::st::run(async_foo);
 
     ASSERT_EQ("start 012 stop", result);
+  }
+
+  TEST(st_yield_is_context_callable)
+  {
+    static_assert(coro::st::is_context_callable_co<decltype(coro::st::async_yield)>);
+
+    auto x = coro::deferred_co(coro::st::async_yield);
+    static_assert(coro::st::is_context_callable_co<decltype(x)>);
   }
 } // anonymous namespace
