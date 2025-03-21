@@ -89,14 +89,6 @@ namespace coro_test
       awaiter(const awaiter&) = delete;
       awaiter& operator=(const awaiter&) = delete;
 
-// TODO: maybe uncomment
-// #ifdef _DEBUG
-//       ~awaiter()
-//       {
-//         assert(unique_child_coro_.get().promise().parent_coro_);
-//       }
-// #endif
-
       [[nodiscard]] constexpr bool await_ready() const noexcept
       {
         return false;
