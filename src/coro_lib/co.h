@@ -13,6 +13,7 @@ namespace coro
   class [[nodiscard]] co
   {
   public:
+    // TODO: can this be deleted?
     using co_return_type = T;
 
     class promise_type : public promise_base<T>

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "deferred_type_traits.h"
 #include "coro_type_traits.h"
 #include "st_context.h"
 
@@ -12,10 +11,13 @@ namespace coro::st
     { coro::get_awaiter(fn(ctx)) } -> coro::is_awaiter;
   };
 
-  //TODO high delete from here downwards
-  template <typename T>
-  concept is_deferred_context_co = is_deferred_co<T, coro::st::context&>;
+  template <typename Fn>
+  using context_callable_awaiter_t =
+    awaitable_traits<
+      std::invoke_result_t<Fn, context&>>::awaiter_t;
 
-  template <typename T>
-  using deferred_context_co_return_type = deferred_co_return_type<T, coro::st::context&>;
+  template <typename Fn>
+  using context_callable_await_result_t =
+    awaitable_traits<
+      std::invoke_result_t<Fn, context&>>::await_result_t;
 }

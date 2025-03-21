@@ -27,7 +27,7 @@ namespace coro::st
   class [[nodiscard]] wait_any_awaitable
   {
     using T = std::common_type_t<
-      deferred_context_co_return_type<DeferredCoFn>...>;
+      context_callable_await_result_t<DeferredCoFn>...>;
     static constexpr size_t N = sizeof... (DeferredCoFn);
     using DeferredCoFnsTuple = std::tuple<DeferredCoFn...>;
   public:

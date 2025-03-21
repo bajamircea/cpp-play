@@ -53,9 +53,9 @@ namespace coro::st
     }
   };
 
-  template<is_deferred_context_co DeferredCoFn>
-  auto run(DeferredCoFn&& co_fn)
-    -> deferred_context_co_return_type<DeferredCoFn>
+  template<is_context_callable_co CoFn>
+  auto run(CoFn&& co_fn)
+    -> context_callable_await_result_t<CoFn>
   {
     runner_impl runner;
 
@@ -71,8 +71,8 @@ namespace coro::st
     };
     context main_ctx(runner_ctx, main_chain_ctx);
 
-    using TrampolineType = coro::trampoline_co<deferred_context_co_return_type<DeferredCoFn>>;
-    auto trampoline = [](context& ctx, DeferredCoFn& co_fn)
+    using TrampolineType = coro::trampoline_co<context_callable_await_result_t<CoFn>>;
+    auto trampoline = [](context& ctx, CoFn& co_fn)
      -> TrampolineType {
       co_return co_await co_fn(ctx);
     };
