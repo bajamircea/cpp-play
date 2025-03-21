@@ -8,10 +8,6 @@ namespace coro::st
 {
   class [[nodiscard]] yield_awaitable
   {
-  public:
-    using co_return_type = void;
-
-  private:
     context& ctx_;
 
   public:
@@ -49,7 +45,7 @@ namespace coro::st
         ctx_.push_ready_node(node_, handle);
       }
 
-      constexpr co_return_type await_resume() const noexcept
+      constexpr void await_resume() const noexcept
       {
       }
     };

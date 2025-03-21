@@ -12,9 +12,6 @@ namespace coro::st
   // can be taken for the single threaded model
   class [[nodiscard]] sleep_awaitable
   {
-  public:
-    using co_return_type = void;
-
   private:
     context& ctx_;
     std::chrono::steady_clock::time_point deadline_;
@@ -60,7 +57,7 @@ namespace coro::st
         stop_cb_.enable(ctx_.get_stop_token(), &awaiter::cancel, this);
       }
 
-      constexpr co_return_type await_resume() const noexcept
+      constexpr void await_resume() const noexcept
       {
       }
 

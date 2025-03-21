@@ -9,9 +9,6 @@ namespace coro::st
 {
   class [[nodiscard]] suspend_forever_awaitable
   {
-  public:
-    using co_return_type = void;
-
   private:
     context& ctx_;
 
@@ -52,7 +49,7 @@ namespace coro::st
         stop_cb_.enable(ctx_.get_stop_token(), &awaiter::cancel, this);
       }
 
-      constexpr co_return_type await_resume() const noexcept
+      constexpr void await_resume() const noexcept
       {
       }
 

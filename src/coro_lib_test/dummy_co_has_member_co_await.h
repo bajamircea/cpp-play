@@ -13,8 +13,6 @@ namespace coro_test
   class [[nodiscard]] dummy_co_has_member_co_await
   {
   public:
-    using co_return_type = T;
-
     class promise_type : public coro::promise_base<T>
     {
       friend dummy_co_has_member_co_await;

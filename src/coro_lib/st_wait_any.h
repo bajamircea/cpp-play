@@ -30,8 +30,7 @@ namespace coro::st
       context_callable_await_result_t<DeferredCoFn>...>;
     static constexpr size_t N = sizeof... (DeferredCoFn);
     using DeferredCoFnsTuple = std::tuple<DeferredCoFn...>;
-  public:
-    using co_return_type = wait_any_result<T>;
+    using ResultType = wait_any_result<T>;
 
   private:
     context& parent_ctx_;
@@ -179,19 +178,19 @@ namespace coro::st
         return true;
       }
 
-      co_return_type await_resume() const
+      ResultType await_resume() const
       {
         assert(result_index_ != N);
         if constexpr (std::is_same_v<T, void>)
         {
           children_chain_data_[result_index_].get_result();
-          return co_return_type{
+          return ResultType{
             .index=result_index_
           };
         }
         else
         {
-          return co_return_type{
+          return ResultType{
             .index=result_index_,
             .value=children_chain_data_[result_index_].get_result()
           };
