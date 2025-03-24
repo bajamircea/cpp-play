@@ -7,7 +7,7 @@
 #include <utility>
 #include <variant>
 
-namespace coro
+namespace coro_st
 {
   template<typename T>
   class promise_base

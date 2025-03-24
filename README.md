@@ -8,7 +8,7 @@ This is a play area on an variety of C++ topics
 
 ## C++20 coroutine prodding
 
-[See src/coro_lib, src/coro_lib_test, src/coro_lib_perf](src/coro_lib/)
+[See src/coro_st_lib, src/coro_st_lib_test](src/coro_st_lib/README.md)
 
 ## How vector works
 

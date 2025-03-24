@@ -4,7 +4,7 @@
 
 #include <coroutine>
 
-namespace coro
+namespace coro_st
 {
   template<typename Promise>
   struct unique_coroutine_handle_traits
