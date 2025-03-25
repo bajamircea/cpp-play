@@ -21,3 +21,8 @@ All the code is in the `coro_st` namespace.
   - `stop_callback` calls a function object when the request to stop is called
     for the first time or when constructed. It uses a linked list provided
     by the `stop_source`
+- `synthetic_coroutine.h`
+  - allows building synthetic coroutine handles i.e. assuming the ABI for a coroutine
+    frame starts with the resume and destroy functions
+  - `synthetic_resumable_coroutine_frame` calls a callback (function and pointer) when
+    `resume()` is called on the handle obtained with `get_coroutine_handle()`
