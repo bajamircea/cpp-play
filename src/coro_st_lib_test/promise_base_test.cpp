@@ -8,7 +8,7 @@
 
 namespace
 {
-  TEST(promise_return_value)
+  TEST(promise_base_return_value)
   {
     coro_st::promise_base<std::string> x;
     x.return_value("42");
@@ -19,7 +19,7 @@ namespace
     ASSERT_EQ("42", result);
   }
 
-  TEST(promise_exception)
+  TEST(promise_base_exception)
   {
     coro_st::promise_base<std::string> x;
     try
@@ -34,7 +34,7 @@ namespace
     ASSERT_THROW_WHAT(x.get_result(), std::runtime_error, "42");
   }
 
-  TEST(promise_return_void)
+  TEST(promise_base_return_void)
   {
     coro_st::promise_base<void> x;
     x.return_void();
@@ -42,7 +42,7 @@ namespace
     x.get_result();
   }
 
-  TEST(promise_exception_void)
+  TEST(promise_base_exception_void)
   {
     coro_st::promise_base<void> x;
     try
