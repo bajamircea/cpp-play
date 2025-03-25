@@ -26,3 +26,8 @@ All the code is in the `coro_st` namespace.
     frame starts with the resume and destroy functions
   - `synthetic_resumable_coroutine_frame` calls a callback (function and pointer) when
     `resume()` is called on the handle obtained with `get_coroutine_handle()`
+- `ready_queue.h`
+  - `ready_queue` is an intrusive queue of ready work
+  - `ready_node` the node in the queue contains:
+    - a coroutine handle to `resume()`
+    - `next`the pointer required for the queue
