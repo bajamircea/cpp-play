@@ -14,7 +14,8 @@ namespace coro_st
     ready_node& operator=(const ready_node&) = delete;
 
     ready_node* next{};
-    std::coroutine_handle<> coroutine;
+    void (*fn)(void* x) noexcept { nullptr };
+    void* x{ nullptr };
   };
 
   using ready_queue = cpp_util::intrusive_queue<ready_node, &ready_node::next>;
