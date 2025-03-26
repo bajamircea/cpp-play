@@ -27,3 +27,29 @@ All the code is in the `coro_st` namespace.
     - `next`the pointer required for the queue
     - the work to be done as a function `fn`
       to be called with an `x` pointer as argument
+- `timer_heap.h`
+  - `timer_heap` is an intrusive heap of timers
+  - `timer_node` the node in the heap contains:
+    - pointers for `parent`, `left` and `right`
+    - `deadline` for ordering by a monotonic `steady_clock` absolute time
+    - the work to be done as a function `fn`
+      to be called with an `x` pointer as argument
+  - the rationale is:
+    - we want an intrusive structure where the nodes can be stored
+      in coroutine awaiters
+    - the heap is a tree structure, it has the advantage over e.g.
+      a red-black tree that that the next timer to use for sleep
+      calculation is at the root, accessible in `O(1)`
+    - we want reasonable time complexity for the other operations,
+      we get `O(lg(N))` for insertion and removal, but the cost is not
+      trivial as there might be lots of pointers to adjust in nodes
+      for these operations
+    - often heaps are implemented on top of memory contiguous data
+      structures like `std::vector` where the node pointers are not
+      needed and the index arithmetic is used to find `parent`, `left`
+      and `right` values; the node based implementation has the
+      advantage that nodes can be removed in `O(1)` (e.g. when a timer
+      in cancelled) and that insertion in particular can be made `noexcept`
+      which is useful to be able to use a timer in error recovery
+      scenarios: e.g. on exception sleep for a while and then try again,
+      that would be problematic if sleeping could throw
