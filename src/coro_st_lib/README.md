@@ -25,5 +25,5 @@ All the code is in the `coro_st` namespace.
   - `ready_queue` is an intrusive queue of ready work
   - `ready_node` the node in the queue contains:
     - `next`the pointer required for the queue
-    - the work to be done as `fn` a function to be called with an `x` pointer
-      as argument
+    - the work to be done as a function `fn`
+      to be called with an `x` pointer as argument
