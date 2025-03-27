@@ -1,5 +1,7 @@
 #pragma once
 
+#include "callback.h"
+
 #include "../cpp_util_lib/intrusive_list.h"
 
 #include <cassert>
@@ -11,8 +13,7 @@ namespace coro_st
   {
     stop_list_node* next{ nullptr };
     stop_list_node* prev{ nullptr };
-    void (*fn)(void* x) noexcept { nullptr };
-    void* x{ nullptr };
+    callback cb{};
 
     stop_list_node() noexcept = default;
 
@@ -36,7 +37,7 @@ namespace coro_st
 
     stop_source* source_ = nullptr;
 
-    stop_token(stop_source* source) noexcept : source_{ source }
+    explicit stop_token(stop_source* source) noexcept : source_{ source }
     {
     }
 
@@ -55,9 +56,8 @@ namespace coro_st
     bool stop_{ false };
     stop_list callbacks_{};
   public:
-    stop_source() noexcept
-    {
-    }
+    stop_source() noexcept = default;
+
     stop_source(const stop_source&) = delete;
     stop_source& operator=(const stop_source&) = delete;
 
@@ -80,19 +80,17 @@ namespace coro_st
         {
           break;
         }
-        auto fn = node->fn;
-        void* x = node->x;
-        node->fn = nullptr;
-        node->x = nullptr;
+        callback copy_cb = node->cb;
+        node->cb = callback{};
         callbacks_.remove(node);
-        fn(x);
+        copy_cb.invoke();
       }
       return true;
     }
 
     stop_token get_token() noexcept
     {
-      return { this };
+      return stop_token{ this };
     }
   };
 
@@ -119,8 +117,7 @@ namespace coro_st
       }
       else
       {
-        node_.fn = invoke;
-        node_.x = this;
+        node_.cb = make_callback<&stop_callback::invoke>(this);
         source_->callbacks_.push_back(&node_);
       }
     }
@@ -130,17 +127,16 @@ namespace coro_st
 
     ~stop_callback()
     {
-      if (node_.x != nullptr)
+      if (node_.cb.is_callable())
       {
         source_->callbacks_.remove(&node_);
       }
     }
+
   private:
-    static void invoke(void* x) noexcept
+    void invoke() noexcept
     {
-      assert(x != nullptr);
-      stop_callback* self = reinterpret_cast<stop_callback*>(x);
-      self->fn_();
+      fn_();
     }
   };
 }

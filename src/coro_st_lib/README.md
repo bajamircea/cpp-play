@@ -4,14 +4,6 @@ but the single threadness is quite a limitation to actual real usage.
 
 All the code is in the `coro_st` namespace.
 
-- `unique_coroutine_handle`
-  - a RAII type owning a coroutine handle
-- `promise_base`
-  - base for coroutine promises to handle variations around the coroutine
-    return value
-  - template on a type `T`, specialized for `void`
-  - handles `return_value`/`return_void` and `unhandled_exception`
-  - provides `T get_result()` to either get the value or throw the exception
 - `synthetic_coroutine.h`
   - NOT USED (see below why)! 
   - demonstrates a technique where you could have a coroutine frame on the stack
@@ -25,6 +17,16 @@ All the code is in the `coro_st` namespace.
     - any other call on the returned coroutine handle is problematic e.g.
       - `destroy()` will hopefully terminate
       - `done()` is undefined behaviour
+- `callback.h`
+  - rationale: we end up using this a lot instead of `synthetic_coroutine` as
+    a unified abstraction between coroutine resumption and other completion
+    work
+  - `callback`
+    - captures a pointer
+    - and a `void (*)(void* x) noexcept` function that takes that pointer
+  - `make_callback`
+    - helper function make a `callback` calling a member function for some
+      class
 - `stop_util.h`
   - single threaded implementation of the standard variants
   - `stop_source` has a boolean that can be flipped to `true` using
@@ -61,7 +63,7 @@ All the code is in the `coro_st` namespace.
       structures like `std::vector` where the node pointers are not
       needed and the index arithmetic is used to find `parent`, `left`
       and `right` values; the node based implementation has the
-      advantage that nodes can be removed in `O(1)` (e.g. when a timer
+      advantage that nodes can be removed in `O(lg(N))` (e.g. when a timer
       in cancelled) and that insertion in particular can be made `noexcept`
       which is useful to be able to use a timer in error recovery
       scenarios: e.g. on exception sleep for a while and then try again,
@@ -71,3 +73,12 @@ All the code is in the `coro_st` namespace.
     - adding node to ready queue
     - adding node to the timer heap
     - removing node from timer heap (e.g. when timer cancelled)
+
+- `unique_coroutine_handle`
+  - a RAII type owning a coroutine handle
+- `promise_base`
+  - base for coroutine promises to handle variations around the coroutine
+    return value
+  - template on a type `T`, specialized for `void`
+  - handles `return_value`/`return_void` and `unhandled_exception`
+  - provides `T get_result()` to either get the value or throw the exception

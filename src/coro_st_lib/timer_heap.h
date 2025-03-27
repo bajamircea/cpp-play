@@ -2,14 +2,15 @@
 
 #include "../cpp_util_lib/intrusive_heap.h"
 
+#include "callback.h"
+
 #include <chrono>
 
 namespace coro_st
 {
   struct timer_node
   {
-    timer_node() noexcept = default;
-    timer_node(std::chrono::steady_clock::time_point deadline_arg) noexcept :
+    explicit timer_node(std::chrono::steady_clock::time_point deadline_arg) noexcept :
       deadline{ deadline_arg }
     {
     }
@@ -20,9 +21,8 @@ namespace coro_st
     timer_node* parent{};
     timer_node* left{};
     timer_node* right{};
-    std::chrono::steady_clock::time_point deadline;
-    void (*fn)(void* x) noexcept { nullptr };
-    void* x{ nullptr };
+    std::chrono::steady_clock::time_point deadline{};
+    callback cb{};
   };
 
   struct compare_timer_node_by_deadline

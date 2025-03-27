@@ -22,15 +22,13 @@ namespace coro_st
 
     void push_ready_node(ready_node& node) noexcept
     {
-      assert(node.fn != nullptr);
-      assert(node.x != nullptr);
+      assert(node.cb.is_callable());
       ready_queue_.push(&node);
     }
 
     void insert_timer_node(timer_node& node) noexcept
     {
-      assert(node.fn != nullptr);
-      assert(node.x != nullptr);
+      assert(node.cb.is_callable());
       timer_heap_.insert(&node);
     }
 

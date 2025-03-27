@@ -13,11 +13,10 @@ namespace
     bool called{ false };
 
     coro_st::ready_node n0;
-    n0.fn = +[](void* x) noexcept {
+    n0.cb = coro_st::callback(&called,  +[](void* x) noexcept {
       bool* p_called = reinterpret_cast<bool*>(x);
       *p_called = true;
-    };
-    n0.x = &called;
+    });
     q.push(&n0);
     ASSERT_FALSE(q.empty());
     ASSERT_EQ(nullptr, n0.next);
@@ -29,7 +28,7 @@ namespace
     auto p = q.pop();
     ASSERT_EQ(p, &n0);
 
-    p->fn(p->x);
+    p->cb.invoke();
 
     ASSERT_TRUE(called);
   }

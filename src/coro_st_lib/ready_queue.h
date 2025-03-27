@@ -2,7 +2,7 @@
 
 #include "../cpp_util_lib/intrusive_queue.h"
 
-#include <coroutine>
+#include "callback.h"
 
 namespace coro_st
 {
@@ -14,8 +14,7 @@ namespace coro_st
     ready_node& operator=(const ready_node&) = delete;
 
     ready_node* next{};
-    void (*fn)(void* x) noexcept { nullptr };
-    void* x{ nullptr };
+    callback cb{};
   };
 
   using ready_queue = cpp_util::intrusive_queue<ready_node, &ready_node::next>;
