@@ -53,3 +53,8 @@ All the code is in the `coro_st` namespace.
       which is useful to be able to use a timer in error recovery
       scenarios: e.g. on exception sleep for a while and then try again,
       that would be problematic if sleeping could throw
+- `event_loop_context.h`
+  - holds references to the ready queue and heap and allows
+    - adding node to ready queue
+    - adding node to the timer heap
+    - removing node from timer heap (e.g. when timer cancelled)
