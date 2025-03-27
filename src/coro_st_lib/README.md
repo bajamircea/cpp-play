@@ -12,6 +12,19 @@ All the code is in the `coro_st` namespace.
   - template on a type `T`, specialized for `void`
   - handles `return_value`/`return_void` and `unhandled_exception`
   - provides `T get_result()` to either get the value or throw the exception
+- `synthetic_coroutine.h`
+  - NOT USED (see below why)! 
+  - demonstrates a technique where you could have a coroutine frame on the stack
+  - `coroutine_frame_abi` is the ABI where the coroutine frame has two function pointers
+  - `synthetic_resumable_coroutine_frame`
+    - demonstrates how you could have a coroutine frame on the stack
+    - to which you can get a `std::coroutine_handle<>`
+    - which when it has `resume()` called, it calls your callback
+  - the problem with this approach is that it's frail
+    - the ABI is not standardised and subject to change
+    - any other call on the returned coroutine handle is problematic e.g.
+      - `destroy()` will hopefully terminate
+      - `done()` is undefined behaviour
 - `stop_util.h`
   - single threaded implementation of the standard variants
   - `stop_source` has a boolean that can be flipped to `true` using
