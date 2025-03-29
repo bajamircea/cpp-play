@@ -41,7 +41,7 @@ namespace coro_st
     {
       assert(x_void != nullptr);
       T* x = reinterpret_cast<T*>(x_void);
-      std::invoke(member_fn, x);
+      return std::invoke(member_fn, x);
     }
   };
 

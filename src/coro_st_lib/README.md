@@ -69,10 +69,25 @@ All the code is in the `coro_st` namespace.
       scenarios: e.g. on exception sleep for a while and then try again,
       that would be problematic if sleeping could throw
 - `event_loop_context.h`
-  - holds references to the ready queue and heap and allows
+  - `event_loop_context` holds references to the ready queue and heap and
+    allows:
     - adding node to ready queue
     - adding node to the timer heap
     - removing node from timer heap (e.g. when timer cancelled)
+- `chain_context.h`
+  - `chain_context` holds data for a cancellable chain:
+    - the cancellation token
+    - the continutation callback to run on completion of the chain
+    - the cancellation callback to run when the chain was cancelled
+    - a node that can be used to schedule callbacks
+- `context.h`
+  - `context`
+    - holds references to:
+      - an `event_loop_context`
+      - a `chain_context`
+    - except for the root context, the rest are created per chain
+      by using the `event_loop_context` reference from the parent
+      and a new `chain_context` (via a constructor)
 
 - `unique_coroutine_handle`
   - a RAII type owning a coroutine handle
