@@ -28,7 +28,7 @@ namespace coro_st
       fn_(x_);
     }
 
-    bool is_callable()
+    bool is_callable() noexcept
     {
       return nullptr != fn_;
     }

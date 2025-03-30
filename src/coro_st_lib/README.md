@@ -1,6 +1,62 @@
+# What is this?
+
 Single threaded coroutine framework. It's useful as a learning tool
 and as a benchmark against which threading support can be measured,
 but the single threadness is quite a limitation to actual real usage.
+
+The threading model is (single threaded obviously):
+- on a thead call `run` with a root entry point
+- `run` will internally start the entry point, then loop piking
+  alternativly from a `ready_queue` of work to be done and a `timer_heap`
+  of timers, sleeping when there is nothing to be done yet.
+- `run` returns (or throws) when the root entry point eventually
+  completes
+
+
+# Design choices
+
+**We want to have structured concurrency** with (relatively) simple reasoning
+rules about work lifetimes.
+
+In particular **avoid detached work** where functions return before the work is
+completed (i.e. on another thread, another coroutine etc.). Detached work has
+many problems including:
+- requires joining later (which is problematic for coroutines where that
+  can't be done currently in a destructor)
+- the work might reference objects that go out of scope before the work is
+  completed (from as simple as the calling function exits, to subtler cases
+  of lambda captures by reference)
+
+Obviously there is a coroutine type. For brevity will call it `co`, templatized
+on the return value e.g. `co<std::string>`. Structured concurrencly means e.g.
+that when we reach a `co_await` in our library the code will suspend and
+continue only when the work of what's in the right of `co_await` completed,
+either with a result value or with an exception.
+This creates a chain of parent/child relationships, where the parent is the
+continuation of the child. This is the most basic of the concurrency primitives.
+
+We'll use the convention that things that are made to be `co_await`ed are
+prefixed with `async_`. This helps mitigate the case where we call the ramp of
+a coroutine and we don't `co_await` it, therefore it does not do the work.
+
+In additonal to the linear chains we want at least three concurrency primitives
+that fan out and create multiple chains and handle the joining:
+- `async_wait_any`
+  - fans out, starts a number of chains
+  - when one of them completes (even though exception): cancel the rest
+  - return the result of the first
+- `async_wait_all`
+  - fans out, starts a number of chains
+  - return the all of them complete
+- `async_with_nursery`
+  - this is a low level concurency primitive (more details later)
+
+Clearly `async_wait_any` requires cancellation, but actually `async_wait_all`
+requires cancellation when one of the chains throws then the remaining will
+be cancelled.
+
+
+# Code description
 
 All the code is in the `coro_st` namespace.
 
@@ -88,6 +144,15 @@ All the code is in the `coro_st` namespace.
     - except for the root context, the rest are created per chain
       by using the `event_loop_context` reference from the parent
       and a new `chain_context` (via a constructor)
+- `event_loop.h`
+  - `event_loop`
+    - helper class holding a `ready_queue` and a `timer_heap`
+    - `do_current_pending_work`
+      - reads current pending tasks from both queue and heap and runs them
+      - returns a duration to sleep if there is no more ready work, but
+        there are pending timers
+      - it's supposed to have some fairness e.g. we consume alternatively
+        from both the `ready_queue` and the `timer_heap`
 
 - `unique_coroutine_handle`
   - a RAII type owning a coroutine handle

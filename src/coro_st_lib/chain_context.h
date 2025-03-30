@@ -1,7 +1,7 @@
 #pragma once
 
 #include "callback.h"
-#include "stop.h"
+#include "stop_util.h"
 #include "ready_queue.h"
 
 #include <cassert>
@@ -10,7 +10,7 @@ namespace coro_st
 {
   class chain_context
   {
-    stop_token token_{};
+    stop_token token_;
     callback continuation_cb_{};
     callback cancellation_cb_{};
     ready_node node_{};

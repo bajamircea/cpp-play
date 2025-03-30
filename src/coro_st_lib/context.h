@@ -3,7 +3,7 @@
 #include "event_loop_context.h"
 #include "chain_context.h"
 
-namespace coro::st
+namespace coro_st
 {
   class context
   {
