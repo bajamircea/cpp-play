@@ -44,14 +44,20 @@ namespace coro_st
       return chain_ctx_.get_stop_token();
     }
 
-    callback get_continuation_callback() noexcept
+    void schedule_continuation_callback() noexcept
     {
-      return chain_ctx_.get_continuation_callback();
+      callback cb = chain_ctx_.get_continuation_callback();
+      ready_node& node = chain_ctx_.get_chain_node();
+      node.cb = cb;
+      event_loop_ctx_.push_ready_node(node);
     }
 
-    callback get_cancellation_callback() noexcept
+    void schedule_cancellation_callback() noexcept
     {
-      return chain_ctx_.get_cancellation_callback();
+      callback cb = chain_ctx_.get_cancellation_callback();
+      ready_node& node = chain_ctx_.get_chain_node();
+      node.cb = cb;
+      event_loop_ctx_.push_ready_node(node);
     }
 
     ready_node& get_chain_node() noexcept

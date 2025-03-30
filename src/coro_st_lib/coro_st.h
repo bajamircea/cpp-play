@@ -8,6 +8,7 @@
 #include "chain_context.h"
 #include "context.h"
 #include "event_loop.h"
+#include "co.h"
 
 #include "unique_coroutine_handle"
 #include "promise_base.h"
