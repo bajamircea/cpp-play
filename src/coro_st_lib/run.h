@@ -4,50 +4,43 @@
 #include "event_loop_context.h"
 #include "chain_context.h"
 #include "context.h"
+#include "coro_type_traits.h"
 
 #include <thread>
 
 namespace coro_st
 {
-  // TODO: continue and write test
-  template<is_context_callable_co CoFn>
-  auto run(CoFn&& co_fn)
-    -> context_callable_await_result_t<CoFn>
+  template<is_co_awaitable CoAwaitable>
+  auto run(CoAwaitable co_awaitable)
+    -> co_awaitable_result_t<CoAwaitable>
   {
-    runner_impl runner;
-
     stop_source main_stop_source;
+    bool done { false };
 
-    runner_context runner_ctx(runner.ready_queue_, runner.timers_heap_);
-    chain_context main_chain_ctx{
+    event_loop el;
+
+    event_loop_context el_ctx{ el.ready_queue_, el.timers_heap_ };
+    chain_context chain_ctx{
       main_stop_source.get_token(),
-      [](void* ,std::coroutine_handle<> coroutine) noexcept {
-        coroutine.resume();
-      },
-      nullptr
+      callback{ &done, +[](void* x) noexcept {
+        bool* p_done = reinterpret_cast<bool*>(x);
+        *p_done = true;
+      }},
+      callback{ nullptr, +[](void*) noexcept {
+        std::terminate();
+      }}
     };
-    context main_ctx(runner_ctx, main_chain_ctx);
+    context ctx{ el_ctx, chain_ctx };
 
-    using TrampolineType = coro::trampoline_co<context_callable_await_result_t<CoFn>>;
-    auto trampoline = [](context& ctx, CoFn& co_fn)
-     -> TrampolineType {
-      co_return co_await co_fn(ctx);
-    };
+    auto awaiter = co_awaitable.get_awaiter_for_context(ctx);
 
-    bool done{ false };
-    OnTrampolineDoneFnPtr on_done = +[](void* x) noexcept {
-      bool* p_done = reinterpret_cast<bool*>(x);
-      *p_done = true;
-    };
-    auto main_co = trampoline(main_ctx, co_fn);
-    main_co.set_on_done_fn(on_done, &done);
-    main_co.resume();
+    awaiter.start_as_chain_root();
 
     while (!done)
     {
-      runner.do_work();
+      el.do_current_pending_work();
     }
 
-    return main_co.get_result();
+    return awaiter.await_resume();
   }
 }

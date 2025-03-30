@@ -60,6 +60,9 @@ be cancelled.
 
 All the code is in the `coro_st` namespace.
 
+If you want to just start playing with it, include the `coro_st.h` header,
+see the examples in `coro_st_lib_test\run_test.cpp`
+
 - `synthetic_coroutine.h`
   - NOT USED (see below why)! 
   - demonstrates a technique where you could have a coroutine frame on the stack
@@ -153,7 +156,8 @@ All the code is in the `coro_st` namespace.
         there are pending timers
       - it's supposed to have some fairness e.g. we consume alternatively
         from both the `ready_queue` and the `timer_heap`
-
+- // TODO `coro_type_traits.h`
+- // TODO `run.h`
 - `unique_coroutine_handle`
   - a RAII type owning a coroutine handle
 - `promise_base`
@@ -162,3 +166,4 @@ All the code is in the `coro_st` namespace.
   - template on a type `T`, specialized for `void`
   - handles `return_value`/`return_void` and `unhandled_exception`
   - provides `T get_result()` to either get the value or throw the exception
+- // TODO `co.h`
