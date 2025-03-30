@@ -1,6 +1,7 @@
 #pragma once
 
 #include "context.h"
+#include "coro_type_traits.h"
 #include "unique_coroutine_handle.h"
 #include "promise_base.h"
 
@@ -72,7 +73,7 @@ namespace coro_st
         return {*pctx_};
       }
 
-      template<typename CoAwaitable>
+      template<coro_st::is_co_awaitable CoAwaitable>
       auto await_transform(CoAwaitable co_awaitable)
       {
         assert(pctx_ != nullptr);
