@@ -44,6 +44,11 @@ namespace coro_st
       return chain_ctx_.get_stop_token();
     }
 
+    callback get_continuation_callback() noexcept
+    {
+      return chain_ctx_.get_continuation_callback();
+    }
+
     void schedule_continuation_callback() noexcept
     {
       callback cb = chain_ctx_.get_continuation_callback();

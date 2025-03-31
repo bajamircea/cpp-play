@@ -42,7 +42,7 @@ namespace coro_st
         }
 
         ready_node& n = ctx_.get_chain_node();
-        n.cb = callback(handle.address(), resume_handle);
+        n.cb = make_resume_coroutine_callback(handle);
         ctx_.push_ready_node(n);
       }
 
@@ -53,13 +53,6 @@ namespace coro_st
       void start_as_chain_root() noexcept
       {
         ctx_.schedule_continuation_callback();
-      }
-
-    private:
-      static void resume_handle(void* ph) noexcept
-      {
-        std::coroutine_handle<> handle = std::coroutine_handle<>::from_address(ph);
-        handle.resume();
       }
     };
 

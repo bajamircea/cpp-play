@@ -117,7 +117,7 @@ namespace coro_st
       }
       else
       {
-        node_.cb = make_callback<&stop_callback::invoke>(this);
+        node_.cb = make_member_callback<&stop_callback::invoke>(this);
         source_->callbacks_.push_back(&node_);
       }
     }

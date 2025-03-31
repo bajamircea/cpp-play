@@ -47,7 +47,7 @@ namespace
       std::runtime_error, "Ups!");
   }
 
-  coro_st::co<void> async_buzz(int& val)
+  coro_st::co<void> async_buzz_ref(int& val)
   {
     val = 42;
     co_return;
@@ -57,9 +57,23 @@ namespace
   {
     int val = 0;
 
-    coro_st::run(async_buzz(val));
+    coro_st::run(async_buzz_ref(val));
 
     ASSERT_EQ(42, val);
+  }
+
+  coro_st::co<int> async_buzz_const_ref(const int& val)
+  {
+    co_return val - 1;
+  }
+
+  TEST(run_co_const_ref)
+  {
+    int val = 42;
+
+    int result = coro_st::run(async_buzz_const_ref(val + 1));
+
+    ASSERT_EQ(val, result);
   }
 
   coro_st::co<std::string> async_chain_leaf(int& i)

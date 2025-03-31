@@ -38,7 +38,11 @@ namespace coro_st
 
     while (!done)
     {
-      el.do_current_pending_work();
+      auto sleep_time = el.do_current_pending_work();
+      if (sleep_time.has_value())
+      {
+        std::this_thread::sleep_for(*sleep_time);
+      }
     }
 
     return awaiter.await_resume();

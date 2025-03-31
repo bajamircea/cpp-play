@@ -5,9 +5,6 @@
 #include "../coro_st_lib/co.h"
 #include "../coro_st_lib/run.h"
 
-#include <stdexcept>
-#include <string>
-
 namespace
 {
   TEST(yield_chain_root)
