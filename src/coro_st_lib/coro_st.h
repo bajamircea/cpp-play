@@ -15,3 +15,5 @@
 #include "co.h"
 #include "yield.h"
 #include "sleep.h"
+#include "suspend_forever.h"
+#include "wait_any.h"

@@ -1,0 +1,80 @@
+#pragma once
+
+#include "callback.h"
+#include "context.h"
+#include "stop_util.h"
+
+#include <coroutine>
+#include <optional>
+
+namespace coro_st
+{
+  class [[nodiscard]] suspend_forever_awaitable
+  {
+  public:
+    suspend_forever_awaitable() noexcept = default;
+
+    suspend_forever_awaitable(const suspend_forever_awaitable&) = delete;
+    suspend_forever_awaitable& operator=(const suspend_forever_awaitable&) = delete;
+
+  private:
+    class [[nodiscard]] awaiter
+    {
+      context& ctx_;
+      std::optional<stop_callback<callback>> stop_cb_;
+
+    public:
+      awaiter(context& ctx) noexcept :
+        ctx_{ ctx }
+      {
+      }
+
+      awaiter(const awaiter&) = delete;
+      awaiter& operator=(const awaiter&) = delete;
+
+      [[nodiscard]] constexpr bool await_ready() const noexcept
+      {
+        return false;
+      }
+
+      void await_suspend(std::coroutine_handle<>) noexcept
+      {
+        configure_cancellation();
+      }
+
+      constexpr void await_resume() const noexcept
+      {
+      }
+
+      void start_as_chain_root() noexcept
+      {
+        configure_cancellation();
+      }
+
+    private:
+      void configure_cancellation() noexcept
+      {
+        stop_cb_.emplace(
+          ctx_.get_stop_token(),
+          make_member_callback<&awaiter::on_cancel>(this));
+      }
+
+      void on_cancel() noexcept
+      {
+        stop_cb_ = std::nullopt;
+        ctx_.schedule_cancellation_callback();
+      }
+    };
+
+  public:
+    [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+    {
+      return { ctx };
+    }
+  };
+
+  [[nodiscard]] inline suspend_forever_awaitable async_suspend_forever() noexcept
+  {
+    return {};
+  }
+}

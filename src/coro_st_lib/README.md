@@ -83,9 +83,11 @@ see the examples in `coro_st_lib_test\run_test.cpp`
   - `callback`
     - captures a pointer
     - and a `void (*)(void* x) noexcept` function that takes that pointer
-  - `make_callback`
+  - `make_member_callback`
     - helper function make a `callback` calling a member function for some
       class
+  - `make_resume_coroutine_callback`
+    - helper function to make a `callback` that resumes a coroutine handle
 - `stop_util.h`
   - single threaded implementation of the standard variants
   - `stop_source` has a boolean that can be flipped to `true` using
@@ -169,3 +171,5 @@ see the examples in `coro_st_lib_test\run_test.cpp`
 - // TODO `co.h`
 - // TODO `yield.h`
 - // TODO `sleep.h`
+- // TODO `suspend_forever.h`
+- // TODO `wait_any.h`
