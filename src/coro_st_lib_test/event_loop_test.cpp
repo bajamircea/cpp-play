@@ -33,7 +33,7 @@ namespace
 
     coro_st::timer_node n0{ now + std::chrono::hours(24) };
     n0.cb = coro_st::callback(&called, +[](void*) noexcept {
-      FAIL();
+      FAIL_TEST("Callback should not run");
     });
     el.timers_heap_.insert(&n0);
 

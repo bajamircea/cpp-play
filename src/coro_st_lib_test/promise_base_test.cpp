@@ -26,7 +26,7 @@ namespace
     {
       throw std::runtime_error("42");
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
       x.unhandled_exception();
     }
@@ -49,7 +49,7 @@ namespace
     {
       throw std::runtime_error("42");
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
       x.unhandled_exception();
     }

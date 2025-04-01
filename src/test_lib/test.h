@@ -22,7 +22,7 @@ namespace test
 
 #define TEST(func) void func(); test::test_base func ## _instance{func, #func, __FILE__, __LINE__}; void func()
 
-#define FAIL() test::fail_current(__FILE__, __LINE__, "FAILED was called")
+#define FAIL_TEST(reason) test::fail_current(__FILE__, __LINE__, "FAILED_TEST(" #reason ")")
 
 #define ASSERT_TRUE(cond) if (cond) {} else { test::fail_current(__FILE__, __LINE__, "ASSERT failed '" #cond "' was false"); }
 
