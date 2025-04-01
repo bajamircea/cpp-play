@@ -45,19 +45,19 @@ namespace
     static_assert(!coro_st::has_symmetric_await_suspend<test_with_void_await_suspend>);
     static_assert(!coro_st::has_symmetric_await_suspend<test_with_bool_await_suspend>);
     static_assert(coro_st::has_symmetric_await_suspend<
-      coro_st::co_awaitable_awaiter_t<coro_st::co<std::string>>>);
+      coro_st::co_task_awaiter_t<coro_st::co<std::string>>>);
     static_assert(!coro_st::has_symmetric_await_suspend<int>);
   }
 
-  TEST(coro_type_traits_co_awaitable)
+  TEST(coro_type_traits_co_task)
   {
-    static_assert(coro_st::is_co_awaitable<coro_st::co<std::string>>);
+    static_assert(coro_st::is_co_task<coro_st::co<std::string>>);
 
     static_assert(std::is_same_v<
       std::string,
-      coro_st::co_awaitable_result_t<coro_st::co<std::string>>>);
+      coro_st::co_task_result_t<coro_st::co<std::string>>>);
     static_assert(std::is_same_v<
       void,
-      coro_st::co_awaitable_result_t<coro_st::co<void>>>);
+      coro_st::co_task_result_t<coro_st::co<void>>>);
   }
 } // anonymous namespace

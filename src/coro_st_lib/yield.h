@@ -6,13 +6,13 @@
 
 namespace coro_st
 {
-  class [[nodiscard]] yield_awaitable
+  class [[nodiscard]] yield_task
   {
   public:
-    yield_awaitable() noexcept = default;
+    yield_task() noexcept = default;
 
-    yield_awaitable(const yield_awaitable&) = delete;
-    yield_awaitable& operator=(const yield_awaitable&) = delete;
+    yield_task(const yield_task&) = delete;
+    yield_task& operator=(const yield_task&) = delete;
 
   private:
     class [[nodiscard]] awaiter
@@ -56,14 +56,29 @@ namespace coro_st
       }
     };
 
-  public:
-    [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+    struct [[nodiscard]] work
     {
-      return { ctx };
+      work() noexcept = default;
+
+      work(const work&) = delete;
+      work& operator=(const work&) = delete;
+      work(work&&) noexcept = default;
+      work& operator=(work&&) noexcept = default;
+
+      [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+      {
+        return { ctx };
+      }
+    };
+
+  public:
+    [[nodiscard]] work get_work() noexcept
+    {
+      return {};
     }
   };
 
-  [[nodiscard]] inline yield_awaitable async_yield() noexcept
+  [[nodiscard]] inline yield_task async_yield() noexcept
   {
     return {};
   }

@@ -73,11 +73,11 @@ namespace coro_st
         return {*pctx_};
       }
 
-      template<coro_st::is_co_awaitable CoAwaitable>
-      auto await_transform(CoAwaitable co_awaitable)
+      template<coro_st::is_co_task CoTask>
+      auto await_transform(CoTask co_task)
       {
         assert(pctx_ != nullptr);
-        return co_awaitable.get_awaiter_for_context(*pctx_);
+        return co_task.get_work().get_awaiter_for_context(*pctx_);
       }
     };
 
@@ -132,10 +132,31 @@ namespace coro_st
       }
     };
 
-  public:
-    [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+    class [[nodiscard]] work
     {
-      return { ctx, std::move(unique_child_coro_) };
+      unique_coroutine_handle<promise_type> unique_child_coro_;
+
+    public:
+      work(unique_coroutine_handle<promise_type>&& unique_child_coro) noexcept :
+        unique_child_coro_{ std::move(unique_child_coro) }
+      {
+      }
+
+      work(const work&) = delete;
+      work& operator=(const work&) = delete;
+      work(work&&) noexcept = default;
+      work& operator=(work&&) noexcept = default;
+
+      [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+      {
+        return { ctx, std::move(unique_child_coro_) };
+      }
+    };
+
+  public:
+    [[nodiscard]] work get_work() noexcept
+    {
+      return { std::move(unique_child_coro_) };
     }
   };
 }

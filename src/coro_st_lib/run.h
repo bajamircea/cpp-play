@@ -10,9 +10,9 @@
 
 namespace coro_st
 {
-  template<is_co_awaitable CoAwaitable>
-  auto run(CoAwaitable co_awaitable)
-    -> co_awaitable_result_t<CoAwaitable>
+  template<is_co_task CoTask>
+  auto run(CoTask co_task)
+    -> co_task_result_t<CoTask>
   {
     stop_source main_stop_source;
     bool done { false };
@@ -32,9 +32,11 @@ namespace coro_st
     };
     context ctx{ el_ctx, chain_ctx };
 
-    auto awaiter = co_awaitable.get_awaiter_for_context(ctx);
+    auto co_work = co_task.get_work();
 
-    awaiter.start_as_chain_root();
+    auto co_awaiter = co_work.get_awaiter_for_context(ctx);
+
+    co_awaiter.start_as_chain_root();
 
     while (!done)
     {
@@ -45,6 +47,6 @@ namespace coro_st
       }
     }
 
-    return awaiter.await_resume();
+    return co_awaiter.await_resume();
   }
 }

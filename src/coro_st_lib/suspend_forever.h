@@ -9,13 +9,13 @@
 
 namespace coro_st
 {
-  class [[nodiscard]] suspend_forever_awaitable
+  class [[nodiscard]] suspend_forever_task
   {
   public:
-    suspend_forever_awaitable() noexcept = default;
+    suspend_forever_task() noexcept = default;
 
-    suspend_forever_awaitable(const suspend_forever_awaitable&) = delete;
-    suspend_forever_awaitable& operator=(const suspend_forever_awaitable&) = delete;
+    suspend_forever_task(const suspend_forever_task&) = delete;
+    suspend_forever_task& operator=(const suspend_forever_task&) = delete;
 
   private:
     class [[nodiscard]] awaiter
@@ -66,14 +66,29 @@ namespace coro_st
       }
     };
 
-  public:
-    [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+    struct [[nodiscard]] work
     {
-      return { ctx };
+      work() noexcept = default;
+
+      work(const work&) = delete;
+      work& operator=(const work&) = delete;
+      work(work&&) noexcept = default;
+      work& operator=(work&&) noexcept = default;
+
+      [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+      {
+        return { ctx };
+      }
+    };
+
+  public:
+    [[nodiscard]] work get_work() noexcept
+    {
+      return {};
     }
   };
 
-  [[nodiscard]] inline suspend_forever_awaitable async_suspend_forever() noexcept
+  [[nodiscard]] inline suspend_forever_task async_suspend_forever() noexcept
   {
     return {};
   }

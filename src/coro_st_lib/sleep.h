@@ -10,19 +10,18 @@
 
 namespace coro_st
 {
-  class [[nodiscard]] sleep_awaitable
+  class [[nodiscard]] sleep_task
   {
-  private:
     std::chrono::steady_clock::time_point deadline_;
 
   public:
-    sleep_awaitable(std::chrono::steady_clock::time_point deadline) noexcept :
+    sleep_task(std::chrono::steady_clock::time_point deadline) noexcept :
       deadline_{ deadline }
     {
     }
 
-    sleep_awaitable(const sleep_awaitable&) = delete;
-    sleep_awaitable& operator=(const sleep_awaitable&) = delete;
+    sleep_task(const sleep_task&) = delete;
+    sleep_task& operator=(const sleep_task&) = delete;
 
   private:
     class [[nodiscard]] awaiter
@@ -94,14 +93,35 @@ namespace coro_st
       }
     };
 
-  public:
-    [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+    class [[nodiscard]] work
     {
-      return { ctx, deadline_ };
+      std::chrono::steady_clock::time_point deadline_;
+
+    public:
+      work(std::chrono::steady_clock::time_point deadline) noexcept :
+        deadline_{ deadline }
+      {
+      }
+
+      work(const work&) = delete;
+      work& operator=(const work&) = delete;
+      work(work&&) noexcept = default;
+      work& operator=(work&&) noexcept = default;
+
+      [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+      {
+        return { ctx, deadline_ };
+      }
+    };
+
+  public:
+    [[nodiscard]] work get_work() noexcept
+    {
+      return { deadline_ };
     }
   };
 
-  [[nodiscard]] inline sleep_awaitable async_sleep_for(std::chrono::steady_clock::duration sleep_duration) noexcept
+  [[nodiscard]] inline sleep_task async_sleep_for(std::chrono::steady_clock::duration sleep_duration) noexcept
   {
     return { std::chrono::steady_clock::now() + sleep_duration };
   }
