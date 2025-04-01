@@ -23,7 +23,7 @@ namespace coro_st
     sleep_task(const sleep_task&) = delete;
     sleep_task& operator=(const sleep_task&) = delete;
 
-  private:
+  public:// TODO private:
     class [[nodiscard]] awaiter
     {
       context& ctx_;
@@ -108,7 +108,7 @@ namespace coro_st
       work(work&&) noexcept = default;
       work& operator=(work&&) noexcept = default;
 
-      [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
         return { ctx, deadline_ };
       }

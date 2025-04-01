@@ -47,12 +47,12 @@ namespace coro_st
     std::is_nothrow_move_assignable_v<T> &&
     requires(T x, context ctx)
   {
-    { x.get_awaiter_for_context(ctx) } noexcept -> is_co_awaiter;
+    { x.get_awaiter(ctx) } noexcept -> is_co_awaiter;
   };
 
   template<is_co_work T>
   using co_work_awaiter_t = decltype(
-    std::declval<T>().get_awaiter_for_context(std::declval<context&>()));
+    std::declval<T>().get_awaiter(std::declval<context&>()));
 
   template<is_co_work T>
   using co_work_result_t = co_awaiter_result_t<co_work_awaiter_t<T>>;

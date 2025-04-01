@@ -45,7 +45,7 @@ namespace
 
   // coro_st::co<void> async_does_not_compile4()
   // {
-  //   // error get_awaiter_for_context
+  //   // error get_awaiter
   //   co_await std::suspend_never();
   // }
 

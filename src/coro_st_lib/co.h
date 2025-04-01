@@ -77,7 +77,7 @@ namespace coro_st
       auto await_transform(CoTask co_task)
       {
         assert(pctx_ != nullptr);
-        return co_task.get_work().get_awaiter_for_context(*pctx_);
+        return co_task.get_work().get_awaiter(*pctx_);
       }
     };
 
@@ -147,7 +147,7 @@ namespace coro_st
       work(work&&) noexcept = default;
       work& operator=(work&&) noexcept = default;
 
-      [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
         return { ctx, std::move(unique_child_coro_) };
       }

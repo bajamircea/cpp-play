@@ -4,6 +4,10 @@
 #include "coro_type_traits.h"
 #include "stop_util.h"
 
+#include <coroutine>
+#include <tuple>
+#include <type_traits>
+
 namespace coro_st
 {
   template<typename T>
@@ -19,210 +23,230 @@ namespace coro_st
     size_t index{};
   };
 
-  // template<is_co_awaitable... CoAwaitable>
-  // class [[nodiscard]] wait_any_awaitable
-  // {
-  //   using T = std::common_type_t<
-  //     co_awaitable_result_t<CoAwaitable>...>;
-  //   static constexpr size_t N = sizeof... (CoAwaitable);
-  //   using AwaitersTuple = std::tuple<DeferredCoFn...>;
-  //   using ResultType = wait_any_result<T>;
+  template<is_co_task... CoTasks>
+  class [[nodiscard]] wait_any_task
+  {
+    using T = std::common_type_t<
+      co_task_result_t<CoTasks>...>;
+    static constexpr size_t N = sizeof... (CoTasks);
+    using WorksTuple = std::tuple<co_task_work_t<CoTasks>...>;
+    using WorksTupleSeq = std::index_sequence_for<CoTasks...>;
+    using ResultType = wait_any_result<T>;
 
-  //   context& parent_ctx_;
-  //   DeferredCoFnsTuple co_fns_tuple_;
+    WorksTuple co_works_tuple_;
 
-  // public:
-  //   template<typename... DeferredCoFn2>
-  //   wait_any_awaitable(context& ctx, DeferredCoFn2&&... co_fns) noexcept :
-  //     parent_ctx_{ ctx },
-  //     co_fns_tuple_{ std::forward<DeferredCoFn2>(co_fns)... }
-  //   {
-  //     static_assert(N == sizeof... (DeferredCoFn2));
-  //   }
+  public:
+    template<is_co_task... CoTasks2>
+    wait_any_task(CoTasks2&... co_tasks) noexcept :
+      co_works_tuple_{ co_tasks.get_work()... }
+    {
+      static_assert(N == sizeof... (CoTasks2));
+    }
 
-  //   wait_any_awaitable(const wait_any_awaitable&) = delete;
-  //   wait_any_awaitable& operator=(const wait_any_awaitable&) = delete;
+    wait_any_task(const wait_any_task&) = delete;
+    wait_any_task& operator=(const wait_any_task&) = delete;
 
-  // private:
-  //   class [[nodiscard]] awaiter
-  //   {
-  //     struct chain_data
-  //     {
-  //     private:
-  //       awaiter& awaiter_;
-  //       chain_context chain_ctx_;
-  //       context ctx_;
-  //       coro::trampoline_co<T> trampoline_;
-  //     public:
-  //       template<typename DeferredCoFn2>
-  //       chain_data(awaiter& awaiter, DeferredCoFn2&& co_fn) :
-  //         awaiter_{ awaiter },
-  //         chain_ctx_{ awaiter_.wait_stop_source_.get_token(), invoke_on_resume, this},
-  //         ctx_{ awaiter_.parent_ctx_, chain_ctx_ },
-  //         trampoline_([](context& ctx, DeferredCoFn2& co_fn)
-  //           -> coro::trampoline_co<T> {
-  //             co_return co_await co_fn(ctx);
-  //           }(ctx_, co_fn))
-  //       {
-  //         trampoline_.set_on_done_fn(invoke_on_done, this);
-  //       }
+  public://TODO
+    class [[nodiscard]] awaiter
+    {
+    public: // TODO
+      template<is_co_awaiter CoAwaiter>
+      class chain_data
+      {
+        awaiter& awaiter_;
+        size_t index_;
+        chain_context chain_ctx_;
+        context ctx_;
+        CoAwaiter co_awaiter_;
+      public:
+        template<is_co_work CoWork>
+        chain_data(awaiter& awaiter, CoWork& co_work) :
+          awaiter_{ awaiter },
+          index_{ awaiter_.pending_count_++ },
+          chain_ctx_{
+            awaiter_.wait_stop_source_.get_token(),
+            make_member_callback<&chain_data::on_continue>(this),
+            make_member_callback<&chain_data::on_cancel>(this),
+            },
+          ctx_{ awaiter_.parent_ctx_, chain_ctx_ },
+          co_awaiter_{ co_work.get_awaiter(ctx_) }
+        {
+        }
+
+        chain_data(const chain_data&) = delete;
+        chain_data& operator=(const chain_data&) = delete;
+
+        void on_continue() noexcept
+        {
+          if (!awaiter_.parent_ctx_.get_stop_token().stop_requested())
+          {
+            if (N == awaiter_.data_result_.index)
+            {
+              awaiter_.data_result_.index = index_;
+              awaiter_.wait_stop_source_.request_stop();
+              try
+              {
+                if constexpr (std::is_same_v<void, co_awaiter_result_t<CoAwaiter>>)
+                {
+                  //co_awaiter_.await_resume();
+                }
+                else
+                {
+                  //awaiter_.data_result_.value = co_awaiter_.await_resume();
+                }
+              }
+              catch(...)
+              {
+                awaiter_.exception_result_ = std::current_exception();
+              }
+            }
+            --awaiter_.pending_count_;
+            if (0 != awaiter_.pending_count_)
+            {
+              return;
+            }
+            awaiter_.on_done();
+          }
+        }
+
+        void on_cancel() noexcept
+        {
+          --awaiter_.pending_count_;
+          if (0 != awaiter_.pending_count_)
+          {
+            return;
+          }
+          awaiter_.on_done();
+        }
+      };
+
+      using ChildrenTuple = std::tuple<chain_data<co_task_awaiter_t<CoTasks>>...>;
+
+      // awaiter members
+      context& parent_ctx_;
+      std::coroutine_handle<> parent_handle_;
+      stop_source wait_stop_source_;
+      std::exception_ptr exception_result_;
+      ResultType data_result_;
+    //   stop_op_callback<awaiter> stop_cb_;
+      size_t pending_count_;
+      //std::tuple<chain_data<co_task_awaiter_t<CoTasks>>...> children_;
+
+    public:
+      template<is_co_work... CoWorks>
+      awaiter(context& parent_ctx, CoWorks&&... co_works) noexcept :
+        parent_ctx_{ parent_ctx },
+        parent_handle_{},
+        wait_stop_source_{},
+        exception_result_{},
+        data_result_{.index=N},
+        pending_count_{ 0 }//,
+        //children_{{*this, std::forward<CoWorks>(co_works)}...}
+      {
+        static_assert(N == sizeof...(co_works));
+      }
+
+      awaiter(const awaiter&) = delete;
+      awaiter& operator=(const awaiter&) = delete;
+
+      [[nodiscard]] constexpr bool await_ready() const noexcept
+      {
+        return false;
+      }
+
+    //   bool await_suspend(std::coroutine_handle<> handle) noexcept
+    //   {
+    //     parent_handle_ = handle;
   
-  //       chain_data(const chain_data&) = delete;
-  //       chain_data& operator=(const chain_data&) = delete;
+    //     for(auto& child: children_chain_data_)
+    //     {
+    //       child.resume();
+    //     }
   
-  //       static void invoke_on_resume(void* x, std::coroutine_handle<> coroutine) noexcept
-  //       {
-  //         assert(x != nullptr);
-  //         chain_data* self = reinterpret_cast<chain_data*>(x);
-  //         self->on_resume(coroutine);
-  //       }
-  
-  //       void on_resume(std::coroutine_handle<> coroutine) noexcept
-  //       {
-  //         if (chain_ctx_.get_stop_token().stop_requested())
-  //         {
-  //           on_done();
-  //           return;
-  //         }
-  //         coroutine.resume();
-  //       }
-  
-  //       static void invoke_on_done(void* x) noexcept
-  //       {
-  //         assert(x != nullptr);
-  //         chain_data* self = reinterpret_cast<chain_data*>(x);
-  //         return self->on_done();
-  //       }
-  
-  //       void on_done() noexcept
-  //       {
-  //         if (!chain_ctx_.get_stop_token().stop_requested())
-  //         {
-  //           if (N == awaiter_.result_index_)
-  //           {
-  //             size_t this_index = this - awaiter_.children_chain_data_;
-  //             awaiter_.result_index_ = this_index;
-  //             awaiter_.wait_stop_source_.request_stop();
-  //           }
-  //         }
-  //         --awaiter_.pending_count_;
-  //         if (0 == awaiter_.pending_count_)
-  //         {
-  //           awaiter_.parent_ctx_.push_ready_node(awaiter_.node_, awaiter_.parent_handle_);
-  //         }
-  //       }
-  
-  //       void resume()
-  //       {
-  //         trampoline_.resume();
-  //       }
-  
-  //       T get_result() const
-  //       {
-  //         return trampoline_.get_result();
-  //       }
-  //     };
+    //     --pending_count_;
+    //     if (0 == pending_count_)
+    //     {
+    //       return false;
+    //     }
+    //     stop_cb_.enable(parent_ctx_.get_stop_token(), &awaiter::cancel, this);
+    //     return true;
+    //   }
 
-  //     context& parent_ctx_;
-  //     stop_op_callback<awaiter> stop_cb_;
-  //     // TODO (low pri, see cppcoro) do I need the node?
-  //     ready_node node_;
-  //     stop_source wait_stop_source_;
-  //     std::coroutine_handle<> parent_handle_;
-  //     size_t pending_count_;
-  //     size_t result_index_;
-  //     chain_data children_chain_data_[N];
+      ResultType await_resume() const
+      {
+        assert(data_result_.index != N);
+        if (exception_result_)
+        {
+          std::rethrow_exception(exception_result_);
+        }
+        return std::move(data_result_);
+      }
 
-  //   public:
-  //     template<typename... DeferredCoFn2>
-  //     awaiter(context& parent_ctx, DeferredCoFn2&&... co_fns) noexcept :
-  //       parent_ctx_{ parent_ctx },
-  //       node_{},
-  //       wait_stop_source_{},
-  //       parent_handle_{},
-  //       pending_count_{ N + 1 },
-  //       result_index_{ N },
-  //       children_chain_data_{{*this, std::forward<DeferredCoFn2>(co_fns)}...}
-  //     {
-  //       static_assert(N == sizeof...(co_fns));
-  //     }
+    //   void cancel() noexcept
+    //   {
+    //     stop_cb_.disable();
+    //     wait_stop_source_.request_stop();
+    //     parent_ctx_.push_ready_node(node_, std::coroutine_handle<>());
+    //   }
 
-  //     awaiter(const awaiter&) = delete;
-  //     awaiter& operator=(const awaiter&) = delete;
+      void on_done() noexcept
+      {
+        if (parent_ctx_.get_stop_token().stop_requested())
+        {
+          parent_ctx_.schedule_cancellation_callback();
+          return;
+        }
 
-  //     [[nodiscard]] constexpr bool await_ready() const noexcept
-  //     {
-  //       return false;
-  //     }
+        if (parent_handle_)
+        {
+          ready_node& n = parent_ctx_.get_chain_node();
+          n.cb = make_resume_coroutine_callback(parent_handle_);
+          parent_ctx_.push_ready_node(n);
+          return;
+        }
 
-  //     bool await_suspend(std::coroutine_handle<> handle) noexcept
-  //     {
-  //       parent_handle_ = handle;
-  
-  //       for(auto& child: children_chain_data_)
-  //       {
-  //         child.resume();
-  //       }
-  
-  //       --pending_count_;
-  //       if (0 == pending_count_)
-  //       {
-  //         return false;
-  //       }
-  //       stop_cb_.enable(parent_ctx_.get_stop_token(), &awaiter::cancel, this);
-  //       return true;
-  //     }
+        parent_ctx_.schedule_continuation_callback();
+      }
+    };
 
-  //     ResultType await_resume() const
-  //     {
-  //       assert(result_index_ != N);
-  //       if constexpr (std::is_same_v<T, void>)
-  //       {
-  //         children_chain_data_[result_index_].get_result();
-  //         return ResultType{
-  //           .index=result_index_
-  //         };
-  //       }
-  //       else
-  //       {
-  //         return ResultType{
-  //           .index=result_index_,
-  //           .value=children_chain_data_[result_index_].get_result()
-  //         };
-  //       }
-  //     }
+    struct [[nodiscard]] work
+    {
+      WorksTuple co_works_tuple_;
 
-  //     void cancel() noexcept
-  //     {
-  //       stop_cb_.disable();
-  //       wait_stop_source_.request_stop();
-  //       parent_ctx_.push_ready_node(node_, std::coroutine_handle<>());
-  //     }
-  //   };
+      work(WorksTuple&& co_works_tuple) noexcept:
+        co_works_tuple_{ std::move(co_works_tuple) }
+      {
+      }
 
-  //   template<std::size_t... I>
-  //   awaiter make_awaiter(std::index_sequence<I...>)
-  //   {
-  //     return awaiter{ parent_ctx_, std::get<I>(co_fns_tuple_)... };
-  //   }
+      work(const work&) = delete;
+      work& operator=(const work&) = delete;
+      work(work&&) noexcept = default;
+      work& operator=(work&&) noexcept = default;
 
-  // private:
-  //   [[nodiscard]] friend awaiter operator co_await(wait_any_awaitable x) noexcept
-  //   {
-  //     return std::move(x).hazmat_get_awaiter();
-  //   }
+      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
+      {
+        return get_awaiter_impl(WorksTupleSeq{}, ctx);
+      }
 
-  // public:
-  //   [[nodiscard]] awaiter hazmat_get_awaiter() && noexcept
-  //   {
-  //     return make_awaiter(std::index_sequence_for<DeferredCoFn...>{});
-  //   }
-  // };
+    private:
+      template<std::size_t... I>
+      [[nodiscard]] awaiter get_awaiter_impl(std::index_sequence<I...>, context& ctx) noexcept
+      {
+        return awaiter{ ctx, std::move(std::get<I>(co_works_tuple_))... };
+      }
+    };
 
-  // template<is_co_awaitable... CoAwaitable>
-  // [[nodiscard]] wait_any_awaitable<CoAwaitable...>
-  //   async_wait_any(CoAwaitable... co_awaitables)
-  // {
-  //   return wait_any_awaitable<CoAwaitable...>{ co_awaitables... };
-  // }
+  public:
+    [[nodiscard]] work get_work() noexcept
+    {
+      return { std::move(co_works_tuple_) };
+    }
+  };
+
+  template<is_co_task... CoTasks>
+  [[nodiscard]] wait_any_task<CoTasks...>
+    async_wait_any(CoTasks... co_tasks)
+  {
+    return wait_any_task<CoTasks...>{ co_tasks... };
+  }
 }

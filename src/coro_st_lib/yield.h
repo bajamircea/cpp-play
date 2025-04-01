@@ -65,7 +65,7 @@ namespace coro_st
       work(work&&) noexcept = default;
       work& operator=(work&&) noexcept = default;
 
-      [[nodiscard]] awaiter get_awaiter_for_context(context& ctx) noexcept
+      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
         return { ctx };
       }
