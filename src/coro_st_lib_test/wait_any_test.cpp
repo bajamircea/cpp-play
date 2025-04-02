@@ -16,17 +16,36 @@ namespace
 
   TEST(wait_any_impl_construction)
   {
+    using namespace coro_st;
+    using namespace coro_st::impl;
+
     coro_st_test::test_loop tl;
 
-    auto task = coro_st::async_sleep_for(std::chrono::hours(24));
+    auto task = async_sleep_for(std::chrono::hours(24));
 
     auto work = task.get_work();
 
-    coro_st::impl::wait_any_awaiter_shared_data<void> shared_data(tl.ctx);
+    wait_any_awaiter_shared_data<void> shared_data(tl.ctx);
 
-    std::tuple<coro_st::impl::wait_any_awaiter_chain_data<decltype(shared_data), decltype(work)>>
+    std::tuple<wait_any_awaiter_chain_data<decltype(shared_data), decltype(work)>>
       chain_datas{
-        coro_st::impl::wait_any_awaiter_chain_data_tuple_builder{shared_data, work} };
+        wait_any_awaiter_chain_data_tuple_builder{shared_data, work} };
+  }
+
+  TEST(wait_any_construction)
+  {
+    using namespace coro_st;
+    using namespace coro_st::impl;
+
+    coro_st_test::test_loop tl;
+
+    auto sleep_task = async_sleep_for(std::chrono::hours(24));
+
+    auto task = wait_any_task<decltype(sleep_task)>(sleep_task);
+
+    auto work = task.get_work();
+
+    auto awaiter = work.get_awaiter(tl.ctx);
   }
 
   // TEST(wait_any_inside_co)
@@ -77,39 +96,8 @@ namespace
   //   ASSERT_NE(nullptr, &impl_construction);
   // }
 
-//   void bar(
-//     coro_st::co_task_awaiter_t<coro_st::wait_any_task<coro_st::sleep_task>>& awaiter,
-//     coro_st::sleep_task::work& co_work)
-//   {
-// //    static_assert(std::is_nothrow_move_assignable_v<coro_st::sleep_task::work>);
-//     coro_st::wait_any_task<coro_st::sleep_task>::awaiter::chain_data<coro_st::sleep_task::awaiter>
-//       t(awaiter, co_work);
-//   }
-
-  void fn(coro_st::context& ctx)
-  {
-    auto task = coro_st::async_wait_any(
-//      coro_st::async_suspend_forever(),
-      coro_st::async_sleep_for(std::chrono::seconds(0))
-    );
-    auto work = task.get_work();
-    // using a_t = decltype(work.get_awaiter(ctx));
-    // using c_t = decltype(work.get_awaiter(ctx))::ChildrenTuple;
-    auto awaiter = work.get_awaiter(ctx);
-    //c_t children{{awaiter, get<0>(work.co_works_tuple_)}};
-    //  coro_st::wait_any_task<coro_st::sleep_task>::awaiter::chain_data<coro_st::sleep_task::awaiter> 
-    //    cd {awaiter, get<0>(work.co_works_tuple_)};
-    // std::tuple<coro_st::wait_any_task<coro_st::sleep_task>::awaiter::chain_data<coro_st::sleep_task::awaiter>> 
-    //    cd {{awaiter, get<0>(work.co_works_tuple_)}};
-    using X = coro_st::wait_any_task<coro_st::sleep_task>::awaiter::chain_data<coro_st::sleep_task::awaiter>;
-
-    X cd {awaiter, get<0>(work.co_works_tuple_)};
-  }
-
   TEST(wait_any_trivial)
   {
-//    ASSERT_NE(nullptr, &bar);
-    ASSERT_NE(nullptr, &fn);
     // auto result = coro_st::run(coro_st::async_wait_any(
     //   coro_st::async_suspend_forever(),
     //   coro_st::async_sleep_for(std::chrono::seconds(0))
