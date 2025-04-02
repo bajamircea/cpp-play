@@ -19,7 +19,7 @@ namespace coro_st
     event_loop(const event_loop&) = delete;
     event_loop& operator=(const event_loop&) = delete;
 
-    std::optional<std::chrono::steady_clock::duration> do_current_pending_work()
+    std::optional<std::chrono::steady_clock::duration> do_current_pending_work() noexcept
     {
       coro_st::ready_queue local_ready = std::move(ready_queue_);
       while (!local_ready.empty())

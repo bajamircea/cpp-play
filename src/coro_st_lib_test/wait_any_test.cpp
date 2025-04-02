@@ -6,6 +6,34 @@
 
 namespace
 {
+  // static_assert(
+  //   coro_st::is_co_task<
+  //     coro_st::wait_any_task<
+  //       coro_st::co<void>,
+  //       coro_st::sleep_task>>);
+
+  void impl_construction(coro_st::context& parent_ctx,
+    coro_st::sleep_task::work& co_work0,
+    coro_st::sleep_task::work& co_work1)
+  {
+    using SharedData = coro_st::impl::wait_any_awaiter_shared_data<void>;
+    SharedData shared(parent_ctx);
+
+    using ChainData =
+      coro_st::impl::wait_any_awaiter_chain_data<
+        SharedData, coro_st::sleep_task::work>;
+
+    ChainData cd0(shared, co_work0);
+    ChainData cd1(shared, co_work1);
+
+    //std::tuple<ChainData> tcd{{shared, co_work0}};
+  }
+
+  TEST(wait_any_impl_construction)
+  {
+    ASSERT_NE(nullptr, &impl_construction);
+  }
+
 //   void bar(
 //     coro_st::co_task_awaiter_t<coro_st::wait_any_task<coro_st::sleep_task>>& awaiter,
 //     coro_st::sleep_task::work& co_work)

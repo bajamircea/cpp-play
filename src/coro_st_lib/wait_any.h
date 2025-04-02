@@ -7,6 +7,7 @@
 #include <coroutine>
 #include <tuple>
 #include <type_traits>
+#include <variant>
 
 namespace coro_st
 {
@@ -22,6 +23,67 @@ namespace coro_st
   {
     size_t index{};
   };
+
+  namespace impl
+  {
+    template<typename T>
+    struct wait_any_awaiter_shared_data
+    {
+      using ResultType = wait_any_result<T>;
+
+      context& parent_ctx_;
+      std::coroutine_handle<> parent_handle_;
+      stop_source wait_stop_source_;
+      size_t pending_count_;
+      std::variant<std::monostate, ResultType, std::exception_ptr> result_;
+
+      wait_any_awaiter_shared_data(context& parent_ctx) noexcept :
+        parent_ctx_{ parent_ctx },
+        parent_handle_{},
+        wait_stop_source_{},
+        pending_count_{ 0 },
+        result_{}
+      {
+      }
+
+      wait_any_awaiter_shared_data(const wait_any_awaiter_shared_data&) = delete;
+      wait_any_awaiter_shared_data& operator=(const wait_any_awaiter_shared_data&) = delete;
+    };
+
+    template<typename SharedData, typename CoWork>
+    class wait_any_awaiter_chain_data
+    {
+      SharedData& shared_data_;
+      size_t index_;
+      chain_context chain_ctx_;
+      context ctx_;
+      CoWork co_awaiter_;
+    public:
+      wait_any_awaiter_chain_data(SharedData& shared_data, CoWork& co_work) noexcept :
+        shared_data_{ shared_data },
+        index_{ shared_data_.pending_count_++ },
+        chain_ctx_{
+          shared_data_.wait_stop_source_.get_token(),
+          make_member_callback<&wait_any_awaiter_chain_data::on_continue>(this),
+          make_member_callback<&wait_any_awaiter_chain_data::on_cancel>(this),
+          },
+        ctx_{ shared_data_.parent_ctx_, chain_ctx_ },
+        co_awaiter_{ std::move(co_work) }
+      {
+      }
+
+      wait_any_awaiter_chain_data(const wait_any_awaiter_chain_data&) = delete;
+      wait_any_awaiter_chain_data& operator=(const wait_any_awaiter_chain_data&) = delete;
+
+      void on_continue() noexcept
+      {
+      }
+
+      void on_cancel() noexcept
+      {
+      }
+    };
+  }
 
   template<is_co_task... CoTasks>
   class [[nodiscard]] wait_any_task

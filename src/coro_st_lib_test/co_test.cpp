@@ -2,10 +2,15 @@
 
 #include "../coro_st_lib/co.h"
 
+#include "../coro_st_lib/coro_type_traits.h"
+
 #include <string>
 
 namespace
 {
+  static_assert(coro_st::is_co_task<coro_st::co<void>>);
+  static_assert(coro_st::is_co_task<coro_st::co<int>>);
+
   coro_st::co<void> async_foo()
   {
     co_return;

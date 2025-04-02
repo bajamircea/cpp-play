@@ -52,6 +52,11 @@ namespace coro_st
 
       void start_as_chain_root() noexcept
       {
+        if (ctx_.get_stop_token().stop_requested())
+        {
+          ctx_.schedule_cancellation_callback();
+          return;
+        }
         ctx_.schedule_continuation_callback();
       }
     };
