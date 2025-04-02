@@ -50,14 +50,14 @@ namespace coro_st
       wait_any_awaiter_shared_data& operator=(const wait_any_awaiter_shared_data&) = delete;
     };
 
-    template<typename SharedData, typename CoWork>
+    template<typename SharedData, is_co_work CoWork>
     class wait_any_awaiter_chain_data
     {
       SharedData& shared_data_;
       size_t index_;
       chain_context chain_ctx_;
       context ctx_;
-      CoWork co_awaiter_;
+      co_work_awaiter_t<CoWork> co_awaiter_;
     public:
       wait_any_awaiter_chain_data(SharedData& shared_data, CoWork& co_work) noexcept :
         shared_data_{ shared_data },
@@ -68,7 +68,7 @@ namespace coro_st
           make_member_callback<&wait_any_awaiter_chain_data::on_cancel>(this),
           },
         ctx_{ shared_data_.parent_ctx_, chain_ctx_ },
-        co_awaiter_{ std::move(co_work) }
+        co_awaiter_{ co_work.get_awaiter(ctx_) }
       {
       }
 
@@ -81,6 +81,28 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
+      }
+    };
+
+    template<typename SharedData, is_co_work CoWork>
+    class wait_any_awaiter_chain_data_tuple_builder
+    {
+      SharedData* shared_data_;
+      CoWork* co_work_;
+
+      public:
+      wait_any_awaiter_chain_data_tuple_builder(SharedData& shared_data, CoWork& co_work) noexcept :
+        shared_data_{&shared_data},
+        co_work_{&co_work}
+      {
+      }
+
+      wait_any_awaiter_chain_data_tuple_builder(const wait_any_awaiter_chain_data_tuple_builder&) = delete;
+      wait_any_awaiter_chain_data_tuple_builder& operator=(const wait_any_awaiter_chain_data_tuple_builder&) = delete;
+
+      operator wait_any_awaiter_chain_data<SharedData, CoWork>() const
+      {
+        return {*shared_data_, *co_work_};
       }
     };
   }
