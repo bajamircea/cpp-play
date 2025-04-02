@@ -271,24 +271,7 @@ namespace coro_st
     //     parent_ctx_.push_ready_node(node_, std::coroutine_handle<>());
     //   }
 
-      void on_done() noexcept
-      {
-        if (parent_ctx_.get_stop_token().stop_requested())
-        {
-          parent_ctx_.schedule_cancellation_callback();
-          return;
-        }
 
-        if (parent_handle_)
-        {
-          ready_node& n = parent_ctx_.get_chain_node();
-          n.cb = make_resume_coroutine_callback(parent_handle_);
-          parent_ctx_.push_ready_node(n);
-          return;
-        }
-
-        parent_ctx_.schedule_continuation_callback();
-      }
     };
 
     struct [[nodiscard]] work

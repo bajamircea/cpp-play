@@ -48,6 +48,25 @@ namespace coro_st
 
       wait_any_awaiter_shared_data(const wait_any_awaiter_shared_data&) = delete;
       wait_any_awaiter_shared_data& operator=(const wait_any_awaiter_shared_data&) = delete;
+
+      void on_done() noexcept
+      {
+        if (parent_ctx_.get_stop_token().stop_requested())
+        {
+          parent_ctx_.schedule_cancellation_callback();
+          return;
+        }
+
+        if (parent_handle_)
+        {
+          ready_node& n = parent_ctx_.get_chain_node();
+          n.cb = make_resume_coroutine_callback(parent_handle_);
+          parent_ctx_.push_ready_node(n);
+          return;
+        }
+
+        parent_ctx_.schedule_continuation_callback();
+      }
     };
 
     template<typename SharedData, is_co_work CoWork>
@@ -77,10 +96,46 @@ namespace coro_st
 
       void on_continue() noexcept
       {
+        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          if (0 == shared_data_.result_.index())
+          {
+            try
+            {
+              if constexpr (std::is_same_v<void, co_work_result_t<CoWork>>)
+              {
+                co_awaiter_.await_resume();
+                shared_data_.result_.template emplace<1>(index_);
+              }
+              else
+              {
+                shared_data_.result_.template emplace<1>(index_, co_awaiter_.await_resume());
+              }
+            }
+            catch(...)
+            {
+              shared_data_.result_.template emplace<2>(std::current_exception());
+            }
+
+            shared_data_.wait_stop_source_.request_stop();
+          }
+          --shared_data_.pending_count_;
+          if (0 != shared_data_.pending_count_)
+          {
+            return;
+          }
+          shared_data_.on_done();
+        }
       }
 
       void on_cancel() noexcept
       {
+        --shared_data_.pending_count_;
+        if (0 != shared_data_.pending_count_)
+        {
+          return;
+        }
+        shared_data_.on_done();
       }
     };
 
@@ -144,7 +199,6 @@ namespace coro_st
         shared_data_{ parent_ctx },
         chain_data_{ impl::wait_any_awaiter_chain_data_tuple_builder{shared_data_, co_works}... }
       {
-        static_assert(N == sizeof...(co_works));
       }
 
       awaiter(const awaiter&) = delete;
@@ -173,15 +227,18 @@ namespace coro_st
     //     return true;
     //   }
 
-      // ResultType await_resume() const
-      // {
-      //   assert(data_result_.index != N);
-      //   if (exception_result_)
-      //   {
-      //     std::rethrow_exception(exception_result_);
-      //   }
-      //   return std::move(data_result_);
-      // }
+      ResultType await_resume() const
+      {
+        switch(shared_data_.result_.index())
+        {
+          case 1:
+            return std::move(std::get<1>(shared_data_.result_));
+          case 2:
+            std::rethrow_exception(std::get<2>(shared_data_.result_));
+          default:
+            std::terminate();
+        }
+      }
 
     //   void cancel() noexcept
     //   {
@@ -189,25 +246,6 @@ namespace coro_st
     //     wait_stop_source_.request_stop();
     //     parent_ctx_.push_ready_node(node_, std::coroutine_handle<>());
     //   }
-
-      // void on_done() noexcept
-      // {
-      //   if (parent_ctx_.get_stop_token().stop_requested())
-      //   {
-      //     parent_ctx_.schedule_cancellation_callback();
-      //     return;
-      //   }
-
-      //   if (parent_handle_)
-      //   {
-      //     ready_node& n = parent_ctx_.get_chain_node();
-      //     n.cb = make_resume_coroutine_callback(parent_handle_);
-      //     parent_ctx_.push_ready_node(n);
-      //     return;
-      //   }
-
-      //   parent_ctx_.schedule_continuation_callback();
-      // }
     };
 
     struct [[nodiscard]] work
