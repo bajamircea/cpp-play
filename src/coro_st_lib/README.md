@@ -90,6 +90,8 @@ see the examples in `coro_st_lib_test\run_test.cpp`
     - helper function to make a `callback` that resumes a coroutine handle
 - `stop_util.h`
   - single threaded implementation of the standard variants
+    - however compared with `std::stop_source` has better `noexcept`
+      guarantees e.g. does not use a heap allocated state for `stop_source`
   - `stop_source` has a boolean that can be flipped to `true` using
     `request_stop()`
   - `stop_token` is really a pointer to `stop_source` to allow checking the

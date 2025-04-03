@@ -23,7 +23,7 @@ namespace coro_st
     sleep_task(const sleep_task&) = delete;
     sleep_task& operator=(const sleep_task&) = delete;
 
-  public:// TODO private:
+  private:
     class [[nodiscard]] awaiter
     {
       context& ctx_;

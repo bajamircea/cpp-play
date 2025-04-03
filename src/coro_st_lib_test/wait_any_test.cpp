@@ -29,7 +29,7 @@ namespace
 
     std::tuple<wait_any_awaiter_chain_data<decltype(shared_data), decltype(work)>>
       chain_datas{
-        wait_any_awaiter_chain_data_tuple_builder{shared_data, work} };
+        wait_any_awaiter_chain_data_tuple_builder{shared_data, 0, work} };
   }
 
   TEST(wait_any_construction)
@@ -74,35 +74,13 @@ namespace
   //   // ASSERT_TRUE(tl.cancelled);
   // }
 
-  // void impl_construction(coro_st::context& parent_ctx,
-  //   coro_st::sleep_task::work& co_work0,
-  //   coro_st::sleep_task::work& co_work1)
-  // {
-  //   using SharedData = coro_st::impl::wait_any_awaiter_shared_data<void>;
-  //   SharedData shared(parent_ctx);
-
-  //   using ChainData =
-  //     coro_st::impl::wait_any_awaiter_chain_data<
-  //       SharedData, coro_st::sleep_task::work>;
-
-  //   ChainData cd0(shared, co_work0);
-  //   ChainData cd1(shared, co_work1);
-
-  //   //std::tuple<ChainData> tcd{{shared, co_work0}};
-  // }
-
-  // TEST(wait_any_impl_construction)
-  // {
-  //   ASSERT_NE(nullptr, &impl_construction);
-  // }
-
   TEST(wait_any_trivial)
   {
-    // auto result = coro_st::run(coro_st::async_wait_any(
-    //   coro_st::async_suspend_forever(),
-    //   coro_st::async_sleep_for(std::chrono::seconds(0))
-    // ));
-    // ASSERT_EQ(1, result.index);
+    auto result = coro_st::run(coro_st::async_wait_any(
+      coro_st::async_suspend_forever(),
+      coro_st::async_sleep_for(std::chrono::seconds(0))
+    ));
+    ASSERT_EQ(1, result.index);
   }
 
 //   TEST(yield_lambda_return_int)

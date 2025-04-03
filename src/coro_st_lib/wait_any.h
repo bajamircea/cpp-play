@@ -96,9 +96,9 @@ namespace coro_st
       context ctx_;
       co_work_awaiter_t<CoWork> co_awaiter_;
 
-      wait_any_awaiter_chain_data(SharedData& shared_data, CoWork& co_work) noexcept :
+      wait_any_awaiter_chain_data(SharedData& shared_data, size_t index, CoWork& co_work) noexcept :
         shared_data_{ shared_data },
-        index_{ shared_data_.pending_count_++ },
+        index_{ index },
         chain_ctx_{
           shared_data_.wait_stop_source_.get_token(),
           make_member_callback<&wait_any_awaiter_chain_data::on_continue>(this),
@@ -161,11 +161,17 @@ namespace coro_st
     class wait_any_awaiter_chain_data_tuple_builder
     {
       SharedData* shared_data_;
+      size_t index_;
       CoWork* co_work_;
 
       public:
-      wait_any_awaiter_chain_data_tuple_builder(SharedData& shared_data, CoWork& co_work) noexcept :
+      wait_any_awaiter_chain_data_tuple_builder(
+        SharedData& shared_data,
+        size_t index,
+        CoWork& co_work
+      ) noexcept :
         shared_data_{&shared_data},
+        index_{index},
         co_work_{&co_work}
       {
       }
@@ -175,7 +181,7 @@ namespace coro_st
 
       operator wait_any_awaiter_chain_data<SharedData, CoWork>() const
       {
-        return {*shared_data_, *co_work_};
+        return {*shared_data_, index_, *co_work_};
       }
     };
   }
@@ -213,9 +219,15 @@ namespace coro_st
       ChainDataTuple chain_data_;
 
     public:
-      awaiter(context& parent_ctx, co_task_work_t<CoTasks>&... co_works) noexcept :
+      template<std::size_t... I>
+      awaiter(
+        std::index_sequence<I...>,
+        context& parent_ctx,
+        WorksTuple& co_works_tuple
+      ) noexcept :
         shared_data_{ parent_ctx },
-        chain_data_{ impl::wait_any_awaiter_chain_data_tuple_builder{shared_data_, co_works}... }
+        chain_data_{(
+            impl::wait_any_awaiter_chain_data_tuple_builder{shared_data_, I, std::get<I>(co_works_tuple)})... }
       {
       }
 
@@ -231,24 +243,24 @@ namespace coro_st
       {
         shared_data_.parent_handle_ = handle;
 
-        ++shared_data_.pending_count_;
+        shared_data_.pending_count_ = N + 1;
         shared_data_.init_cancellation_callback();
 
         start_chains();
 
         --shared_data_.pending_count_;
-        if (0 == shared_data_.pending_count_)
+        if (0 != shared_data_.pending_count_)
         {
-          return false;
+          return true;
         }
 
         if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
           shared_data_.parent_ctx_.schedule_cancellation_callback();
-          return false;
+          return true;
         }
 
-        return true;
+        return false;
       }
 
       ResultType await_resume() const
@@ -266,7 +278,7 @@ namespace coro_st
 
       void start_as_chain_root() noexcept
       {
-        ++shared_data_.pending_count_;
+        shared_data_.pending_count_ = N + 1;
         shared_data_.init_cancellation_callback();
 
         start_chains();
@@ -274,6 +286,12 @@ namespace coro_st
         --shared_data_.pending_count_;
         if (0 != shared_data_.pending_count_)
         {
+          return;
+        }
+
+        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          shared_data_.parent_ctx_.schedule_cancellation_callback();
           return;
         }
 
@@ -291,13 +309,6 @@ namespace coro_st
           chain_data_
         ); 
       }
-
-    //   void cancel() noexcept
-    //   {
-    //     stop_cb_.disable();
-    //     wait_stop_source_.request_stop();
-    //     parent_ctx_.push_ready_node(node_, std::coroutine_handle<>());
-    //   }
     };
 
     struct [[nodiscard]] work
@@ -316,14 +327,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
-        return get_awaiter_impl(WorksTupleSeq{}, ctx);
-      }
-
-    private:
-      template<std::size_t... I>
-      [[nodiscard]] awaiter get_awaiter_impl(std::index_sequence<I...>, context& ctx) noexcept
-      {
-        return awaiter{ ctx, std::get<I>(co_works_tuple_)... };
+        return awaiter(WorksTupleSeq{}, ctx, co_works_tuple_);
       }
     };
 

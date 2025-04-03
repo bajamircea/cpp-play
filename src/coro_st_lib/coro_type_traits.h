@@ -28,27 +28,28 @@ namespace coro_st
 
   template<typename T>
   concept is_co_awaiter = requires(T a)
-  {
-    { a.await_ready() } noexcept -> std::convertible_to<bool>;
-    a.await_resume();
-    { a.start_as_chain_root() } noexcept;
-  } && (
-    has_void_await_suspend<T> ||
-    has_bool_await_suspend<T> ||
-    has_symmetric_await_suspend<T>);
+    {
+      { a.await_ready() } noexcept -> std::convertible_to<bool>;
+      a.await_resume();
+      { a.start_as_chain_root() } noexcept;
+    } && (
+      has_void_await_suspend<T> ||
+      has_bool_await_suspend<T> ||
+      has_symmetric_await_suspend<T>) &&
+    !std::is_move_constructible_v<T> &&
+    !std::is_move_assignable_v<T>;
 
   template<is_co_awaiter T>
   using co_awaiter_result_t = decltype(
     std::declval<T>().await_resume());
 
   template<typename T>
-  concept is_co_work =
+  concept is_co_work = requires(T x, context ctx)
+    {
+      { x.get_awaiter(ctx) } noexcept -> is_co_awaiter;
+    } &&
     std::is_nothrow_move_constructible_v<T> &&
-    std::is_nothrow_move_assignable_v<T> &&
-    requires(T x, context ctx)
-  {
-    { x.get_awaiter(ctx) } noexcept -> is_co_awaiter;
-  };
+    std::is_nothrow_move_assignable_v<T>;
 
   template<is_co_work T>
   using co_work_awaiter_t = decltype(
@@ -58,10 +59,12 @@ namespace coro_st
   using co_work_result_t = co_awaiter_result_t<co_work_awaiter_t<T>>;
 
   template<typename T>
-  concept is_co_task = requires(T x, context ctx)
-  {
-    { x.get_work() } noexcept -> is_co_work;
-  };
+  concept is_co_task = requires(T x)
+    {
+      { x.get_work() } noexcept -> is_co_work;
+    } &&
+    !std::is_move_constructible_v<T> &&
+    !std::is_move_assignable_v<T>;
 
   template<is_co_task T>
   using co_task_work_t = decltype(
