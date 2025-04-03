@@ -1,10 +1,12 @@
 #pragma once
 
+#include "callback.h"
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
 
 #include <coroutine>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <variant>
@@ -34,6 +36,7 @@ namespace coro_st
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
       stop_source wait_stop_source_;
+      std::optional<stop_callback<callback>> stop_cb_;
       size_t pending_count_;
       std::variant<std::monostate, ResultType, std::exception_ptr> result_;
 
@@ -49,8 +52,17 @@ namespace coro_st
       wait_any_awaiter_shared_data(const wait_any_awaiter_shared_data&) = delete;
       wait_any_awaiter_shared_data& operator=(const wait_any_awaiter_shared_data&) = delete;
 
-      void on_done() noexcept
+      void init_cancellation_callback() noexcept
       {
+        stop_cb_.emplace(
+          parent_ctx_.get_stop_token(),
+          make_member_callback<&wait_any_awaiter_shared_data::on_cancel>(this));
+      }
+
+      void on_continue() noexcept
+      {
+        stop_cb_ = std::nullopt;
+
         if (parent_ctx_.get_stop_token().stop_requested())
         {
           parent_ctx_.schedule_cancellation_callback();
@@ -67,17 +79,23 @@ namespace coro_st
 
         parent_ctx_.schedule_continuation_callback();
       }
+
+      void on_cancel() noexcept
+      {
+        stop_cb_ = std::nullopt;
+        wait_stop_source_.request_stop();
+      }
     };
 
     template<typename SharedData, is_co_work CoWork>
-    class wait_any_awaiter_chain_data
+    struct wait_any_awaiter_chain_data
     {
       SharedData& shared_data_;
       size_t index_;
       chain_context chain_ctx_;
       context ctx_;
       co_work_awaiter_t<CoWork> co_awaiter_;
-    public:
+
       wait_any_awaiter_chain_data(SharedData& shared_data, CoWork& co_work) noexcept :
         shared_data_{ shared_data },
         index_{ shared_data_.pending_count_++ },
@@ -124,7 +142,7 @@ namespace coro_st
           {
             return;
           }
-          shared_data_.on_done();
+          shared_data_.on_continue();
         }
       }
 
@@ -135,7 +153,7 @@ namespace coro_st
         {
           return;
         }
-        shared_data_.on_done();
+        shared_data_.on_continue();
       }
     };
 
@@ -209,23 +227,29 @@ namespace coro_st
         return false;
       }
 
-    //   bool await_suspend(std::coroutine_handle<> handle) noexcept
-    //   {
-    //     parent_handle_ = handle;
-  
-    //     for(auto& child: children_chain_data_)
-    //     {
-    //       child.resume();
-    //     }
-  
-    //     --pending_count_;
-    //     if (0 == pending_count_)
-    //     {
-    //       return false;
-    //     }
-    //     stop_cb_.enable(parent_ctx_.get_stop_token(), &awaiter::cancel, this);
-    //     return true;
-    //   }
+      bool await_suspend(std::coroutine_handle<> handle) noexcept
+      {
+        shared_data_.parent_handle_ = handle;
+
+        ++shared_data_.pending_count_;
+        shared_data_.init_cancellation_callback();
+
+        start_chains();
+
+        --shared_data_.pending_count_;
+        if (0 == shared_data_.pending_count_)
+        {
+          return false;
+        }
+
+        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          shared_data_.parent_ctx_.schedule_cancellation_callback();
+          return false;
+        }
+
+        return true;
+      }
 
       ResultType await_resume() const
       {
@@ -238,6 +262,34 @@ namespace coro_st
           default:
             std::terminate();
         }
+      }
+
+      void start_as_chain_root() noexcept
+      {
+        ++shared_data_.pending_count_;
+        shared_data_.init_cancellation_callback();
+
+        start_chains();
+
+        --shared_data_.pending_count_;
+        if (0 != shared_data_.pending_count_)
+        {
+          return;
+        }
+
+        shared_data_.on_continue();
+      }
+
+
+    private:
+      void start_chains() noexcept
+      {
+        std::apply (
+          [](auto &... chain) {
+            (chain.co_awaiter_.start_as_chain_root(),...);
+          },
+          chain_data_
+        ); 
       }
 
     //   void cancel() noexcept

@@ -8,11 +8,11 @@
 
 namespace
 {
-  // static_assert(
-  //   coro_st::is_co_task<
-  //     coro_st::wait_any_task<
-  //       coro_st::co<void>,
-  //       coro_st::sleep_task>>);
+  static_assert(
+    coro_st::is_co_task<
+      coro_st::wait_any_task<
+        coro_st::co<void>,
+        coro_st::sleep_task>>);
 
   TEST(wait_any_impl_construction)
   {
