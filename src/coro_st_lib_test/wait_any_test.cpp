@@ -88,6 +88,22 @@ namespace
     ASSERT_EQ(42, result.value.value);
   }
 
+  TEST(wait_any_common_type)
+  {
+    auto result = coro_st::run(coro_st::async_wait_any(
+        std::invoke([]() -> coro_st::co<short> {
+          co_return 42;
+        }),
+        std::invoke([]() -> coro_st::co<int> {
+          co_await coro_st::async_suspend_forever();
+          co_return 1729;
+        })
+      ));
+    ASSERT_EQ(0, result.index);
+    ASSERT_EQ(42, result.value);
+    static_assert(std::is_same_v<int, decltype(result.value)>);
+  }
+
   // coro_st::co<void> async_wait_any_does_not_compile()
   // {
   //   auto x = coro_st::async_wait_any(
