@@ -41,7 +41,6 @@ namespace
 
   TEST(coro_type_traits_has_symmetric_await_suspend)
   {
-
     static_assert(!coro_st::has_symmetric_await_suspend<test_with_void_await_suspend>);
     static_assert(!coro_st::has_symmetric_await_suspend<test_with_bool_await_suspend>);
     static_assert(coro_st::has_symmetric_await_suspend<

@@ -4,6 +4,7 @@
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
+#include "wait_any_type_traits.h"
 
 #include <coroutine>
 #include <optional>
@@ -189,7 +190,7 @@ namespace coro_st
   template<is_co_task... CoTasks>
   class [[nodiscard]] wait_any_task
   {
-    using T = std::common_type_t<
+    using T = wait_any_type_traits::value_type_t<
       co_task_result_t<CoTasks>...>;
     static constexpr size_t N = sizeof... (CoTasks);
     using WorksTuple = std::tuple<co_task_work_t<CoTasks>...>;
@@ -341,6 +342,7 @@ namespace coro_st
   template<is_co_task... CoTasks>
   [[nodiscard]] wait_any_task<CoTasks...>
     async_wait_any(CoTasks... co_tasks)
+      requires(sizeof... (CoTasks) > 1)
   {
     return wait_any_task<CoTasks...>{ co_tasks... };
   }
