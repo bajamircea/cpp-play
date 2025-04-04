@@ -112,9 +112,31 @@ namespace
     ASSERT_TRUE(g_values_closed.empty());
   }
 
+  void some_init_api(int* ret)
+  {
+    *ret = 42;
+  }
+
+  TEST(unique_handle_pointer)
+  {
+    g_values_closed.clear();
+
+    {
+      simple_test_handle x;
+      some_init_api(x.handle_pointer());
+
+      ASSERT_EQ(42, x.get());
+    }
+
+    ASSERT_EQ((std::vector{42}), g_values_closed);
+  }
+
   struct test_reinterpret_handle_traits
   {
     using handle_type = void *;
+    // not using constexpr for invalid_value()
+    // because incompatible with the reintepret_cast
+    // see commented static_asserts below
     static auto invalid_value() noexcept { return reinterpret_cast<handle_type>(-1); }
     static void close_handle(handle_type) noexcept
     {
@@ -125,6 +147,10 @@ namespace
 
   TEST(unique_handle_reinterpret_cast)
   {
+    // this does not compile even by adding constexpr to the traits invalid_value
+    // because of the reinterpret_cast
+    // static_assert(nullptr != test_reinterpret_handle_is_valid_traits::invalid_value());
+
     g_values_closed.clear();
 
     {
@@ -132,6 +158,42 @@ namespace
     }
 
     ASSERT_EQ((std::vector{42}), g_values_closed);
+  }
+
+  struct test_reinterpret_handle_is_valid_traits
+  {
+    using handle_type = void *;
+    // not using constexpr for invalid_value() or is_valid()
+    // because incompatible with the reintepret_cast
+    // see commented static_asserts below
+    static auto invalid_value() noexcept { return reinterpret_cast<handle_type>(-1); }
+    static auto is_valid(handle_type h) noexcept {
+      return (h != nullptr) || (h != reinterpret_cast<handle_type>(-1));
+    }
+    static void close_handle(handle_type) noexcept
+    {
+      g_values_closed.push_back(43);
+    }
+  };
+  static_assert(cpp_util::unique_handle_custom_is_valid_traits<test_reinterpret_handle_is_valid_traits>);
+  using test_reinterpret_handle_is_valid = cpp_util::unique_handle<test_reinterpret_handle_is_valid_traits>;
+
+  TEST(unique_handle_reinterpret_cast_with_is_valid)
+  {
+    // these do not compile even by adding constexpr to the traits methods
+    // because of the reinterpret_cast
+    // static_assert(!test_reinterpret_handle_is_valid_traits::is_valid(nullptr));
+    // static_assert(!test_reinterpret_handle_is_valid_traits::is_valid(
+    //  test_reinterpret_handle_is_valid_traits::invalid_value()));
+    // static_assert(nullptr != test_reinterpret_handle_is_valid_traits::invalid_value());
+
+    g_values_closed.clear();
+
+    {
+      test_reinterpret_handle_is_valid x(reinterpret_cast<void *>(100));
+    }
+
+    ASSERT_EQ((std::vector{43}), g_values_closed);
   }
 
   struct test_bool_handle_traits

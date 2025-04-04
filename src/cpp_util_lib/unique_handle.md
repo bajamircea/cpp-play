@@ -68,6 +68,25 @@ void usage()
 }
 ```
 
+## Direct access case
+
+Some APIs want direct access to the handle, shown here reimplementing to use `fopen_s`.
+For this declare a `unique_handle` and use `handle_pointer()`.
+
+```cpp
+file_handle open_file(const char* file_name, const char* mode)
+{
+  file_handle return_value;
+  auto result = std::fopen_s(return_value.handle_pointer(), file_name, mode);
+  if (0 != result)
+  {
+    error::throw_errno(result, "fopen_s");
+  }
+  assert(return_value.is_valid());
+  return return_value;
+}
+```
+
 ## POSIX close
 
 - handle is not always a pointer
@@ -115,6 +134,7 @@ using basic_handle = cpp_util::unique_handle<basic_handle_traits>;
 // e.g. also in a winlib namespace:
 struct file_handle_traits {
   using handle_type = HANDLE;
+  // notice lack of constexpr
   static auto invalid_value() noexcept { return INVALID_HANDLE_VALUE; }
   static void close_handle(handle_type h) noexcept {
     static_cast<void>(::CloseHandle(h));
@@ -139,7 +159,8 @@ using file_handle = cpp_util::unique_handle<file_handle_traits>;
 struct windows_any_handle_traits {
   using handle_type = HANDLE;
   static constexpr auto invalid_value() noexcept { return nullptr; }
-  static constexpr auto is_valid(handle_type h) noexcept {
+  // notice lack of constexpr
+  static auto is_valid(handle_type h) noexcept {
     return (h != nullptr) || (h != INVALID_HANDLE_VALUE);
   }
   static void close_handle(handle_type h) noexcept {
@@ -308,7 +329,7 @@ using unique_coroutine_handle = cpp_util::unique_handle<unique_coroutine_handle_
 # Templated example
 
 - Shows usage where a templated version is used for `::WTSFreeMemory`.
-  Similar cases exist for `LocalFree`, `CoTaskMemFree`.
+  Similar cases exist for `LocalFree` (also shown below), `CoTaskMemFree` etc.
 - It also shows a case where the `handle_pointer()` method is used
   for API that takes a pointer to the handle, albeit a complex one
   where a `reinterpret_cast` is also used. For a simpler case see
@@ -346,6 +367,18 @@ void usage()
   connect_state state = to_connect_state(*query_session_information<WTS_CONNECTSTATE_CLASS*>(session_id, WTSConnectState).get());
   // ...
 }
+```
+
+Sample of `LocalFree` wrapper
+```cpp
+template<typename T>
+struct local_ptr_traits {
+  using handle_type = T;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept { static_cast<void>(::LocalFree(h)); }
+};
+template<typename T>
+using local_ptr = cpp_util::unique_handle<local_ptr_traits<T>>;
 ```
 
 # Why traits instead of taking template parameters
@@ -487,3 +520,61 @@ win_http_session_handle open_session() {
     std::move(handle), std::move(unregister_callback));
 }
 ```
+
+# C-API case not handled by `unique_handle`
+
+Custom RAII classes are still required when dealing with C-APIs.
+Here is an example that needs to clean up to pointers.
+
+```cpp
+struct http_proxy_info {
+  WINHTTP_PROXY_INFO data{
+    .dwAccessType=0,
+    .lpszProxy=0,
+    .lpszProxyBypass=0
+  };
+
+  http_proxy_info() noexcept = default;
+
+  http_proxy_info(const http_proxy_info&) = delete;
+  http_proxy_info& operator=(const http_proxy_info&) = delete;
+
+  ~http_proxy_info() {
+    free_string(data.lpszProxy);
+    free_string(data.lpszProxyBypass);
+  }
+
+private:
+  void free_string(LPWSTR str) noexcept {
+    if (str != nullptr) {
+      ::GlobalFree(str);
+    }
+  }
+};
+```
+
+# The case of multiple cleanup functions
+
+This is a very rare case e.g. `PSID` in Windows:
+```cpp
+BOOL AllocateAndInitializeSid(
+  [in]  PSID_IDENTIFIER_AUTHORITY pIdentifierAuthority,
+  //...
+  [in]  DWORD                     nSubAuthority7,
+  [out] PSID                      *pSid
+);
+// A SID allocated with the AllocateAndInitializeSid function
+// must be freed by using the FreeSid function.
+
+BOOL ConvertStringSidToSidW(
+  [in]  LPCWSTR StringSid,
+  [out] PSID    *Sid
+);
+// [out] Sid: A pointer to a variable that receives a pointer to the
+// converted SID. To free the returned buffer, call the LocalFree function.
+```
+
+The options are to either
+- use two RAII classes (e.g. one based on `local_ptr<PSID>` and
+another one that calls `FreeSid`)
+- or use a special RAII that captures the cleanup/deleter as a pointer
