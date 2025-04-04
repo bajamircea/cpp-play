@@ -92,7 +92,7 @@ namespace
   {
     auto result = coro_st::run(coro_st::async_wait_any(
         std::invoke([]() -> coro_st::co<short> {
-          co_return 42;
+          co_return (short)42;
         }),
         std::invoke([]() -> coro_st::co<int> {
           co_await coro_st::async_suspend_forever();
