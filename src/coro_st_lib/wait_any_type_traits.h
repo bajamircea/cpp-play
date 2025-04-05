@@ -5,11 +5,8 @@
 
 namespace coro_st::wait_any_type_traits
 {
-  // primary template, used for no types
   template<typename...>
-  struct value_type
-  {
-  };
+  struct value_type;
 
   template<typename T>
   struct value_type<T>

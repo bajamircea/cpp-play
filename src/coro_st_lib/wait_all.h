@@ -4,6 +4,7 @@
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
+#include "wait_all_type_traits.h"
 
 #include <coroutine>
 #include <optional>
@@ -125,6 +126,19 @@ namespace coro_st
         }
         shared_data_.on_continue();
       }
+
+      auto get_result() const
+      {
+        if constexpr (std::is_same_v<void, co_work_result_t<CoWork>>)
+        {
+          co_awaiter_.await_resume();
+          return void_result{};
+        }
+        else
+        {
+          return co_awaiter_.await_resume();
+        }
+      }
     };
 
     template<typename SharedData, is_co_work CoWork>
@@ -153,163 +167,169 @@ namespace coro_st
     };
   }
 
-  // template<is_co_task... CoTasks>
-  // class [[nodiscard]] wait_any_task
-  // {
-  //   using T = wait_any_type_traits::value_type_t<
-  //     co_task_result_t<CoTasks>...>;
-  //   static constexpr size_t N = sizeof... (CoTasks);
-  //   using WorksTuple = std::tuple<co_task_work_t<CoTasks>...>;
-  //   using WorksTupleSeq = std::index_sequence_for<CoTasks...>;
-  //   using ResultType = wait_any_result<T>;
+  template<is_co_task... CoTasks>
+  class [[nodiscard]] wait_all_task
+  {
+    static constexpr size_t N = sizeof... (CoTasks);
+    using WorksTuple = std::tuple<co_task_work_t<CoTasks>...>;
+    using WorksTupleSeq = std::index_sequence_for<CoTasks...>;
+    using ResultType = std::tuple<
+      wait_all_type_traits::value_type_t<
+        co_task_result_t<CoTasks>>...>;
 
-  //   WorksTuple co_works_tuple_;
+    WorksTuple co_works_tuple_;
 
-  // public:
-  //   wait_any_task(CoTasks&... co_tasks) noexcept :
-  //     co_works_tuple_{ co_tasks.get_work()... }
-  //   {
-  //   }
+  public:
+    wait_all_task(CoTasks&... co_tasks) noexcept :
+      co_works_tuple_{ co_tasks.get_work()... }
+    {
+    }
 
-  //   wait_any_task(const wait_any_task&) = delete;
-  //   wait_any_task& operator=(const wait_any_task&) = delete;
+    wait_all_task(const wait_all_task&) = delete;
+    wait_all_task& operator=(const wait_all_task&) = delete;
 
-  // private:
-  //   class [[nodiscard]] awaiter
-  //   {
-  //     using SharedData = impl::wait_any_awaiter_shared_data<T>;
-  //     using ChainDataTuple =
-  //       std::tuple<
-  //         impl::wait_any_awaiter_chain_data<SharedData, co_task_work_t<CoTasks>>...>;
+  private:
+    class [[nodiscard]] awaiter
+    {
+      using SharedData = impl::wait_all_awaiter_shared_data;
+      using ChainDataTuple =
+        std::tuple<
+          impl::wait_all_awaiter_chain_data<SharedData, co_task_work_t<CoTasks>>...>;
 
-  //     SharedData shared_data_;
-  //     ChainDataTuple chain_data_;
+      SharedData shared_data_;
+      ChainDataTuple chain_data_;
 
-  //   public:
-  //     template<std::size_t... I>
-  //     awaiter(
-  //       std::index_sequence<I...>,
-  //       context& parent_ctx,
-  //       WorksTuple& co_works_tuple
-  //     ) noexcept :
-  //       shared_data_{ parent_ctx },
-  //       chain_data_{(
-  //           impl::wait_any_awaiter_chain_data_tuple_builder{shared_data_, I, std::get<I>(co_works_tuple)})... }
-  //     {
-  //     }
+    public:
+      template<std::size_t... I>
+      awaiter(
+        std::index_sequence<I...>,
+        context& parent_ctx,
+        WorksTuple& co_works_tuple
+      ) noexcept :
+        shared_data_{ parent_ctx },
+        chain_data_{(
+            impl::wait_all_awaiter_chain_data_tuple_builder{shared_data_, std::get<I>(co_works_tuple)})... }
+      {
+      }
 
-  //     awaiter(const awaiter&) = delete;
-  //     awaiter& operator=(const awaiter&) = delete;
+      awaiter(const awaiter&) = delete;
+      awaiter& operator=(const awaiter&) = delete;
 
-  //     [[nodiscard]] constexpr bool await_ready() const noexcept
-  //     {
-  //       return false;
-  //     }
+      [[nodiscard]] constexpr bool await_ready() const noexcept
+      {
+        return false;
+      }
 
-  //     bool await_suspend(std::coroutine_handle<> handle) noexcept
-  //     {
-  //       shared_data_.parent_handle_ = handle;
+      bool await_suspend(std::coroutine_handle<> handle) noexcept
+      {
+        shared_data_.parent_handle_ = handle;
 
-  //       shared_data_.pending_count_ = N + 1;
-  //       shared_data_.init_cancellation_callback();
+        shared_data_.pending_count_ = N + 1;
+        shared_data_.init_cancellation_callback();
 
-  //       start_chains();
+        start_chains();
 
-  //       --shared_data_.pending_count_;
-  //       if (0 != shared_data_.pending_count_)
-  //       {
-  //         return true;
-  //       }
+        --shared_data_.pending_count_;
+        if (0 != shared_data_.pending_count_)
+        {
+          return true;
+        }
 
-  //       if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
-  //       {
-  //         shared_data_.parent_ctx_.schedule_cancellation_callback();
-  //         return true;
-  //       }
+        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          shared_data_.parent_ctx_.schedule_cancellation_callback();
+          return true;
+        }
 
-  //       return false;
-  //     }
+        return false;
+      }
 
-  //     ResultType await_resume() const
-  //     {
-  //       switch(shared_data_.result_.index())
-  //       {
-  //         case 1:
-  //           return std::move(std::get<1>(shared_data_.result_));
-  //         case 2:
-  //           std::rethrow_exception(std::get<2>(shared_data_.result_));
-  //         default:
-  //           std::terminate();
-  //       }
-  //     }
+      ResultType await_resume() const
+      {
+        if (shared_data_.exception_)
+        {
+          std::rethrow_exception(shared_data_.exception_);
+        }
 
-  //     void start_as_chain_root() noexcept
-  //     {
-  //       shared_data_.pending_count_ = N + 1;
-  //       shared_data_.init_cancellation_callback();
+        return std::apply(
+          [](auto &... chain) -> ResultType {
+            return std::make_tuple(chain.get_result()...);
+          },
+          chain_data_
+        );
+      }
 
-  //       start_chains();
+      std::exception_ptr get_result_exception() const noexcept
+      {
+        return shared_data_.exception_;
+      }
 
-  //       --shared_data_.pending_count_;
-  //       if (0 != shared_data_.pending_count_)
-  //       {
-  //         return;
-  //       }
+      void start_as_chain_root() noexcept
+      {
+        shared_data_.pending_count_ = N + 1;
+        shared_data_.init_cancellation_callback();
 
-  //       if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
-  //       {
-  //         shared_data_.parent_ctx_.schedule_cancellation_callback();
-  //         return;
-  //       }
+        start_chains();
 
-  //       shared_data_.on_continue();
-  //     }
+        --shared_data_.pending_count_;
+        if (0 != shared_data_.pending_count_)
+        {
+          return;
+        }
 
+        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          shared_data_.parent_ctx_.schedule_cancellation_callback();
+          return;
+        }
 
-  //   private:
-  //     void start_chains() noexcept
-  //     {
-  //       std::apply (
-  //         [](auto &... chain) {
-  //           (chain.co_awaiter_.start_as_chain_root(),...);
-  //         },
-  //         chain_data_
-  //       ); 
-  //     }
-  //   };
+        shared_data_.on_continue();
+      }
 
-  //   struct [[nodiscard]] work
-  //   {
-  //     WorksTuple co_works_tuple_;
+    private:
+      void start_chains() noexcept
+      {
+        std::apply (
+          [](auto &... chain) {
+            (chain.co_awaiter_.start_as_chain_root(),...);
+          },
+          chain_data_
+        );
+      }
+    };
 
-  //     work(WorksTuple&& co_works_tuple) noexcept:
-  //       co_works_tuple_{ std::move(co_works_tuple) }
-  //     {
-  //     }
+    struct [[nodiscard]] work
+    {
+      WorksTuple co_works_tuple_;
 
-  //     work(const work&) = delete;
-  //     work& operator=(const work&) = delete;
-  //     work(work&&) noexcept = default;
-  //     work& operator=(work&&) noexcept = default;
+      work(WorksTuple&& co_works_tuple) noexcept:
+        co_works_tuple_{ std::move(co_works_tuple) }
+      {
+      }
 
-  //     [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
-  //     {
-  //       return awaiter(WorksTupleSeq{}, ctx, co_works_tuple_);
-  //     }
-  //   };
+      work(const work&) = delete;
+      work& operator=(const work&) = delete;
+      work(work&&) noexcept = default;
+      work& operator=(work&&) noexcept = default;
 
-  // public:
-  //   [[nodiscard]] work get_work() noexcept
-  //   {
-  //     return { std::move(co_works_tuple_) };
-  //   }
-  // };
+      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
+      {
+        return awaiter(WorksTupleSeq{}, ctx, co_works_tuple_);
+      }
+    };
 
-  // template<is_co_task... CoTasks>
-  // [[nodiscard]] wait_any_task<CoTasks...>
-  //   async_wait_any(CoTasks... co_tasks)
-  //     requires(sizeof... (CoTasks) > 1)
-  // {
-  //   return wait_any_task<CoTasks...>{ co_tasks... };
-  // }
+  public:
+    [[nodiscard]] work get_work() noexcept
+    {
+      return { std::move(co_works_tuple_) };
+    }
+  };
+
+  template<is_co_task... CoTasks>
+  [[nodiscard]] wait_all_task<CoTasks...>
+    async_wait_all(CoTasks... co_tasks)
+      requires(sizeof... (CoTasks) > 1)
+  {
+    return wait_all_task<CoTasks...>{ co_tasks... };
+  }
 }

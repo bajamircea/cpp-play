@@ -104,6 +104,19 @@ namespace
     static_assert(std::is_same_v<int, decltype(result.value)>);
   }
 
+  TEST(wait_any_exception)
+  {
+    auto async_lambda = []() -> coro_st::co<void> {
+      throw std::runtime_error("Ups!");
+      co_return;
+    };
+
+    ASSERT_THROW_WHAT(coro_st::run(coro_st::async_wait_any(
+      async_lambda(),
+      coro_st::async_suspend_forever()
+    )), std::runtime_error, "Ups!");
+  }
+
   // coro_st::co<void> async_wait_any_does_not_compile()
   // {
   //   auto x = coro_st::async_wait_any(

@@ -326,7 +326,7 @@ namespace coro_st
             (chain.co_awaiter_.start_as_chain_root(),...);
           },
           chain_data_
-        ); 
+        );
       }
     };
 
