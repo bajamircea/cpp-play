@@ -41,12 +41,21 @@ namespace coro_st
           std::terminate();
       }
     }
+
+    std::exception_ptr get_result_exception() const noexcept
+    {
+      if (2 != result_.index())
+      {
+        return {};
+      }
+      return std::get<2>(result_);
+    }
   };
 
   template<>
   class promise_base<void>
   {
-    std::exception_ptr exception_;
+    std::exception_ptr exception_{};
 
   public:
     void return_void() noexcept
@@ -65,6 +74,11 @@ namespace coro_st
       {
         std::rethrow_exception(exception_);
       }
+    }
+
+    std::exception_ptr get_result_exception() const noexcept
+    {
+      return exception_;
     }
   };
 }

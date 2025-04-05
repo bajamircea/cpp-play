@@ -3,6 +3,7 @@
 #include "context.h"
 
 #include <coroutine>
+#include <exception>
 #include <type_traits>
 #include <utility>
 
@@ -32,6 +33,7 @@ namespace coro_st
       { a.await_ready() } noexcept -> std::convertible_to<bool>;
       a.await_resume();
       { a.start_as_chain_root() } noexcept;
+      { a.get_result_exception() } noexcept -> std::same_as<std::exception_ptr>;
     } && (
       has_void_await_suspend<T> ||
       has_bool_await_suspend<T> ||

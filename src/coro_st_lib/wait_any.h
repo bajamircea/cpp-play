@@ -45,6 +45,7 @@ namespace coro_st
         parent_ctx_{ parent_ctx },
         parent_handle_{},
         wait_stop_source_{},
+        stop_cb_{},
         pending_count_{ 0 },
         result_{}
       {
@@ -119,21 +120,29 @@ namespace coro_st
         {
           if (0 == shared_data_.result_.index())
           {
-            try
+            std::exception_ptr e = co_awaiter_.get_result_exception();
+            if (e)
             {
-              if constexpr (std::is_same_v<void, co_work_result_t<CoWork>>)
-              {
-                co_awaiter_.await_resume();
-                shared_data_.result_.template emplace<1>(index_);
-              }
-              else
-              {
-                shared_data_.result_.template emplace<1>(index_, co_awaiter_.await_resume());
-              }
+              shared_data_.result_.template emplace<2>(e);
             }
-            catch(...)
+            else
             {
-              shared_data_.result_.template emplace<2>(std::current_exception());
+              try
+              {
+                if constexpr (std::is_same_v<void, co_work_result_t<CoWork>>)
+                {
+                  co_awaiter_.await_resume();
+                  shared_data_.result_.template emplace<1>(index_);
+                }
+                else
+                {
+                  shared_data_.result_.template emplace<1>(index_, co_awaiter_.await_resume());
+                }
+              }
+              catch(...)
+              {
+                shared_data_.result_.template emplace<2>(std::current_exception());
+              }
             }
 
             shared_data_.wait_stop_source_.request_stop();
@@ -275,6 +284,15 @@ namespace coro_st
           default:
             std::terminate();
         }
+      }
+
+      std::exception_ptr get_result_exception() const noexcept
+      {
+        if (2 != shared_data_.result_.index())
+        {
+          return {};
+        }
+        return std::get<2>(shared_data_.result_);
       }
 
       void start_as_chain_root() noexcept

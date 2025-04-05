@@ -126,6 +126,11 @@ namespace coro_st
         return unique_child_coro_.get().promise().get_result();
       }
 
+      std::exception_ptr get_result_exception() const noexcept
+      {
+        return unique_child_coro_.get().promise().get_result_exception();
+      }
+
       void start_as_chain_root() noexcept
       {
         unique_child_coro_.get().resume();

@@ -50,6 +50,11 @@ namespace coro_st
       {
       }
 
+      constexpr std::exception_ptr get_result_exception() const noexcept
+      {
+        return {};
+      }
+
       void start_as_chain_root() noexcept
       {
         if (ctx_.get_stop_token().stop_requested())

@@ -13,6 +13,8 @@ namespace
     coro_st::promise_base<std::string> x;
     x.return_value("42");
 
+    ASSERT_EQ(nullptr, x.get_result_exception());
+
     auto result = x.get_result();
     static_assert(std::is_same_v<decltype(result), std::string>);
 
@@ -31,6 +33,7 @@ namespace
       x.unhandled_exception();
     }
 
+    ASSERT_NE(nullptr, x.get_result_exception());
     ASSERT_THROW_WHAT(x.get_result(), std::runtime_error, "42");
   }
 
@@ -39,6 +42,7 @@ namespace
     coro_st::promise_base<void> x;
     x.return_void();
 
+    ASSERT_EQ(nullptr, x.get_result_exception());
     x.get_result();
   }
 
@@ -54,6 +58,7 @@ namespace
       x.unhandled_exception();
     }
 
+    ASSERT_NE(nullptr, x.get_result_exception());
     ASSERT_THROW_WHAT(x.get_result(), std::runtime_error, "42");
   }
 } // anonymous namespace
