@@ -107,14 +107,14 @@ namespace coro_st
               shared_data_.wait_stop_source_.request_stop();
             }
           }
-
-          --shared_data_.pending_count_;
-          if (0 != shared_data_.pending_count_)
-          {
-            return;
-          }
-          shared_data_.on_continue();
         }
+
+        --shared_data_.pending_count_;
+        if (0 != shared_data_.pending_count_)
+        {
+          return;
+        }
+        shared_data_.on_continue();
       }
 
       void on_cancel() noexcept
