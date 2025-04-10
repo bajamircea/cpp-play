@@ -63,7 +63,23 @@ namespace
   TEST(synthetic_coroutine_check_expected_promise_offset)
   {
     offset_check_co x = foo();
-    ASSERT_EQ(2 * sizeof(void*), x.promise_offset_from_handle_address);
+    static_assert(sizeof(coro_st::coroutine_frame_abi) == 2 * sizeof(void*));
+    ASSERT_EQ(sizeof(coro_st::coroutine_frame_abi), x.promise_offset_from_handle_address);
+  }
+
+  TEST(synthetic_coroutine_done)
+  {
+    coro_st::coroutine_frame_abi abi;
+    abi.resume = nullptr;
+    abi.destroy = +[](void*) {  return; };
+
+    std::coroutine_handle<> handle = std::coroutine_handle<>::from_address(&abi);
+
+    ASSERT_TRUE(handle.done());
+
+    abi.resume =  +[](void*) {  return; };
+
+    ASSERT_FALSE(handle.done());
   }
 
   TEST(synthetic_coroutine_resume_synthetic_resumable)
@@ -78,6 +94,9 @@ namespace
       done_when_resumed, &done};
 
     std::coroutine_handle<> handle = root_frame.get_coroutine_handle();
+
+    ASSERT_FALSE(handle.done());
+
     handle.resume();
     ASSERT_TRUE(done);
   }
