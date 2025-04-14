@@ -56,7 +56,16 @@ namespace coro_st
           }
 
           // we're the first one in a chain
-          ctx_.schedule_continuation_callback();
+          if (ctx_.get_stop_token().stop_requested())
+          {
+            ctx_.schedule_cancellation_callback();
+          }
+          else
+          {
+            callback continuation_cb = ctx_.get_continuation_callback();
+            continuation_cb.invoke();
+          }
+
           return std::noop_coroutine();
         }
 
