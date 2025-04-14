@@ -16,6 +16,7 @@
 #include "yield.h"
 #include "sleep.h"
 #include "suspend_forever.h"
+#include "noop.h"
 #include "void_result.h"
 #include "wait_any_type_traits.h"
 #include "wait_any.h"

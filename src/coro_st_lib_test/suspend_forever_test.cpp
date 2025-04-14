@@ -59,7 +59,6 @@ namespace
     ASSERT_FALSE(tl.completed);
     ASSERT_FALSE(tl.cancelled);
     tl.run_pending_work();
-
     ASSERT_FALSE(tl.completed);
     ASSERT_TRUE(tl.cancelled);
   }

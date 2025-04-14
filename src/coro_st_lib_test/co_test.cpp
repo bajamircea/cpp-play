@@ -3,6 +3,9 @@
 #include "../coro_st_lib/co.h"
 
 #include "../coro_st_lib/coro_type_traits.h"
+#include "../coro_st_lib/run.h"
+
+#include "test_loop.h"
 
 #include <string>
 
@@ -26,6 +29,51 @@ namespace
     co_await async_foo();
     auto x = co_await async_bar();
     co_return x;
+  }
+
+  TEST(co_chain_root_run)
+  {
+    auto result = coro_st::run(async_buzz());
+    ASSERT_EQ("abc", result);
+  }
+
+  TEST(co_chain_root)
+  {
+    coro_st_test::test_loop tl;
+
+    auto task = async_buzz();
+
+    auto awaiter = task.get_work().get_awaiter(tl.ctx);
+
+    awaiter.start_as_chain_root();
+
+    ASSERT_TRUE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.timers_heap_.empty());
+
+    ASSERT_TRUE(tl.completed);
+    ASSERT_FALSE(tl.cancelled);
+  }
+
+  TEST(co_chain_root_cancellation)
+  {
+    coro_st_test::test_loop tl;
+
+    auto task = async_buzz();
+
+    auto awaiter = task.get_work().get_awaiter(tl.ctx);
+
+    tl.stop_source.request_stop();
+
+    awaiter.start_as_chain_root();
+
+    ASSERT_FALSE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.timers_heap_.empty());
+
+    ASSERT_FALSE(tl.completed);
+    ASSERT_FALSE(tl.cancelled);
+    tl.run_pending_work();
+    ASSERT_FALSE(tl.completed);
+    ASSERT_TRUE(tl.cancelled);
   }
 
   // coro_st::co<void> async_does_not_compile()
@@ -53,11 +101,6 @@ namespace
   //   // error get_awaiter
   //   co_await std::suspend_never();
   // }
-
-  TEST(co_compiles)
-  {
-    ASSERT_NE(nullptr, &async_buzz);
-  }
 
   struct X
   {
