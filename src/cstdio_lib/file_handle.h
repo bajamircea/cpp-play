@@ -18,5 +18,5 @@ namespace cstdio
   };
 
   using file_handle = cpp_util::unique_handle<file_handle_traits>;
-  using file_arg = cpp_util::handle_arg<file_handle>;
+  using file_arg = cpp_util::handle_arg<file_handle_traits>;
 }

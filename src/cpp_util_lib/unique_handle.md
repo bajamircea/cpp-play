@@ -14,7 +14,7 @@ struct file_handle_traits {
   }
 };
 using file_handle = cpp_util::unique_handle<file_handle_traits>;
-using file_arg = cpp_util::handle_arg<file_handle>;
+using file_arg = cpp_util::handle_arg<file_handle_traits>;
 
 // Construction API wrappers return a unique_handle to take care
 // of the resource. Shown with fopen here, but often there are
