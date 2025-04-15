@@ -48,7 +48,7 @@ namespace coro_st
       {
       }
 
-      constexpr std::exception_ptr get_result_exception() const noexcept
+      std::exception_ptr get_result_exception() const noexcept
       {
         return {};
       }
