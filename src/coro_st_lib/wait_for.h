@@ -42,8 +42,8 @@ namespace coro_st
     {
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      stop_source wait_for_stop_source_;
-      std::optional<stop_callback<callback>> wait_for_stop_cb_;
+      stop_source wait_stop_source_;
+      std::optional<stop_callback<callback>> wait_stop_cb_;
       size_t pending_count_{ 0 };
       bool has_result_{ false };
 
@@ -62,12 +62,12 @@ namespace coro_st
       ) noexcept :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
-        wait_for_stop_source_{},
-        wait_for_stop_cb_{},
+        wait_stop_source_{},
+        wait_stop_cb_{},
         pending_count_{},
         has_result_{ false },
         task_chain_ctx_{
-          wait_for_stop_source_.get_token(),
+          wait_stop_source_.get_token(),
           make_member_callback<&awaiter::on_task_chain_continue>(this),
           make_member_callback<&awaiter::on_task_chain_cancel>(this),
           },
@@ -100,6 +100,8 @@ namespace coro_st
         {
           return true;
         }
+
+        wait_stop_cb_ = std::nullopt;
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
@@ -154,7 +156,7 @@ namespace coro_st
           return;
         }
 
-        wait_for_stop_cb_ = std::nullopt;
+        wait_stop_cb_ = std::nullopt;
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
@@ -167,27 +169,62 @@ namespace coro_st
       }
 
     private:
+      void on_shared_continue() noexcept
+      {
+        wait_stop_cb_ = std::nullopt;
+
+        if (parent_ctx_.get_stop_token().stop_requested())
+        {
+          parent_ctx_.schedule_cancellation_callback();
+          return;
+        }
+
+        if (parent_handle_)
+        {
+          parent_ctx_.schedule_coroutine_resume(parent_handle_);
+          return;
+        }
+
+        parent_ctx_.schedule_continuation_callback();
+      }
+
       void on_task_chain_continue() noexcept
       {
-        // TODO:
+        if (!parent_ctx_.get_stop_token().stop_requested())
+        {
+          has_result_ = true;
+          wait_stop_source_.request_stop();
+        }
+
+        --pending_count_;
+        if (0 != pending_count_)
+        {
+          return;
+        }
+        on_shared_continue();
       }
 
       void on_task_chain_cancel() noexcept
       {
-        // TODO:
+        --pending_count_;
+        if (0 != pending_count_)
+        {
+          return;
+        }
+        on_shared_continue();
       }
 
       void init_parent_cancellation_callback() noexcept
       {
-        wait_for_stop_cb_.emplace(
+        wait_stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
           make_member_callback<&awaiter::on_parent_cancel>(this));
       }
 
       void on_parent_cancel() noexcept
       {
-        wait_for_stop_cb_ = std::nullopt;
-        wait_for_stop_source_.request_stop();
+        wait_stop_cb_ = std::nullopt;
+        wait_stop_source_.request_stop();
       }
 
       void start_chains() noexcept
@@ -197,7 +234,7 @@ namespace coro_st
         if (2 == pending_count_)
         {
           --pending_count_;
-          // no co_awaiter_ completed, no need to sleep
+          // co_awaiter_ completed early, no need to sleep
           return;
         }
 
@@ -209,18 +246,54 @@ namespace coro_st
         timer_node_.cb = make_member_callback<&awaiter::on_timer>(this);
         parent_ctx_.insert_timer_node(timer_node_);
         timer_stop_cb_.emplace(
-          wait_for_stop_source_.get_token(),
+          wait_stop_source_.get_token(),
           make_member_callback<&awaiter::on_timer_cancel>(this));
       }
 
       void on_timer() noexcept
       {
-        // TODO
+        timer_stop_cb_ = std::nullopt;
+
+        if (!parent_ctx_.get_stop_token().stop_requested())
+        {
+          wait_stop_source_.request_stop();
+        }
+
+        --pending_count_;
+        if (0 != pending_count_)
+        {
+          return;
+        }
+
+        wait_stop_cb_ = std::nullopt;
+
+        if (parent_ctx_.get_stop_token().stop_requested())
+        {
+          parent_ctx_.schedule_cancellation_callback();
+          return;
+        }
+
+        if (parent_handle_)
+        {
+          parent_ctx_.schedule_coroutine_resume(parent_handle_);
+          return;
+        }
+
+        callback continuation_cb = parent_ctx_.get_continuation_callback();
+        continuation_cb.invoke();
       }
 
       void on_timer_cancel() noexcept
       {
-        // TODO
+        timer_stop_cb_ = std::nullopt;
+        parent_ctx_.remove_timer_node(timer_node_);
+
+        --pending_count_;
+        if (0 != pending_count_)
+        {
+          return;
+        }
+        on_shared_continue();
       }
     };
 

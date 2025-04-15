@@ -73,9 +73,7 @@ namespace coro_st
 
         if (parent_handle_)
         {
-          ready_node& n = parent_ctx_.get_chain_node();
-          n.cb = make_resume_coroutine_callback(parent_handle_);
-          parent_ctx_.push_ready_node(n);
+          parent_ctx_.schedule_coroutine_resume(parent_handle_);
           return;
         }
 

@@ -41,9 +41,7 @@ namespace coro_st
           return;
         }
 
-        ready_node& n = ctx_.get_chain_node();
-        n.cb = make_resume_coroutine_callback(handle);
-        ctx_.push_ready_node(n);
+        ctx_.schedule_coroutine_resume(handle);
       }
 
       constexpr void await_resume() const noexcept

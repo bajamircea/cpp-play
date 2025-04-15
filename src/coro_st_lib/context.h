@@ -3,6 +3,8 @@
 #include "event_loop_context.h"
 #include "chain_context.h"
 
+#include <coroutine>
+
 namespace coro_st
 {
   class context
@@ -51,17 +53,22 @@ namespace coro_st
 
     void schedule_continuation_callback() noexcept
     {
-      callback cb = chain_ctx_.get_continuation_callback();
       ready_node& node = chain_ctx_.get_chain_node();
-      node.cb = cb;
+      node.cb = chain_ctx_.get_continuation_callback();
+      event_loop_ctx_.push_ready_node(node);
+    }
+
+    void schedule_coroutine_resume(std::coroutine_handle<void> handle) noexcept
+    {
+      ready_node& node = chain_ctx_.get_chain_node();
+      node.cb = make_resume_coroutine_callback(handle);
       event_loop_ctx_.push_ready_node(node);
     }
 
     void schedule_cancellation_callback() noexcept
     {
-      callback cb = chain_ctx_.get_cancellation_callback();
       ready_node& node = chain_ctx_.get_chain_node();
-      node.cb = cb;
+      node.cb = chain_ctx_.get_cancellation_callback();
       event_loop_ctx_.push_ready_node(node);
     }
 
