@@ -19,7 +19,7 @@ namespace coro_st
     using CoAwaiter = co_task_awaiter_t<CoTask>;
     using T = co_task_result_t<CoTask>;
     using ResultType = std::conditional_t<
-      std::is_same_v<void, T>, bool, T>;
+      std::is_same_v<void, T>, bool, std::optional<T>>;
 
     CoWork co_work_;
     std::chrono::steady_clock::time_point deadline_;
