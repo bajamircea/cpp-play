@@ -197,6 +197,7 @@ struct window_dc_handle_traits {
   }
 };
 using window_dc_handle = cpp_util::unique_handle<window_dc_handle_traits>;
+static_assert(cpp_util::unique_handle_custom_is_valid_traits<window_dc_handle_traits>);
 
 window_dc_handle get_dc(HWND hwnd) {
   window_dc_handle return_value{hwnd, ::GetDC(hwnd)};
