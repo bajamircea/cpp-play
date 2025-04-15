@@ -21,3 +21,4 @@
 #include "wait_any_type_traits.h"
 #include "wait_any.h"
 #include "wait_all.h"
+#include "wait_for.h"

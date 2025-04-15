@@ -36,7 +36,7 @@ namespace coro_st
       wait_all_awaiter_shared_data(const wait_all_awaiter_shared_data&) = delete;
       wait_all_awaiter_shared_data& operator=(const wait_all_awaiter_shared_data&) = delete;
 
-      void init_cancellation_callback() noexcept
+      void init_parent_cancellation_callback() noexcept
       {
         stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
@@ -225,7 +225,7 @@ namespace coro_st
         shared_data_.parent_handle_ = handle;
 
         shared_data_.pending_count_ = N + 1;
-        shared_data_.init_cancellation_callback();
+        shared_data_.init_parent_cancellation_callback();
 
         start_chains();
 
@@ -267,7 +267,7 @@ namespace coro_st
       void start_as_chain_root() noexcept
       {
         shared_data_.pending_count_ = N + 1;
-        shared_data_.init_cancellation_callback();
+        shared_data_.init_parent_cancellation_callback();
 
         start_chains();
 
@@ -283,6 +283,7 @@ namespace coro_st
           return;
         }
 
+        // TODO: revisit if this is right see wait_for
         shared_data_.on_continue();
       }
 
@@ -327,7 +328,7 @@ namespace coro_st
 
   template<is_co_task... CoTasks>
   [[nodiscard]] wait_all_task<CoTasks...>
-    async_wait_all(CoTasks... co_tasks)
+    async_wait_all(CoTasks... co_tasks) noexcept
       requires(sizeof... (CoTasks) > 1)
   {
     return wait_all_task<CoTasks...>{ co_tasks... };
