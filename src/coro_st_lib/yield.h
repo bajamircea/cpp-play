@@ -60,6 +60,7 @@ namespace coro_st
           ctx_.schedule_cancellation_callback();
           return;
         }
+
         ctx_.schedule_continuation_callback();
       }
     };

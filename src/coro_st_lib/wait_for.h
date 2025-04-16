@@ -90,7 +90,7 @@ namespace coro_st
       {
         parent_handle_ = handle;
 
-        pending_count_ = 3;
+        ++pending_count_;
         init_parent_cancellation_callback();
 
         start_chains();
@@ -145,7 +145,7 @@ namespace coro_st
 
       void start_as_chain_root() noexcept
       {
-        pending_count_ = 3;
+        ++pending_count_;
         init_parent_cancellation_callback();
 
         start_chains();
@@ -229,15 +229,16 @@ namespace coro_st
 
       void start_chains() noexcept
       {
+        ++pending_count_;
         co_awaiter_.start_as_chain_root();
 
-        if (2 == pending_count_)
+        if (1 == pending_count_)
         {
-          --pending_count_;
           // co_awaiter_ completed early, no need to sleep
           return;
         }
 
+        ++pending_count_;
         schedule_timer();
       }
 

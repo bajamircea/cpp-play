@@ -41,8 +41,6 @@ namespace coro_st
           return true;
         }
 
-        callback continuation_cb = ctx_.get_continuation_callback();
-        continuation_cb.invoke();
         return false;
       }
 
@@ -62,6 +60,7 @@ namespace coro_st
           ctx_.schedule_cancellation_callback();
           return;
         }
+
         callback continuation_cb = ctx_.get_continuation_callback();
         continuation_cb.invoke();
       }

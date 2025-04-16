@@ -81,11 +81,13 @@ namespace coro_st
       void on_timer() noexcept
       {
         stop_cb_ = std::nullopt;
+
         if (parent_handle_)
         {
           parent_handle_.resume();
           return;
         }
+
         callback continuation_cb = ctx_.get_continuation_callback();
         continuation_cb.invoke();
       }

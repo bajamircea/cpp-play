@@ -40,10 +40,10 @@ namespace coro_st
       {
         stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
-          make_member_callback<&wait_all_awaiter_shared_data::on_cancel>(this));
+          make_member_callback<&wait_all_awaiter_shared_data::on_parent_cancel>(this));
       }
 
-      void on_continue() noexcept
+      void on_shared_continue() noexcept
       {
         stop_cb_ = std::nullopt;
 
@@ -62,7 +62,7 @@ namespace coro_st
         parent_ctx_.schedule_continuation_callback();
       }
 
-      void on_cancel() noexcept
+      void on_parent_cancel() noexcept
       {
         stop_cb_ = std::nullopt;
         wait_stop_source_.request_stop();
@@ -112,7 +112,7 @@ namespace coro_st
         {
           return;
         }
-        shared_data_.on_continue();
+        shared_data_.on_shared_continue();
       }
 
       void on_cancel() noexcept
@@ -122,7 +122,7 @@ namespace coro_st
         {
           return;
         }
-        shared_data_.on_continue();
+        shared_data_.on_shared_continue();
       }
 
       auto get_result() const
@@ -233,6 +233,8 @@ namespace coro_st
           return true;
         }
 
+        shared_data_.stop_cb_ = std::nullopt;
+
         if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
           shared_data_.parent_ctx_.schedule_cancellation_callback();
@@ -275,14 +277,16 @@ namespace coro_st
           return;
         }
 
+        shared_data_.stop_cb_ = std::nullopt;
+
         if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
           shared_data_.parent_ctx_.schedule_cancellation_callback();
           return;
         }
 
-        // TODO: revisit if this is right see wait_for
-        shared_data_.on_continue();
+        callback continuation_cb = shared_data_.parent_ctx_.get_continuation_callback();
+        continuation_cb.invoke();
       }
 
     private:
