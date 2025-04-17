@@ -168,7 +168,7 @@ namespace
     // see commented static_asserts below
     static auto invalid_value() noexcept { return reinterpret_cast<handle_type>(-1); }
     static auto is_valid(handle_type h) noexcept {
-      return (h != nullptr) || (h != reinterpret_cast<handle_type>(-1));
+      return (h != nullptr) && (h != reinterpret_cast<handle_type>(-1));
     }
     static void close_handle(handle_type) noexcept
     {

@@ -161,7 +161,7 @@ struct windows_any_handle_traits {
   static constexpr auto invalid_value() noexcept { return nullptr; }
   // notice lack of constexpr
   static auto is_valid(handle_type h) noexcept {
-    return (h != nullptr) || (h != INVALID_HANDLE_VALUE);
+    return (h != nullptr) && (h != INVALID_HANDLE_VALUE);
   }
   static void close_handle(handle_type h) noexcept {
     static_cast<void>(::CloseHandle(h));
@@ -401,11 +401,12 @@ struct service_handle_traits {
   }
 };
 using service_handle = cpp_util::unique_handle<service_handle_traits>;
+using service_arg = cpp_util::handle_arg<service_handle_traits>;
 
 service_handle open_service_manager(DWORD dwDesiredAccess);
 
 service_handle open_service(
-  const service_handle& smgr, const std::wstring & service_name, DWORD desired_access);
+  service_arg smgr, const std::wstring & service_name, DWORD desired_access);
 ```
 
 - or one can design an API wrapper that disambigutes between the usages.
@@ -420,6 +421,7 @@ struct service_manager_handle_traits {
   }
 };
 using service_manager_handle = cpp_util::unique_handle<service_manager_handle_traits>;
+using service_manager_arg = cpp_util::handle_arg<service_manager_handle_traits>;
 
 service_manager_handle open_service_manager(DWORD dwDesiredAccess);
 
@@ -433,7 +435,7 @@ struct service_handle_traits {
 using service_handle = cpp_util::unique_handle<service_handle_raii_traits>;
 
 service_handle open_service(
-  const service_manager_handle& smgr, const std::wstring & service_name, DWORD desired_access);
+  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
 ```
 
 3. Makes this disambiguation controlled by the C++ code as shown for `SC_HANDLE` when compared with an implementation where the three elements (handle type, invalid value and function to close handle) are taken as template arguments.
@@ -453,6 +455,21 @@ C handles are opaque. `PSECURITY_DESCRIPTOR` could be:
 - a pointer sized integral type
 - a struct containing a pointer sized member
 - something else, none of the above
+
+
+# Why use handle_arg, why not use raw handles?
+
+In the example above we had
+```cpp
+service_handle open_service(
+  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
+```
+
+It creates a barrier when we want to distinguish between the `SC_HANDLE`
+returned from `OpenSCManagerW` and the one returned by `OpenServiceW`.
+The barrier is permeable as the `service_manager_arg` can also be constructed
+with a raw `SC_HANDLE` that we can obtain by calling `get()` on a `service_handle`,
+but it is still a barrier.
 
 
 # Compounding cleanup for the same handle
@@ -557,25 +574,63 @@ private:
 # The case of multiple cleanup functions
 
 This is a very rare case e.g. `PSID` in Windows:
+
+When obtained from `AllocateAndInitializeSid` must be freed by using `FreeSid`.
 ```cpp
 BOOL AllocateAndInitializeSid(
-  [in]  PSID_IDENTIFIER_AUTHORITY pIdentifierAuthority,
-  //...
-  [in]  DWORD                     nSubAuthority7,
-  [out] PSID                      *pSid
+  // ...
+  [out] PSID *pSid
 );
-// A SID allocated with the AllocateAndInitializeSid function
-// must be freed by using the FreeSid function.
-
-BOOL ConvertStringSidToSidW(
-  [in]  LPCWSTR StringSid,
-  [out] PSID    *Sid
-);
-// [out] Sid: A pointer to a variable that receives a pointer to the
-// converted SID. To free the returned buffer, call the LocalFree function.
 ```
 
-The options are to either
-- use two RAII classes (e.g. one based on `local_ptr<PSID>` and
-another one that calls `FreeSid`)
-- or use a special RAII that captures the cleanup/deleter as a pointer
+When obtained from `ConvertStringSidToSidW` must be freed by using `LocalFree`.
+```cpp
+BOOL ConvertStringSidToSidW(
+  // ...
+  [out] PSID *Sid
+);
+```
+
+When obtained from `CreateWellKnownSid` can use our own method of allocating and
+freeing (including space on the stack). E.g. can call once with a `NULL`, then use
+`cbSid` as the number of bytes that need to be allocated.
+```cpp
+BOOL CreateWellKnownSid(
+  // ...
+  [out, optional] PSID pSid,
+  [in, out] DWORD *cbSid
+);
+```
+
+In other cases the `PSID` is allocated as part of a larger structure.
+E.g. for `GetTokenInformation` the user has to allocate a buffer. When
+called with `TokenUser`, the content of the buffer is nominally a struct
+```cpp
+struct TOKEN_USER {
+  SID_AND_ATTRIBUTES User;
+};
+```
+where
+```cpp
+struct SID_AND_ATTRIBUTES {
+  PSID  Sid;
+  DWORD Attributes;
+};
+```
+But the buffer needs to be larger to accomodate the `SID` pointed by `Sid`,
+following the `TOKEN_USER`.
+
+I speculate that the reason for the `PSID` multiple cleanup functions is that
+it is not a true resource (e.g. like a file), but instead it is a pointer to
+[a C data structure](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understand-security-identifiers)
+(despite the `PSID` being declared as a `void*`).
+
+The options are to either:
+- use a single RAII class based on `local_ptr<PSID>`, never use `AllocateAndInitializeSid`
+- use multiple RAII classes
+  - e.g. one based on `local_ptr<PSID>`, another one that calls `FreeSid` and maybe yet
+    another one storing a `unique_ptr<unsigned char[]>`
+- use a special RAII that captures the cleanup/deleter as a pointer
+
+The last two options require a custom `sid_arg` type rather than one based on `handle_arg`
+which was designed to work in conjunction with a single `unique_handle`
