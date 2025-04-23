@@ -34,8 +34,14 @@ namespace
 
       ASSERT_EQ(0, x.get());
       ASSERT_EQ(1, y.get());
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 26800) // Use of a moved from object
+#endif
       ASSERT_EQ(-1, z.get());
-
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
       ASSERT_TRUE(x.is_valid());
       ASSERT_TRUE(y.is_valid());
       ASSERT_FALSE(z.is_valid());
@@ -57,7 +63,14 @@ namespace
       simple_test_handle y(std::move(x));
 
       ASSERT_TRUE(g_values_closed.empty());
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 26800) // Use of a moved from object
+#endif
       ASSERT_EQ(-1, x.get());
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
       ASSERT_EQ(0, y.get());
     }
 
