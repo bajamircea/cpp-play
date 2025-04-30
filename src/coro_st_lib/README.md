@@ -182,4 +182,6 @@ see the examples in `coro_st_lib_test\run_test.cpp`
 - // TODO `wait_all.h`
 - // TODO `wait_for.h`
 - // TODO `call_capture.h`
+  - TODO explain decay, how it solves the `const &` problem
+  - TODO explain the problem with rvalue arguments
 - // TODO `nursery.h`

@@ -26,7 +26,7 @@ namespace coro_st
       static_assert(sizeof... (Args) == sizeof... (Args2));
     }
 
-    auto operator()()
+    result_type operator()()
       noexcept(std::is_nothrow_invocable_v<
         Fn,
         Args...>)
