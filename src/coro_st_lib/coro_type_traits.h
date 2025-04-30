@@ -48,7 +48,8 @@ namespace coro_st
   template<typename T>
   concept is_co_work = requires(T x, context ctx)
     {
-      { x.get_awaiter(ctx) } noexcept -> is_co_awaiter;
+      // removed noexcept, in some cases allocation is required
+      { x.get_awaiter(ctx) } -> is_co_awaiter;
     } &&
     std::is_nothrow_move_constructible_v<T> &&
     std::is_nothrow_move_assignable_v<T>;
