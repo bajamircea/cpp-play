@@ -1,11 +1,10 @@
 #pragma once
 
+#include "call_capture.h"
 #include "callback.h"
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
-
-#include "../cpp_util_lib/intrusive_list.h"
 
 #include <coroutine>
 #include <memory>
@@ -17,25 +16,6 @@ namespace coro_st
 
   namespace impl
   {
-    struct nursery_child_node_base
-    {
-      nursery_child_node_base* next{ nullptr };
-      nursery_child_node_base* prev{ nullptr };
-  
-      nursery_child_node_base() noexcept = default;
-  
-      nursery_child_node_base(const nursery_child_node_base&) = delete;
-      nursery_child_node_base& operator=(const nursery_child_node_base&) = delete;
-
-    protected:
-      ~nursery_child_node_base() = default;
-    };
-  
-    using nursery_children_list = cpp_util::intrusive_list<
-      nursery_child_node_base,
-      &nursery_child_node_base::next,
-      &nursery_child_node_base::prev>;
-
     struct nursery_awaiter_shared_data
     {
       context& parent_ctx_;
@@ -44,7 +24,6 @@ namespace coro_st
       std::optional<stop_callback<callback>> stop_cb_;
       size_t pending_count_;
       std::exception_ptr exception_;
-      impl::nursery_children_list children_;
 
       nursery_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
@@ -52,8 +31,7 @@ namespace coro_st
         nursery_stop_source_{},
         stop_cb_{},
         pending_count_{ 0 },
-        exception_{},
-        children_{}
+        exception_{}
       {
       }
 
@@ -94,30 +72,30 @@ namespace coro_st
     };
 
     template<is_co_work CoWork>
-    struct nursery_initial_node : public nursery_child_node_base
+    struct nursery_initial_child
     {
       nursery_awaiter_shared_data& shared_data_;
       chain_context chain_ctx_;
       context ctx_;
       co_work_awaiter_t<CoWork> co_awaiter_;
 
-      nursery_initial_node(
+      nursery_initial_child(
         nursery_awaiter_shared_data& shared_data,
         CoWork& co_work
       ) :
         shared_data_{ shared_data },
         chain_ctx_{
           shared_data_.nursery_stop_source_.get_token(),
-          make_member_callback<&nursery_initial_node::on_continue>(this),
-          make_member_callback<&nursery_initial_node::on_cancel>(this),
+          make_member_callback<&nursery_initial_child::on_continue>(this),
+          make_member_callback<&nursery_initial_child::on_cancel>(this),
           },
         ctx_{ shared_data_.parent_ctx_, chain_ctx_ },
         co_awaiter_{ co_work.get_awaiter(ctx_) }
       {
       }
 
-      nursery_initial_node(const nursery_initial_node&) = delete;
-      nursery_initial_node& operator=(const nursery_initial_node&) = delete;
+      nursery_initial_child(const nursery_initial_child&) = delete;
+      nursery_initial_child& operator=(const nursery_initial_child&) = delete;
 
       void on_continue() noexcept
       {
@@ -153,7 +131,90 @@ namespace coro_st
         // take a copy of the members we use
         auto shared_data_local = &shared_data_;
 
-        std::unique_ptr<nursery_initial_node> self_destruct{ this };
+        std::unique_ptr<nursery_initial_child> self_destruct{ this };
+
+        --shared_data_local->pending_count_;
+        if (0 != shared_data_local->pending_count_)
+        {
+          return;
+        }
+        self_destruct.reset();
+
+        shared_data_local->on_shared_continue();
+      }
+    };
+
+    template<typename Fn, typename... Args>
+    struct nursery_spawn_child
+    {
+      using Capture = call_capture<Fn, Args...>;
+      using Awaiter = co_task_awaiter_t<
+        typename Capture::result_type>;
+
+      Capture lifetime_capture_;
+      nursery_awaiter_shared_data& shared_data_;
+      chain_context chain_ctx_;
+      context ctx_;
+      Awaiter co_awaiter_;
+
+      template<typename Fn2, typename... Args2>
+      nursery_spawn_child(
+        nursery_awaiter_shared_data& shared_data,
+        Fn2&& fn,
+        Args2&&... args
+      ) :
+        lifetime_capture_{
+          std::forward<Fn2>(fn),
+          std::forward<Args2>(args)... },
+        shared_data_{ shared_data },
+        chain_ctx_{
+          shared_data_.nursery_stop_source_.get_token(),
+          make_member_callback<&nursery_spawn_child::on_continue>(this),
+          make_member_callback<&nursery_spawn_child::on_cancel>(this),
+          },
+        ctx_{ shared_data_.parent_ctx_, chain_ctx_ },
+        co_awaiter_{ lifetime_capture_().get_work().get_awaiter(ctx_) }
+      {
+      }
+
+      nursery_spawn_child(const nursery_spawn_child&) = delete;
+      nursery_spawn_child& operator=(const nursery_spawn_child&) = delete;
+
+      void on_continue() noexcept
+      {
+        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          if (!shared_data_.exception_)
+          {
+            std::exception_ptr e = co_awaiter_.get_result_exception();
+            if (e)
+            {
+              shared_data_.exception_ = e;
+              shared_data_.nursery_stop_source_.request_stop();
+            }
+          }
+        }
+
+        complete_and_self_destroy();
+      }
+
+      void on_cancel() noexcept
+      {
+        complete_and_self_destroy();
+      }
+
+      void start() noexcept
+      {
+        ++shared_data_.pending_count_;
+        co_awaiter_.start_as_chain_root();
+      }
+
+      void complete_and_self_destroy() noexcept
+      {
+        // take a copy of the members we use
+        auto shared_data_local = &shared_data_;
+
+        std::unique_ptr<nursery_spawn_child> self_destruct{ this };
 
         --shared_data_local->pending_count_;
         if (0 != shared_data_local->pending_count_)
@@ -204,7 +265,7 @@ namespace coro_st
       {
         nursery& nursery_;
         impl::nursery_awaiter_shared_data shared_data_;
-        std::unique_ptr<impl::nursery_initial_node<CoWork>> initial_unstarted_work_;
+        std::unique_ptr<impl::nursery_initial_child<CoWork>> initial_unstarted_work_;
 
       public:
         awaiter(
@@ -215,7 +276,7 @@ namespace coro_st
           nursery_{ nursery },
           shared_data_{ parent_ctx },
           initial_unstarted_work_{
-            std::make_unique<impl::nursery_initial_node<CoWork>>(
+            std::make_unique<impl::nursery_initial_child<CoWork>>(
               shared_data_, co_work
             ) }
         {
@@ -346,6 +407,26 @@ namespace coro_st
       impl_->nursery_stop_source_.request_stop();
     }
 
-    //void spawn_child()
+    template<typename Fn, typename... Args>
+    void spawn_child(Fn&& fn, Args&&... args)
+    {
+      using CaptureResult = typename call_capture<Fn, Args...>::result_type;
+      static_assert(is_co_task<CaptureResult>);
+      static_assert(std::is_same_v<
+        void,
+        co_task_result_t<CaptureResult>>);
+
+      assert(nullptr != impl_);
+
+      auto spawn_unstarted_work_ =
+        std::make_unique<
+          impl::nursery_spawn_child<Fn, Args...>>(
+            *impl_,
+            std::forward<Fn>(fn),
+            std::forward<Args>(args)...
+        );
+
+        spawn_unstarted_work_.release()->start();
+    }
   };
 }

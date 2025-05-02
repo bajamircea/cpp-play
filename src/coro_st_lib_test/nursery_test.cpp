@@ -67,6 +67,19 @@ namespace
       ));
   }
 
+  TEST(nursery_lambda_and_spawn)
+  {
+    coro_st::nursery n;
+    auto async_initial_lambda = [&n]() -> coro_st::co<void> {
+      n.spawn_child(coro_st::async_yield);
+      co_return;
+    };
+    coro_st::run(
+      n.async_run(
+        async_initial_lambda()
+      ));
+  }
+
   // TEST(yield_chain_root_run)
   // {
   //   coro_st::run(coro_st::async_yield());
