@@ -142,6 +142,12 @@ namespace coro_st
         complete_and_self_destroy();
       }
 
+      void start() noexcept
+      {
+        ++shared_data_.pending_count_;
+        co_awaiter_.start_as_chain_root();
+      }
+
       void complete_and_self_destroy() noexcept
       {
         // take a copy of the members we use
@@ -171,7 +177,7 @@ namespace coro_st
     nursery(const nursery&) noexcept = delete;
     nursery& operator=(const nursery&) noexcept = delete;
 
-  private:
+  public:
     template<is_co_task CoTask>
     class [[nodiscard]] nursery_run_task
     {
@@ -219,27 +225,91 @@ namespace coro_st
         awaiter(const awaiter&) = delete;
         awaiter& operator=(const awaiter&) = delete;
 
+        ~awaiter()
+        {
+          nursery_.impl_ = nullptr;
+        }
+
         [[nodiscard]] constexpr bool await_ready() const noexcept
         {
           return false;
         }
 
-        ~awaiter()
+        bool await_suspend(std::coroutine_handle<> handle) noexcept
         {
-          nursery_.impl_ = nullptr;
+          shared_data_.parent_handle_ = handle;
+
+          shared_data_.pending_count_ = 1;
+          shared_data_.init_parent_cancellation_callback();
+
+          initial_unstarted_work_.release()->start();
+
+          --shared_data_.pending_count_;
+          if (0 != shared_data_.pending_count_)
+          {
+            return true;
+          }
+
+          shared_data_.stop_cb_ = std::nullopt;
+
+          if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+          {
+            shared_data_.parent_ctx_.schedule_cancellation_callback();
+            return true;
+          }
+
+          return false;
+        }
+
+        void await_resume() const
+        {
+          if (shared_data_.exception_)
+          {
+            std::rethrow_exception(shared_data_.exception_);
+          }
+        }
+
+        std::exception_ptr get_result_exception() const noexcept
+        {
+          return shared_data_.exception_;
+        }
+
+        void start_as_chain_root() noexcept
+        {
+          shared_data_.pending_count_ = 1;
+          shared_data_.init_parent_cancellation_callback();
+
+          initial_unstarted_work_.release()->start();
+
+          --shared_data_.pending_count_;
+          if (0 != shared_data_.pending_count_)
+          {
+            return;
+          }
+
+          shared_data_.stop_cb_ = std::nullopt;
+
+          if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+          {
+            shared_data_.parent_ctx_.schedule_cancellation_callback();
+            return;
+          }
+
+          callback continuation_cb = shared_data_.parent_ctx_.get_continuation_callback();
+          continuation_cb.invoke();
         }
       };
 
       struct [[nodiscard]] work
       {
-        nursery& nursery_;
+        nursery* nursery_;
         CoWork co_work_;
 
         work(
           nursery& nursery,
           CoWork&& co_work_
         ) noexcept:
-          nursery_{ nursery },
+          nursery_{ &nursery },
           co_work_{ std::move(co_work_) }
         {
         }
@@ -251,7 +321,7 @@ namespace coro_st
 
         [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
         {
-          return awaiter(nursery_, ctx, co_work_);
+          return awaiter(*nursery_, ctx, co_work_);
         }
       };
 
@@ -272,9 +342,10 @@ namespace coro_st
 
     void request_stop() noexcept
     {
-
+      assert(nullptr != impl_);
+      impl_->nursery_stop_source_.request_stop();
     }
 
-    //void bind_and_spawn()
+    //void spawn_child()
   };
 }

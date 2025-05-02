@@ -4,13 +4,18 @@
 
 #include "../coro_st_lib/co.h"
 #include "../coro_st_lib/yield.h"
-// #include "../coro_st_lib/coro_type_traits.h"
-// #include "../coro_st_lib/run.h"
+#include "../coro_st_lib/coro_type_traits.h"
+#include "../coro_st_lib/run.h"
 
 #include "test_loop.h"
 
 namespace
 {
+  static_assert(
+    coro_st::is_co_task<
+      coro_st::nursery::nursery_run_task<
+        coro_st::co<void>>>);
+
   TEST(nursery_compiles)
   {
     coro_st_test::test_loop tl;
@@ -25,7 +30,42 @@ namespace
     auto awaiter = task.get_work().get_awaiter(tl.ctx);
   }
 
-  // static_assert(coro_st::is_co_task<coro_st::yield_task>);
+  TEST(nursery_trivial)
+  {
+    coro_st::nursery n;
+    coro_st::run(
+      n.async_run(
+        coro_st::async_yield()
+      ));
+  }
+
+  TEST(nursery_lambda_and_stop)
+  {
+    coro_st::nursery n;
+    auto async_initial_lambda = [](coro_st::nursery& n) -> coro_st::co<void> {
+      co_await coro_st::async_yield();
+      n.request_stop();
+      co_return;
+    };
+    coro_st::run(
+      n.async_run(
+        async_initial_lambda(n)
+      ));
+  }
+
+  TEST(nursery_lambda_by_capture_and_stop)
+  {
+    coro_st::nursery n;
+    auto async_initial_lambda = [&n]() -> coro_st::co<void> {
+      co_await coro_st::async_yield();
+      n.request_stop();
+      co_return;
+    };
+    coro_st::run(
+      n.async_run(
+        async_initial_lambda()
+      ));
+  }
 
   // TEST(yield_chain_root_run)
   // {
