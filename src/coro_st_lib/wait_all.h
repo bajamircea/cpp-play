@@ -69,15 +69,18 @@ namespace coro_st
       }
     };
 
-    template<typename SharedData, is_co_work CoWork>
+    template<is_co_work CoWork>
     struct wait_all_awaiter_chain_data
     {
-      SharedData& shared_data_;
+      wait_all_awaiter_shared_data& shared_data_;
       chain_context chain_ctx_;
       context ctx_;
       co_work_awaiter_t<CoWork> co_awaiter_;
 
-      wait_all_awaiter_chain_data(SharedData& shared_data, CoWork& co_work) noexcept :
+      wait_all_awaiter_chain_data(
+        wait_all_awaiter_shared_data& shared_data,
+        CoWork& co_work
+      ) :
         shared_data_{ shared_data },
         chain_ctx_{
           shared_data_.wait_stop_source_.get_token(),
@@ -139,15 +142,15 @@ namespace coro_st
       }
     };
 
-    template<typename SharedData, is_co_work CoWork>
+    template<is_co_work CoWork>
     class wait_all_awaiter_chain_data_tuple_builder
     {
-      SharedData* shared_data_;
+      wait_all_awaiter_shared_data* shared_data_;
       CoWork* co_work_;
 
       public:
       wait_all_awaiter_chain_data_tuple_builder(
-        SharedData& shared_data,
+        wait_all_awaiter_shared_data& shared_data,
         CoWork& co_work
       ) noexcept :
         shared_data_{&shared_data},
@@ -158,7 +161,7 @@ namespace coro_st
       wait_all_awaiter_chain_data_tuple_builder(const wait_all_awaiter_chain_data_tuple_builder&) = delete;
       wait_all_awaiter_chain_data_tuple_builder& operator=(const wait_all_awaiter_chain_data_tuple_builder&) = delete;
 
-      operator wait_all_awaiter_chain_data<SharedData, CoWork>() const
+      operator wait_all_awaiter_chain_data<CoWork>() const
       {
         return {*shared_data_, *co_work_};
       }
@@ -189,12 +192,11 @@ namespace coro_st
   private:
     class [[nodiscard]] awaiter
     {
-      using SharedData = impl::wait_all_awaiter_shared_data;
       using ChainDataTuple =
         std::tuple<
-          impl::wait_all_awaiter_chain_data<SharedData, co_task_work_t<CoTasks>>...>;
+          impl::wait_all_awaiter_chain_data<co_task_work_t<CoTasks>>...>;
 
-      SharedData shared_data_;
+      impl::wait_all_awaiter_shared_data shared_data_;
       ChainDataTuple chain_data_;
 
     public:
@@ -203,7 +205,7 @@ namespace coro_st
         std::index_sequence<I...>,
         context& parent_ctx,
         WorksTuple& co_works_tuple
-      ) noexcept :
+      ) :
         shared_data_{ parent_ctx },
         chain_data_{(
             impl::wait_all_awaiter_chain_data_tuple_builder{shared_data_, std::get<I>(co_works_tuple)})... }
@@ -315,7 +317,7 @@ namespace coro_st
       work(work&&) noexcept = default;
       work& operator=(work&&) noexcept = default;
 
-      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
+      [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
         return awaiter(WorksTupleSeq{}, ctx, co_works_tuple_);
       }

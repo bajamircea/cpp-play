@@ -59,7 +59,7 @@ namespace coro_st
         context& parent_ctx,
         CoWork& co_work,
         std::chrono::steady_clock::time_point deadline
-      ) noexcept :
+      ) :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
         wait_stop_source_{},
@@ -317,7 +317,7 @@ namespace coro_st
       work(work&&) noexcept = default;
       work& operator=(work&&) noexcept = default;
 
-      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
+      [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
         return awaiter(ctx, co_work_, deadline_);
       }

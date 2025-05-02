@@ -96,7 +96,11 @@ namespace coro_st
       context ctx_;
       co_work_awaiter_t<CoWork> co_awaiter_;
 
-      wait_any_awaiter_chain_data(SharedData& shared_data, size_t index, CoWork& co_work) noexcept :
+      wait_any_awaiter_chain_data(
+        SharedData& shared_data,
+        size_t index,
+        CoWork& co_work
+      ) :
         shared_data_{ shared_data },
         index_{ index },
         chain_ctx_{
@@ -233,7 +237,7 @@ namespace coro_st
         std::index_sequence<I...>,
         context& parent_ctx,
         WorksTuple& co_works_tuple
-      ) noexcept :
+      ) :
         shared_data_{ parent_ctx },
         chain_data_{(
             impl::wait_any_awaiter_chain_data_tuple_builder{shared_data_, I, std::get<I>(co_works_tuple)})... }
@@ -347,7 +351,7 @@ namespace coro_st
       work(work&&) noexcept = default;
       work& operator=(work&&) noexcept = default;
 
-      [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
+      [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
         return awaiter(WorksTupleSeq{}, ctx, co_works_tuple_);
       }

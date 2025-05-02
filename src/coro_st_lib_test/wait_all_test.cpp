@@ -27,7 +27,7 @@ namespace
 
     wait_all_awaiter_shared_data shared_data(tl.ctx);
 
-    std::tuple<wait_all_awaiter_chain_data<decltype(shared_data), decltype(work)>>
+    std::tuple<wait_all_awaiter_chain_data<decltype(work)>>
       chain_datas{
         wait_all_awaiter_chain_data_tuple_builder{shared_data, work} };
   }
