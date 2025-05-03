@@ -185,3 +185,4 @@ see the examples in `coro_st_lib_test\run_test.cpp`
   - TODO explain decay, how it solves the `const &` problem
   - TODO explain the problem with rvalue arguments
 - // TODO `nursery.h`
+- // TODO `event.h`

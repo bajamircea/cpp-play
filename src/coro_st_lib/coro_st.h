@@ -24,3 +24,4 @@
 #include "wait_for.h"
 #include "call_capture.h"
 #include "nursery.h"
+#include "event.h"

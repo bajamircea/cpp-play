@@ -137,11 +137,13 @@ namespace
   // coro_st::co<void> async_yield_does_not_compile()
   // {
   //   auto x = coro_st::async_yield();
+  //   // use of deleted function
   //   co_await std::move(x);
   // }
 
   // coro_st::co<void> async_yield_does_not_compile2()
   // {
+  //   // ignoring return value
   //   coro_st::async_yield();
   //   co_return;
   // }

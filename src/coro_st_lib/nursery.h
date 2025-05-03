@@ -230,14 +230,6 @@ namespace coro_st
 
   class nursery
   {
-    impl::nursery_awaiter_shared_data* impl_{ nullptr };
-
-  public:
-    nursery() noexcept = default;
-
-    nursery(const nursery&) noexcept = delete;
-    nursery& operator=(const nursery&) noexcept = delete;
-
   public:
     template<is_co_task CoTask>
     class [[nodiscard]] nursery_run_task
@@ -393,7 +385,15 @@ namespace coro_st
       }
     };
 
+  private:
+    impl::nursery_awaiter_shared_data* impl_{ nullptr };
+
   public:
+    nursery() noexcept = default;
+
+    nursery(const nursery&) noexcept = delete;
+    nursery& operator=(const nursery&) noexcept = delete;
+
     template<is_co_task CoTask>
     [[nodiscard]] nursery_run_task<CoTask> async_run(CoTask co_task)
     {

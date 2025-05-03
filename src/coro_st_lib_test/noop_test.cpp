@@ -131,11 +131,13 @@ namespace
   // coro_st::co<void> async_noop_does_not_compile()
   // {
   //   auto x = coro_st::async_noop();
+  //   // use of deleted function
   //   co_await std::move(x);
   // }
 
   // coro_st::co<void> async_noop_does_not_compile2()
   // {
+  //   // ignoring return value
   //   coro_st::async_noop();
   //   co_return;
   // }

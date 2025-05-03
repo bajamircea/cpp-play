@@ -66,7 +66,7 @@ namespace
   // coro_st::co<void> async_suspend_forever_does_not_compile()
   // {
   //   auto x = coro_st::async_suspend_forever();
-  //   // use of deletef function
+  //   // use of deleted function
   //   co_await std::move(x);
   // }
 
