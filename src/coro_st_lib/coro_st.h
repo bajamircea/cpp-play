@@ -22,5 +22,5 @@
 #include "wait_any.h"
 #include "wait_all.h"
 #include "wait_for.h"
-// TODO uncomment #include "captured_task.h"
-// TODO uncomment #include "nursery.h"
+#include "call_capture.h"
+#include "nursery.h"
