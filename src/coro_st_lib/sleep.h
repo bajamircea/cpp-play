@@ -80,7 +80,7 @@ namespace coro_st
 
       void on_timer() noexcept
       {
-        stop_cb_ = std::nullopt;
+        stop_cb_.reset();
 
         if (parent_handle_)
         {
@@ -94,7 +94,7 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
-        stop_cb_ = std::nullopt;
+        stop_cb_.reset();
         ctx_.remove_timer_node(timer_node_);
         ctx_.schedule_cancellation_callback();
       }

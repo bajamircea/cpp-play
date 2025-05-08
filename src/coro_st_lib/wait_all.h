@@ -45,7 +45,7 @@ namespace coro_st
 
       void on_shared_continue() noexcept
       {
-        stop_cb_ = std::nullopt;
+        stop_cb_.reset();
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
@@ -64,7 +64,7 @@ namespace coro_st
 
       void on_parent_cancel() noexcept
       {
-        stop_cb_ = std::nullopt;
+        stop_cb_.reset();
         wait_stop_source_.request_stop();
       }
     };
@@ -235,7 +235,7 @@ namespace coro_st
           return true;
         }
 
-        shared_data_.stop_cb_ = std::nullopt;
+        shared_data_.stop_cb_.reset();
 
         if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
@@ -279,7 +279,7 @@ namespace coro_st
           return;
         }
 
-        shared_data_.stop_cb_ = std::nullopt;
+        shared_data_.stop_cb_.reset();
 
         if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {

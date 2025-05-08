@@ -101,7 +101,7 @@ namespace coro_st
           return true;
         }
 
-        wait_stop_cb_ = std::nullopt;
+        wait_stop_cb_.reset();
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
@@ -156,7 +156,7 @@ namespace coro_st
           return;
         }
 
-        wait_stop_cb_ = std::nullopt;
+        wait_stop_cb_.reset();
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
@@ -171,7 +171,7 @@ namespace coro_st
     private:
       void on_shared_continue() noexcept
       {
-        wait_stop_cb_ = std::nullopt;
+        wait_stop_cb_.reset();
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
@@ -223,7 +223,7 @@ namespace coro_st
 
       void on_parent_cancel() noexcept
       {
-        wait_stop_cb_ = std::nullopt;
+        wait_stop_cb_.reset();
         wait_stop_source_.request_stop();
       }
 
@@ -253,7 +253,7 @@ namespace coro_st
 
       void on_timer() noexcept
       {
-        timer_stop_cb_ = std::nullopt;
+        timer_stop_cb_.reset();
 
         if (!parent_ctx_.get_stop_token().stop_requested())
         {
@@ -266,7 +266,7 @@ namespace coro_st
           return;
         }
 
-        wait_stop_cb_ = std::nullopt;
+        wait_stop_cb_.reset();
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
@@ -286,7 +286,7 @@ namespace coro_st
 
       void on_timer_cancel() noexcept
       {
-        timer_stop_cb_ = std::nullopt;
+        timer_stop_cb_.reset();
         parent_ctx_.remove_timer_node(timer_node_);
 
         --pending_count_;

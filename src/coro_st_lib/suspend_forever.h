@@ -66,7 +66,7 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
-        stop_cb_ = std::nullopt;
+        stop_cb_.reset();
         ctx_.schedule_cancellation_callback();
       }
     };

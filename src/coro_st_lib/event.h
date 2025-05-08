@@ -87,7 +87,7 @@ namespace coro_st
 
         void on_event() noexcept
         {
-          stop_cb_ = std::nullopt;
+          stop_cb_.reset();
           evt_.wait_list_.remove(this);
 
           if (parent_handle_)
@@ -101,7 +101,7 @@ namespace coro_st
 
         void on_cancel() noexcept
         {
-          stop_cb_ = std::nullopt;
+          stop_cb_.reset();
           evt_.wait_list_.remove(this);
           ctx_.schedule_cancellation_callback();
         }
