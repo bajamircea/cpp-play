@@ -12,6 +12,7 @@ namespace cpp_util
   // - linear: end pointer is nullptr
   // - header points to head and tail
   // - no dummy node
+  // - no cached size
   template<typename Node, Node* Node::*next>
   class intrusive_queue
   {

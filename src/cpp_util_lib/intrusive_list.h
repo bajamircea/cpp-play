@@ -14,6 +14,7 @@ namespace cpp_util
   // - end iterator is nullptr
   // - header points to head and tail
   // - no dummy node
+  // - no cached size
   template<typename Node, Node* Node::*next, Node* Node::*prev>
   class intrusive_list
   {
