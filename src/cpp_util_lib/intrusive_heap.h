@@ -25,13 +25,36 @@ namespace cpp_util
   // - remove a node in O(lg(N)) (e.g. when the timer is cancelled)
   // You would store the intrusive_heap somewhere (e.g. in the io_service).
 
-  template<typename Node, Node * Node::*parent, Node * Node::*left, Node * Node::*right, typename Compare>
+  template<typename Node, Node* Node::*parent, Node* Node::*left, Node* Node::*right, typename Compare>
   class intrusive_heap
   {
-    Node * min_node_ = nullptr;
-    std::size_t size_ = 0;
+    Node* min_node_{ nullptr };
+    std::size_t size_{ 0 };
 
   public:
+    intrusive_heap() noexcept = default;
+
+    // Not owning, therefore copy does not copy nodes.
+    // Delete copy to avoid mistakes where min_node gets updated
+    // for a copy out of sync with the original
+    intrusive_heap(const intrusive_heap&) = delete;
+    intrusive_heap& operator=(const intrusive_heap&) = delete;
+
+    intrusive_heap(intrusive_heap&& other) noexcept :
+      min_node_{ other.min_node_ }, size_{ other.size_ }
+    {
+      other.min_node_ = nullptr;
+      other.size_ = 0;
+    }
+
+    intrusive_heap& operator=(intrusive_heap&& other) noexcept
+    {
+      min_node_ = other.min_node_;
+      size_ = other.size_;
+      other.min_node_ = nullptr;
+      other.size_ = 0;
+    }
+
     bool empty() const noexcept
     {
       return (min_node_ == nullptr);
@@ -42,17 +65,17 @@ namespace cpp_util
       return size_;
     }
 
-    Node * min_node() noexcept
+    Node* min_node() noexcept
     {
       return min_node_;
     }
 
-    const Node * min_node() const noexcept
+    const Node* min_node() const noexcept
     {
       return min_node_;
     }
 
-    void insert(Node * new_node) noexcept
+    void insert(Node* new_node) noexcept
     {
       new_node->*left = nullptr;
       new_node->*right = nullptr;
@@ -68,7 +91,7 @@ namespace cpp_util
       // Assume new node is added
       ++size_;
 
-      Node * new_node_parent = min_node_;
+      Node* new_node_parent = min_node_;
 
       // size_ now is at least 2
       // e.g. given if the size_ is now 5 (0...0101 in binary)
@@ -123,7 +146,7 @@ namespace cpp_util
       } while(new_node_parent != nullptr);
     }
 
-    void remove(Node * node) noexcept
+    void remove(Node* node) noexcept
     {
       assert(size_ > 0);
 
@@ -134,7 +157,7 @@ namespace cpp_util
         return;
       }
 
-      Node * last_node_parent = min_node_;
+      Node* last_node_parent = min_node_;
 
       // see insert function comment about the mask
       std::size_t mask = ((std::size_t)1 << (std::bit_width(size_) - 2));
@@ -151,7 +174,7 @@ namespace cpp_util
         mask >>= 1;
       }
 
-      Node * last;
+      Node* last;
 
       if (size_ & mask)
       {
@@ -181,7 +204,7 @@ namespace cpp_util
       // Walk down and fix min heap property
       while (true)
       {
-        Node * crt_min = last;
+        Node* crt_min = last;
         if (last->*left != nullptr)
         {
           if (compare(*(last->*left), *crt_min))
@@ -210,9 +233,9 @@ namespace cpp_util
     }
 
   private:
-    void node_swap(Node * old_parent, Node * new_parent) noexcept
+    void node_swap(Node* old_parent, Node* new_parent) noexcept
     {
-      Node * sibling;
+      Node* sibling;
       if (old_parent->*left == new_parent)
       {
         sibling = old_parent->*right;
@@ -241,7 +264,7 @@ namespace cpp_util
       fix_link_from_parent(new_parent, old_parent);
     }
 
-    void fix_links_from_children(Node * node) noexcept
+    void fix_links_from_children(Node* node) noexcept
     {
       if (node->*left != nullptr)
       {
@@ -253,9 +276,9 @@ namespace cpp_util
       }
     }
 
-    void fix_link_from_parent(Node * new_node, Node * old_node) noexcept
+    void fix_link_from_parent(Node* new_node, Node* old_node) noexcept
     {
-      Node * parent_parent = new_node->*parent;
+      Node* parent_parent = new_node->*parent;
       if (parent_parent == nullptr)
       {
         min_node_ = new_node;

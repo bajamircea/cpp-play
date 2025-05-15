@@ -8,15 +8,15 @@ namespace
 {
   struct heap_node
   {
-    heap_node * parent;
-    heap_node * left;
-    heap_node * right;
+    heap_node* parent;
+    heap_node* left;
+    heap_node* right;
     std::string key;
   };
 
   struct heap_node_compare
   {
-    bool operator()(const heap_node & x, const heap_node & y)
+    bool operator()(const heap_node& x, const heap_node& y)
     {
       return x.key < y.key;
     }

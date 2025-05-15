@@ -6,7 +6,7 @@ namespace
 {
   struct queue_node
   {
-    queue_node * next;
+    queue_node* next;
     int value;
   };
 

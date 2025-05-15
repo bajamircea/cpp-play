@@ -14,29 +14,28 @@ namespace cpp_util
   // - end iterator is nullptr
   // - header points to head and tail
   // - no dummy node
-  template<typename Node, Node * Node::*next, Node * Node::*prev>
+  template<typename Node, Node* Node::*next, Node* Node::*prev>
   class intrusive_list
   {
-    Node * head_;
-    Node * tail_;
+    Node* head_{ nullptr };
+    Node* tail_{ nullptr };
   public:
-    intrusive_list() noexcept : head_{ nullptr }, tail_{ nullptr }
-    {
-    }
+    intrusive_list() noexcept = default;
 
     // Not owning, therefore copy does not copy nodes.
     // Delete copy to avoid mistakes where head and tail get updated
     // for a copy out of sync with the original
-    intrusive_list(const intrusive_list &) = delete;
-    intrusive_list & operator=(const intrusive_list &) = delete;
+    intrusive_list(const intrusive_list&) = delete;
+    intrusive_list& operator=(const intrusive_list&) = delete;
 
-    intrusive_list(intrusive_list && other) noexcept : head_{ other.head_ }, tail_{ other.tail_ }
+    intrusive_list(intrusive_list&& other) noexcept :
+      head_{ other.head_ }, tail_{ other.tail_ }
     {
       other.head_ = nullptr;
       other.tail_ = nullptr;
     }
 
-    intrusive_list & operator=(intrusive_list && other) noexcept
+    intrusive_list& operator=(intrusive_list&& other) noexcept
     {
       head_ = other.head_;
       tail_ = other.tail_;
@@ -49,7 +48,7 @@ namespace cpp_util
       return head_ == nullptr;
     }
 
-    void push_back(Node * what) noexcept
+    void push_back(Node* what) noexcept
     {
       what->*next = nullptr;
       what->*prev = tail_;
@@ -64,7 +63,7 @@ namespace cpp_util
       tail_ = what;
     }
 
-    void remove(Node * what) noexcept
+    void remove(Node* what) noexcept
     {
       if (what == head_)
       {
@@ -84,14 +83,33 @@ namespace cpp_util
       }
     }
 
-    Node * front() noexcept
+    Node* front() noexcept
     {
       return head_;
     }
 
-    Node * back() noexcept
+    Node* back() noexcept
     {
       return tail_;
+    }
+
+    Node* pop_front() noexcept
+    {
+      if (head_ == nullptr)
+      {
+        return nullptr;
+      }
+      Node* what = head_;
+      head_ = what->*next;
+      if (what == tail_)
+      {
+        tail_ = nullptr;
+      }
+      else
+      {
+        what->*next->*prev = nullptr;
+      }
+      return what;
     }
   };
 }

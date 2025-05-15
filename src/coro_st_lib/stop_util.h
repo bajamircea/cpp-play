@@ -75,14 +75,13 @@ namespace coro_st
       stop_ = true;
       while(true)
       {
-        stop_list_node* node = callbacks_.front();
+        stop_list_node* node = callbacks_.pop_front();
         if (node == nullptr)
         {
           break;
         }
         callback copy_cb = node->cb;
         node->cb = callback{};
-        callbacks_.remove(node);
         copy_cb.invoke();
       }
       return true;
