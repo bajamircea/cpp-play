@@ -19,14 +19,12 @@ namespace coro_st_test
     coro_st::event_loop_context el_ctx{ el.ready_queue_, el.timers_heap_ };
     coro_st::chain_context chain_ctx{
       stop_source.get_token(),
-      coro_st::callback{ &completed, +[](void* x) noexcept {
-        bool* pb = reinterpret_cast<bool*>(x);
-        *pb = true;
-      }},
-      coro_st::callback{ &cancelled, +[](void* x) noexcept {
-        bool* pb = reinterpret_cast<bool*>(x);
-        *pb = true;
-      }},
+      coro_st::callback{ coro_st::make_function_callback<+[](bool& x) noexcept {
+        x = true;
+      }>(completed) },
+      coro_st::callback{ coro_st::make_function_callback<+[](bool& x) noexcept {
+        x = true;
+      }>(cancelled) }
     };
     coro_st::context ctx{ el_ctx, chain_ctx };
 

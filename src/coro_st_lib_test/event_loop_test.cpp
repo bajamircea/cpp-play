@@ -11,10 +11,9 @@ namespace
     bool called{ false };
 
     coro_st::ready_node n0;
-    n0.cb = coro_st::callback(&called,  +[](void* x) noexcept {
-      bool* p_called = reinterpret_cast<bool*>(x);
-      *p_called = true;
-    });
+    n0.cb = coro_st::make_function_callback<+[](bool& x) noexcept {
+      x = true;
+    }>(called);
     el.ready_queue_.push(&n0);
 
     auto sleep = el.do_current_pending_work();
@@ -38,10 +37,9 @@ namespace
     el.timers_heap_.insert(&n0);
 
     coro_st::timer_node n1{ now };
-    n1.cb = coro_st::callback(&called, +[](void* x) noexcept {
-      bool* p_called = reinterpret_cast<bool*>(x);
-      *p_called = true;
-    });
+    n1.cb = coro_st::make_function_callback<+[](bool& x) noexcept {
+      x = true;
+    }>(called);
     el.timers_heap_.insert(&n1);
 
     auto sleep = el.do_current_pending_work();

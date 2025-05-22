@@ -22,10 +22,9 @@ namespace coro_st
     event_loop_context el_ctx{ el.ready_queue_, el.timers_heap_ };
     chain_context chain_ctx{
       main_stop_source.get_token(),
-      callback{ &done, +[](void* x) noexcept {
-        bool* p_done = reinterpret_cast<bool*>(x);
-        *p_done = true;
-      }},
+      callback{ make_function_callback<+[](bool& x) noexcept {
+        x = true;
+      }>(done) },
       callback{ nullptr, +[](void*) noexcept {
         std::terminate();
       }}

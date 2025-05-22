@@ -40,10 +40,27 @@ namespace coro_st
     }
   };
 
+  template<typename T, void (*fn)(T&) noexcept>
+  struct make_function_callback_impl
+  {
+    static void invoke(void* x_void) noexcept
+    {
+      assert(x_void != nullptr);
+      T* x = reinterpret_cast<T*>(x_void);
+      return std::invoke(fn, *x);
+    }
+  };
+
+  template<auto FnPtr, typename T>
+  callback make_function_callback(T& x)
+  {
+    return callback{ &x, &make_function_callback_impl<T, FnPtr>::invoke };
+  }
+
   template<typename T, void (T::*member_fn)() noexcept>
   struct make_member_callback_impl
   {
-    static void invoke(void * x_void) noexcept
+    static void invoke(void* x_void) noexcept
     {
       assert(x_void != nullptr);
       T* x = reinterpret_cast<T*>(x_void);

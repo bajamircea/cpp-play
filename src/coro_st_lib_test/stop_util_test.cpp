@@ -6,6 +6,9 @@
 
 #include <optional>
 
+#include <stop_token>
+#include <iostream>
+
 namespace
 {
   TEST(stop_util_trivial)
@@ -58,10 +61,9 @@ namespace
     coro_st::stop_token token = source.get_token();
 
     bool called{ false };
-    coro_st::callback cb{ &called, +[](void* x) noexcept {
-      bool* pb = reinterpret_cast<bool*>(x);
-      *pb = true;
-    }};
+    coro_st::callback cb{ coro_st::make_function_callback<+[](bool& x) noexcept {
+      x = true;
+    }>(called) };
 
     std::optional<coro_st::stop_callback<coro_st::callback>> stop_cb;
     stop_cb.emplace(token, std::move(cb));
@@ -70,4 +72,43 @@ namespace
     source.request_stop();
     ASSERT_TRUE(called);
   }
+
+  // TEST(stop_util_size)
+  // {
+  //   coro_st::stop_source source;
+
+  //   coro_st::stop_token token = source.get_token();
+
+  //   bool called{ false };
+  //   coro_st::callback cb{ coro_st::make_function_callback<+[](bool& x) noexcept {
+  //     x = true;
+  //   }>(called)};
+
+  //   coro_st::stop_callback<coro_st::callback> coro_st_stop_with_callback(token, std::move(cb));
+  //   std::cout << sizeof(coro_st_stop_with_callback) << '\n';
+
+  //   coro_st::stop_source source1;
+
+  //   coro_st::stop_token token1 = source1.get_token();
+
+  //   bool called1{ false };
+  //   auto cb1 = [&called1]() noexcept {
+  //     called1 = true;
+  //   };
+
+  //   coro_st::stop_callback<decltype(cb1)> coro_st_stop_with_callback1(token1, std::move(cb1));
+  //   std::cout << sizeof(coro_st_stop_with_callback1) << '\n';
+
+  //   std::stop_source source2;
+
+  //   std::stop_token token2 = source2.get_token();
+
+  //   bool called2{ false };
+  //   auto cb2 = [&called2]() noexcept {
+  //     called2 = true;
+  //   };
+
+  //   std::stop_callback<decltype(cb2)> coro_st_stop_with_callback2(token2, std::move(cb2));
+  //   std::cout << sizeof(coro_st_stop_with_callback2) << '\n';
+  // }
 } // anonymous namespace

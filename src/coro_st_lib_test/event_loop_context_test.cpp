@@ -14,10 +14,9 @@ namespace
     bool called{ false };
 
     coro_st::ready_node r0;
-    r0.cb = coro_st::callback(&called, +[](void* x) noexcept {
-      bool* p_called = reinterpret_cast<bool*>(x);
-      *p_called = true;
-    });
+    r0.cb = coro_st::make_function_callback<+[](bool& x) noexcept {
+      x = true;
+    }>(called);
 
     event_loop_context.push_ready_node(r0);
 
@@ -49,10 +48,9 @@ namespace
     event_loop_context.insert_timer_node(t0);
 
     coro_st::timer_node t1{ now };
-    t1.cb = coro_st::callback(&called, +[](void* x) noexcept {
-      bool* p_called = reinterpret_cast<bool*>(x);
-      *p_called = true;
-    });
+    t1.cb = coro_st::make_function_callback<+[](bool& x) noexcept {
+      x = true;
+    }>(called);
     event_loop_context.insert_timer_node(t1);
 
     ASSERT_TRUE(q.empty());

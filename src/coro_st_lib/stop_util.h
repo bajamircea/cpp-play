@@ -99,6 +99,40 @@ namespace coro_st
     return source_->stop_requested();
   }
 
+  template<>
+  class stop_callback<callback>
+  {
+    stop_source* source_ = nullptr;
+    stop_list_node node_;
+  public:
+    stop_callback(stop_token token, callback fn) noexcept :
+      source_{ token.source_ }
+    {
+      assert(source_ != nullptr);
+      assert(fn.is_callable());
+      if (source_->stop_requested())
+      {
+        fn();
+      }
+      else
+      {
+        node_.cb = fn;
+        source_->callbacks_.push_back(&node_);
+      }
+    }
+
+    stop_callback(const stop_callback&) = delete;
+    stop_callback& operator=(const stop_callback&) = delete;
+
+    ~stop_callback()
+    {
+      if (node_.cb.is_callable())
+      {
+        source_->callbacks_.remove(&node_);
+      }
+    }
+  };
+
   template <typename Fn>
   class stop_callback
   {

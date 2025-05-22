@@ -8,7 +8,24 @@
 
 namespace
 {
-  TEST(callback_trivial)
+  TEST(callback_trivial_function)
+  {
+    coro_st::callback cb;
+
+    bool called{ false };
+
+    cb = coro_st::make_function_callback<+[](bool & x) noexcept {
+      x = true;
+    }>(called);
+
+    ASSERT_FALSE(called);
+
+    cb.invoke();
+
+    ASSERT_TRUE(called);
+  }
+
+  TEST(callback_trivial_member)
   {
     coro_st::callback cb;
 
