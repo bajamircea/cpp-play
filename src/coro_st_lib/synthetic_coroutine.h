@@ -16,15 +16,11 @@ namespace coro_st
 
   class synthetic_resumable_coroutine_frame : public coroutine_frame_abi
   {
-    // wasteful always null pointer to help debugging
-    // matching the position of the parent_handle in a co::promise_type
-    void* no_parent_marker_;
     synthetic_resume_fn_ptr resume_fn_{ nullptr };
     void* x_{ nullptr };
   public:
     synthetic_resumable_coroutine_frame(synthetic_resume_fn_ptr resume_fn, void* x) noexcept :
       coroutine_frame_abi{ .resume=resume_impl, .destroy=destroy_impl },
-      no_parent_marker_{ nullptr },
       resume_fn_{ resume_fn },
       x_{ x }
     {
