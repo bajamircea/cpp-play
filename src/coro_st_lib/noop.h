@@ -30,18 +30,12 @@ namespace coro_st
 
       [[nodiscard]] constexpr bool await_ready() const noexcept
       {
-        return false;
+        return !ctx_.get_stop_token().stop_requested();
       }
 
-      bool await_suspend(std::coroutine_handle<>) noexcept
+      void await_suspend(std::coroutine_handle<>) noexcept
       {
-        if (ctx_.get_stop_token().stop_requested())
-        {
-          ctx_.schedule_cancellation_callback();
-          return true;
-        }
-
-        return false;
+        ctx_.schedule_cancellation_callback();
       }
 
       constexpr void await_resume() const noexcept
