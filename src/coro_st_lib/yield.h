@@ -8,13 +8,6 @@ namespace coro_st
 {
   class [[nodiscard]] yield_task
   {
-  public:
-    yield_task() noexcept = default;
-
-    yield_task(const yield_task&) = delete;
-    yield_task& operator=(const yield_task&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       context& ctx_;
@@ -81,6 +74,11 @@ namespace coro_st
     };
 
   public:
+    yield_task() noexcept = default;
+
+    yield_task(const yield_task&) = delete;
+    yield_task& operator=(const yield_task&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
       return {};

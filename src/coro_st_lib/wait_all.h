@@ -178,18 +178,6 @@ namespace coro_st
       wait_all_type_traits::value_type_t<
         co_task_result_t<CoTasks>>...>;
 
-    WorksTuple co_works_tuple_;
-
-  public:
-    wait_all_task(CoTasks&... co_tasks) noexcept :
-      co_works_tuple_{ co_tasks.get_work()... }
-    {
-    }
-
-    wait_all_task(const wait_all_task&) = delete;
-    wait_all_task& operator=(const wait_all_task&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       using ChainDataTuple =
@@ -307,8 +295,8 @@ namespace coro_st
     {
       WorksTuple co_works_tuple_;
 
-      work(WorksTuple&& co_works_tuple) noexcept:
-        co_works_tuple_{ std::move(co_works_tuple) }
+      work(CoTasks&... co_tasks) noexcept:
+        co_works_tuple_{ co_tasks.get_work()... }
       {
       }
 
@@ -323,10 +311,21 @@ namespace coro_st
       }
     };
 
+  private:
+    work work_;
+
   public:
+    wait_all_task(CoTasks&... co_tasks) noexcept :
+      work_{ co_tasks... }
+    {
+    }
+
+    wait_all_task(const wait_all_task&) = delete;
+    wait_all_task& operator=(const wait_all_task&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
-      return { std::move(co_works_tuple_) };
+      return std::move(work_);
     }
   };
 

@@ -15,17 +15,6 @@ namespace coro_st
     {
       friend class event;
 
-      event& evt_;
-    public:
-      event_wait_task(event& evt) noexcept :
-        evt_{ evt }
-      {
-      }
-
-      event_wait_task(const event_wait_task&) = delete;
-      event_wait_task& operator=(const event_wait_task&) = delete;
-
-    private:
       class [[nodiscard]] awaiter
       {
         friend class event;
@@ -127,10 +116,21 @@ namespace coro_st
         }
       };
 
+    private:
+      work work_;
+
     public:
+      event_wait_task(event& evt) noexcept :
+        work_{ evt }
+      {
+      }
+
+      event_wait_task(const event_wait_task&) = delete;
+      event_wait_task& operator=(const event_wait_task&) = delete;
+
       [[nodiscard]] work get_work() noexcept
       {
-        return { evt_ };
+        return std::move(work_);
       }
     };
 

@@ -21,23 +21,6 @@ namespace coro_st
     using ResultType = std::conditional_t<
       std::is_same_v<void, T>, bool, std::optional<T>>;
 
-    CoWork co_work_;
-    std::chrono::steady_clock::time_point deadline_;
-
-  public:
-    wait_for_task(
-      CoTask& co_task,
-      std::chrono::steady_clock::time_point deadline
-    ) noexcept :
-      co_work_{ co_task.get_work() },
-      deadline_{ deadline }
-    {
-    }
-
-    wait_for_task(const wait_for_task&) = delete;
-    wait_for_task& operator=(const wait_for_task&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       context& parent_ctx_;
@@ -304,10 +287,10 @@ namespace coro_st
       std::chrono::steady_clock::time_point deadline_;
 
       work(
-        CoWork&& co_work_,
+        CoTask& co_task,
         std::chrono::steady_clock::time_point deadline
       ) noexcept:
-        co_work_{ std::move(co_work_) },
+        co_work_{ co_task.get_work() },
         deadline_{ deadline }
       {
       }
@@ -323,10 +306,24 @@ namespace coro_st
       }
     };
 
+  private:
+    work work_;
+
   public:
+    wait_for_task(
+      CoTask& co_task,
+      std::chrono::steady_clock::time_point deadline
+    ) noexcept :
+      work_{ co_task, deadline }
+    {
+    }
+
+    wait_for_task(const wait_for_task&) = delete;
+    wait_for_task& operator=(const wait_for_task&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
-      return { std::move(co_work_), deadline_ };
+      return std::move(work_);
     }
   };
 

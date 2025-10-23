@@ -8,13 +8,6 @@ namespace coro_st
 {
   class [[nodiscard]] noop_task
   {
-  public:
-    noop_task() noexcept = default;
-
-    noop_task(const noop_task&) = delete;
-    noop_task& operator=(const noop_task&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       context& ctx_;
@@ -76,6 +69,11 @@ namespace coro_st
     };
 
   public:
+    noop_task() noexcept = default;
+
+    noop_task(const noop_task&) = delete;
+    noop_task& operator=(const noop_task&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
       return {};

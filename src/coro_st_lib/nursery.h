@@ -237,21 +237,6 @@ namespace coro_st
       using CoWork = co_task_work_t<CoTask>;
       using CoAwaiter = co_task_awaiter_t<CoTask>;
 
-      nursery& nursery_;
-      CoWork co_work_;
-    public:
-      nursery_run_task(
-        nursery& nursery,
-        CoTask& co_task
-      ) noexcept :
-        nursery_{ nursery },
-        co_work_{ co_task.get_work() }
-      {
-      }
-
-      nursery_run_task(const nursery_run_task&) = delete;
-      nursery_run_task& operator=(const nursery_run_task&) = delete;
-
     private:
       class [[nodiscard]] awaiter
       {
@@ -378,10 +363,24 @@ namespace coro_st
         }
       };
 
+    private:
+      work work_;
+
     public:
+      nursery_run_task(
+        nursery& nursery,
+        CoTask& co_task
+      ) noexcept :
+        work_{ nursery, co_task.get_work() }
+      {
+      }
+
+      nursery_run_task(const nursery_run_task&) = delete;
+      nursery_run_task& operator=(const nursery_run_task&) = delete;
+
       [[nodiscard]] work get_work() noexcept
       {
-        return { nursery_, std::move(co_work_) };
+        return std::move(work_);
       }
     };
 

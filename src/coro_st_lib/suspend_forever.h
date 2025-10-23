@@ -11,13 +11,6 @@ namespace coro_st
 {
   class [[nodiscard]] suspend_forever_task
   {
-  public:
-    suspend_forever_task() noexcept = default;
-
-    suspend_forever_task(const suspend_forever_task&) = delete;
-    suspend_forever_task& operator=(const suspend_forever_task&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       context& ctx_;
@@ -87,6 +80,11 @@ namespace coro_st
     };
 
   public:
+    suspend_forever_task() noexcept = default;
+
+    suspend_forever_task(const suspend_forever_task&) = delete;
+    suspend_forever_task& operator=(const suspend_forever_task&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
       return {};

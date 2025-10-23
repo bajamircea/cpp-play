@@ -209,18 +209,6 @@ namespace coro_st
     using WorksTupleSeq = std::index_sequence_for<CoTasks...>;
     using ResultType = wait_any_result<T>;
 
-    WorksTuple co_works_tuple_;
-
-  public:
-    wait_any_task(CoTasks&... co_tasks) noexcept :
-      co_works_tuple_{ co_tasks.get_work()... }
-    {
-    }
-
-    wait_any_task(const wait_any_task&) = delete;
-    wait_any_task& operator=(const wait_any_task&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       using SharedData = impl::wait_any_awaiter_shared_data<T>;
@@ -341,8 +329,8 @@ namespace coro_st
     {
       WorksTuple co_works_tuple_;
 
-      work(WorksTuple&& co_works_tuple) noexcept:
-        co_works_tuple_{ std::move(co_works_tuple) }
+      work(CoTasks&... co_tasks) noexcept:
+        co_works_tuple_{ co_tasks.get_work()... }
       {
       }
 
@@ -357,10 +345,21 @@ namespace coro_st
       }
     };
 
+  private:
+    work work_;
+
   public:
+    wait_any_task(CoTasks&... co_tasks) noexcept :
+      work_{ co_tasks... }
+    {
+    }
+
+    wait_any_task(const wait_any_task&) = delete;
+    wait_any_task& operator=(const wait_any_task&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
-      return { std::move(co_works_tuple_) };
+      return std::move(work_);
     }
   };
 

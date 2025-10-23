@@ -91,18 +91,6 @@ namespace coro_st
     };
 
   private:
-    unique_coroutine_handle<promise_type> unique_child_coro_;
-
-    co(std::coroutine_handle<promise_type> child_coro) noexcept :
-      unique_child_coro_{ child_coro }
-    {
-    }
-
-  public:
-    co(const co&) = delete;
-    co& operator=(const co&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       unique_coroutine_handle<promise_type> unique_child_coro_;
@@ -151,8 +139,8 @@ namespace coro_st
       unique_coroutine_handle<promise_type> unique_child_coro_;
 
     public:
-      work(unique_coroutine_handle<promise_type>&& unique_child_coro) noexcept :
-        unique_child_coro_{ std::move(unique_child_coro) }
+      work(std::coroutine_handle<promise_type> child_coro) noexcept :
+        unique_child_coro_{ child_coro }
       {
       }
 
@@ -167,10 +155,21 @@ namespace coro_st
       }
     };
 
+  private:
+    work work_;
+
+    co(std::coroutine_handle<promise_type> child_coro) noexcept :
+      work_{ child_coro }
+    {
+    }
+
   public:
+    co(const co&) = delete;
+    co& operator=(const co&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
-      return { std::move(unique_child_coro_) };
+      return std::move(work_);
     }
   };
 }

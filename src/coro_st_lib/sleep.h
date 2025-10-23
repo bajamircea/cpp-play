@@ -12,18 +12,6 @@ namespace coro_st
 {
   class [[nodiscard]] sleep_task
   {
-    std::chrono::steady_clock::time_point deadline_;
-
-  public:
-    sleep_task(std::chrono::steady_clock::time_point deadline) noexcept :
-      deadline_{ deadline }
-    {
-    }
-
-    sleep_task(const sleep_task&) = delete;
-    sleep_task& operator=(const sleep_task&) = delete;
-
-  private:
     class [[nodiscard]] awaiter
     {
       context& ctx_;
@@ -121,10 +109,21 @@ namespace coro_st
       }
     };
 
+  private:
+    work work_;
+
   public:
+    sleep_task(std::chrono::steady_clock::time_point deadline) noexcept :
+      work_{ deadline }
+    {
+    }
+
+    sleep_task(const sleep_task&) = delete;
+    sleep_task& operator=(const sleep_task&) = delete;
+
     [[nodiscard]] work get_work() noexcept
     {
-      return { deadline_ };
+      return std::move(work_);
     }
   };
 
