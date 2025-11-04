@@ -39,7 +39,7 @@ namespace coro_st
       stop_source wait_stop_source_;
       std::optional<stop_callback<callback>> stop_cb_;
       size_t pending_count_;
-      std::variant<std::monostate, ResultType, std::exception_ptr> result_;
+      std::variant<std::monostate, ResultType, std::exception_ptr, bool> result_;
 
       wait_any_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
@@ -65,7 +65,7 @@ namespace coro_st
       {
         stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (parent_ctx_.get_stop_token().stop_requested() || (3 == result_.index()))
         {
           parent_ctx_.schedule_cancellation_callback();
           return;
@@ -161,6 +161,15 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
+        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          if (0 == shared_data_.result_.index())
+          {
+            shared_data_.result_.template emplace<3>(true);
+            shared_data_.wait_stop_source_.request_stop();
+          }
+        }
+
         --shared_data_.pending_count_;
         if (0 != shared_data_.pending_count_)
         {

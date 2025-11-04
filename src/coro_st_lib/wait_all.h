@@ -4,7 +4,7 @@
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
-#include "wait_all_type_traits.h"
+#include "value_type_traits.h"
 
 #include <coroutine>
 #include <optional>
@@ -22,6 +22,7 @@ namespace coro_st
       std::optional<stop_callback<callback>> stop_cb_;
       size_t pending_count_;
       std::exception_ptr exception_;
+      bool stopped_;
 
       wait_all_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
@@ -29,7 +30,8 @@ namespace coro_st
         wait_stop_source_{},
         stop_cb_{},
         pending_count_{ 0 },
-        exception_{}
+        exception_{},
+        stopped_{ false }
       {
       }
 
@@ -47,7 +49,7 @@ namespace coro_st
       {
         stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
         {
           parent_ctx_.schedule_cancellation_callback();
           return;
@@ -99,7 +101,7 @@ namespace coro_st
       {
         if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
-          if (!shared_data_.exception_)
+          if (!shared_data_.exception_ && !shared_data_.stopped_)
           {
             std::exception_ptr e = co_awaiter_.get_result_exception();
             if (e)
@@ -120,6 +122,15 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
+        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          if (!shared_data_.wait_stop_source_.stop_requested())
+          {
+            shared_data_.stopped_ = true;
+            shared_data_.wait_stop_source_.request_stop();
+          }
+        }
+
         --shared_data_.pending_count_;
         if (0 != shared_data_.pending_count_)
         {
@@ -175,7 +186,7 @@ namespace coro_st
     using WorksTuple = std::tuple<co_task_work_t<CoTasks>...>;
     using WorksTupleSeq = std::index_sequence_for<CoTasks...>;
     using ResultType = std::tuple<
-      wait_all_type_traits::value_type_t<
+      value_type_traits::value_type_t<
         co_task_result_t<CoTasks>>...>;
 
     class [[nodiscard]] awaiter

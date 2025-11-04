@@ -2,7 +2,7 @@
 
 #include "void_result.h"
 
-namespace coro_st::wait_all_type_traits
+namespace coro_st::value_type_traits
 {
   template<typename T>
   struct value_type

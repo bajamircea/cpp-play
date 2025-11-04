@@ -14,7 +14,7 @@ namespace
 
   TEST(noop_chain_root_run)
   {
-    coro_st::run(coro_st::async_noop());
+    coro_st::run(coro_st::async_noop()).value();
   }
 
   TEST(noop_lambda_return_int)
@@ -23,7 +23,7 @@ namespace
       co_await coro_st::async_noop();
       co_return 42;
     };
-    int result = coro_st::run(async_lambda());
+    int result = coro_st::run(async_lambda()).value();
 
     ASSERT_EQ(42, result);
   }

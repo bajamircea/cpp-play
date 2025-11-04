@@ -3,10 +3,11 @@
 #include "../coro_st_lib/nursery.h"
 
 #include "../coro_st_lib/co.h"
-#include "../coro_st_lib/yield.h"
-#include "../coro_st_lib/suspend_forever.h"
 #include "../coro_st_lib/coro_type_traits.h"
+#include "../coro_st_lib/just_stopped.h"
 #include "../coro_st_lib/run.h"
+#include "../coro_st_lib/suspend_forever.h"
+#include "../coro_st_lib/yield.h"
 
 #include "test_loop.h"
 
@@ -37,7 +38,7 @@ namespace
     coro_st::run(
       n.async_run(
         coro_st::async_yield()
-      ));
+      )).value();
   }
 
   TEST(nursery_lambda_and_stop)
@@ -53,7 +54,7 @@ namespace
     coro_st::run(
       n.async_run(
         async_initial_lambda(n, i)
-      ));
+      )).value();
     ASSERT_EQ(42, i);
   }
 
@@ -70,7 +71,7 @@ namespace
     coro_st::run(
       n.async_run(
         async_initial_lambda()
-      ));
+      )).value();
     ASSERT_EQ(42, i);
   }
 
@@ -89,7 +90,7 @@ namespace
     coro_st::run(
       n.async_run(
         async_initial_lambda()
-      ));
+      )).value();
     ASSERT_EQ(42, i);
   }
 
@@ -118,7 +119,7 @@ namespace
 
   TEST(nursery_inside_co)
   {
-    auto result = coro_st::run(async_some_nursery());
+    auto result = coro_st::run(async_some_nursery()).value();
     ASSERT_EQ(42, result);
   }
 
@@ -154,6 +155,38 @@ namespace
       )), std::runtime_error, "Ups!");
   }
 
+  TEST(nursery_stopped_initial)
+  {
+    coro_st::nursery n;
+    auto async_initial_lambda = [&n]() -> coro_st::co<void> {
+      n.spawn_child([]() -> coro_st::co<void> {
+        co_return;
+      });
+      co_await coro_st::async_just_stopped();
+    };
+    auto result = coro_st::run(
+      n.async_run(
+        async_initial_lambda()
+      ));
+    ASSERT_FALSE(result.has_value());
+  }
+
+  TEST(nursery_stopped_spawn)
+  {
+    coro_st::nursery n;
+    auto async_initial_lambda = [&n]() -> coro_st::co<void> {
+      n.spawn_child([]() -> coro_st::co<void> {
+        co_await coro_st::async_just_stopped();
+      });
+      co_return;
+    };
+    auto result = coro_st::run(
+      n.async_run(
+        async_initial_lambda()
+      ));
+    ASSERT_FALSE(result.has_value());
+  }
+
   // coro_st::co<void> async_nursery_does_not_compile()
   // {
   //   coro_st::nursery n;
@@ -182,6 +215,6 @@ namespace
   //       []() -> coro_st::co<void> {
   //         co_return;
   //       }
-  //     ));
+  //     )).value();
   // }
 } // anonymous namespace

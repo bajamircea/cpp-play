@@ -161,6 +161,8 @@ see the examples in `coro_st_lib_test\run_test.cpp`
       - it's supposed to have some fairness e.g. we consume alternatively
         from both the `ready_queue` and the `timer_heap`
 - // TODO `coro_type_traits.h`
+- // TODO `void_result.h`
+- // TODO `value_type_traits.h`
 - // TODO `run.h`
 - `unique_coroutine_handle`
   - a RAII type owning a coroutine handle
@@ -175,10 +177,8 @@ see the examples in `coro_st_lib_test\run_test.cpp`
 - // TODO `sleep.h`
 - // TODO `suspend_forever.h`
 - // TODO `noop.h`
-- // TODO `void_result.h`
 - // TODO `wait_any_type_traits.h`
 - // TODO `wait_any.h`
-- // TODO `wait_all_type_traits.h`
 - // TODO `wait_all.h`
 - // TODO `wait_for.h`
 - // TODO `call_capture.h`
@@ -186,3 +186,5 @@ see the examples in `coro_st_lib_test\run_test.cpp`
   - TODO explain the problem with rvalue arguments
 - // TODO `nursery.h`
 - // TODO `event.h`
+- // TODO `just_stopped.h`
+- // TODO `stopped_as_optional.h`

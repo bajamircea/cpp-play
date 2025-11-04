@@ -4,10 +4,10 @@
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
+#include "value_type_traits.h"
 
 #include <chrono>
 #include <coroutine>
-#include <type_traits>
 #include <optional>
 
 namespace coro_st
@@ -18,8 +18,7 @@ namespace coro_st
     using CoWork = co_task_work_t<CoTask>;
     using CoAwaiter = co_task_awaiter_t<CoTask>;
     using T = co_task_result_t<CoTask>;
-    using ResultType = std::conditional_t<
-      std::is_same_v<void, T>, bool, std::optional<T>>;
+    using ResultType = std::optional<value_type_traits::value_type_t<T>>;
 
     class [[nodiscard]] awaiter
     {
@@ -29,6 +28,7 @@ namespace coro_st
       std::optional<stop_callback<callback>> wait_stop_cb_;
       size_t pending_count_{ 0 };
       bool has_result_{ false };
+      bool stopped_{ false };
 
       chain_context task_chain_ctx_;
       context task_ctx_;
@@ -49,6 +49,7 @@ namespace coro_st
         wait_stop_cb_{},
         pending_count_{},
         has_result_{ false },
+        stopped_{ false },
         task_chain_ctx_{
           wait_stop_source_.get_token(),
           make_member_callback<&awaiter::on_task_chain_continue>(this),
@@ -97,21 +98,18 @@ namespace coro_st
 
       ResultType await_resume() const
       {
+        if (!has_result_)
+        {
+          return std::nullopt;
+        }
+
         if constexpr (std::is_same_v<void, T>)
         {
-          if (!has_result_)
-          {
-            return false;
-          }
           co_awaiter_.await_resume();
-          return true;
+          return void_result{};
         }
         else
         {
-          if (!has_result_)
-          {
-            return std::nullopt;
-          }
           return co_awaiter_.await_resume();
         }
       }
@@ -156,7 +154,7 @@ namespace coro_st
       {
         wait_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
         {
           parent_ctx_.schedule_cancellation_callback();
           return;
@@ -189,6 +187,15 @@ namespace coro_st
 
       void on_task_chain_cancel() noexcept
       {
+        if (!parent_ctx_.get_stop_token().stop_requested())
+        {
+          if (!wait_stop_source_.stop_requested())
+          {
+            stopped_ = true;
+            wait_stop_source_.request_stop();
+          }
+        }
+
         --pending_count_;
         if (0 != pending_count_)
         {
@@ -251,7 +258,7 @@ namespace coro_st
 
         wait_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
         {
           parent_ctx_.schedule_cancellation_callback();
           return;

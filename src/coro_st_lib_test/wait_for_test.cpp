@@ -36,31 +36,31 @@ namespace
     auto awaiter = work.get_awaiter(tl.ctx);
   }
 
-  TEST(wait_for_void_true)
+  TEST(wait_for_void_has_value)
   {
     auto result = coro_st::run(coro_st::async_wait_for(
       coro_st::async_yield(),
       std::chrono::hours(24)
-    ));
-    ASSERT_TRUE(result);
+    )).value();
+    ASSERT_TRUE(result.has_value());
   }
 
-  TEST(wait_for_void_true_immediate)
+  TEST(wait_for_void_has_value_immediate)
   {
     auto result = coro_st::run(coro_st::async_wait_for(
       coro_st::async_noop(),
       std::chrono::hours(24)
-    ));
-    ASSERT_TRUE(result);
+    )).value();
+    ASSERT_TRUE(result.has_value());
   }
 
-  TEST(wait_for_void_false)
+  TEST(wait_for_void_nullopt)
   {
     auto result = coro_st::run(coro_st::async_wait_for(
       coro_st::async_suspend_forever(),
       std::chrono::seconds(0)
-    ));
-    ASSERT_FALSE(result);
+    )).value();
+    ASSERT_FALSE(result.has_value());
   }
 
   coro_st::co<int> async_some_int()
@@ -74,7 +74,7 @@ namespace
     auto result = coro_st::run(coro_st::async_wait_for(
       async_some_int(),
       std::chrono::hours(24)
-    ));
+    )).value();
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(42, result.value());
   }
@@ -89,7 +89,7 @@ namespace
     auto result = coro_st::run(coro_st::async_wait_for(
       async_some_int_immediate(),
       std::chrono::hours(24)
-    ));
+    )).value();
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(42, result.value());
   }
@@ -105,11 +105,11 @@ namespace
     auto result = coro_st::run(coro_st::async_wait_for(
       async_some_int_suspended(),
       std::chrono::seconds(0)
-    ));
+    )).value();
     ASSERT_FALSE(result.has_value());
   }
 
-  coro_st::co<bool> async_some_wait()
+  coro_st::co<std::optional<coro_st::void_result>> async_some_wait()
   {
     auto result = co_await coro_st::async_wait_for(
       coro_st::async_suspend_forever(),
@@ -120,8 +120,8 @@ namespace
 
   TEST(wait_for_inside_co)
   {
-    auto result = coro_st::run(async_some_wait());
-    ASSERT_FALSE(result);
+    auto result = coro_st::run(async_some_wait()).value();
+    ASSERT_FALSE(result.has_value());
   }
 
   TEST(wait_for_tree)
@@ -135,7 +135,7 @@ namespace
         std::chrono::seconds(0)
       ),
       std::chrono::hours(24)
-    ));
+    )).value();
     ASSERT_TRUE(result.has_value());
     ASSERT_FALSE(result.value().has_value());
   }
@@ -151,6 +151,14 @@ namespace
       async_lambda(),
       std::chrono::hours(24)
     )), std::runtime_error, "Ups!");
+  }
+
+  TEST(wait_for_stopped)
+  {
+    auto result = coro_st::run(coro_st::async_wait_for(
+      coro_st::async_just_stopped(),
+      std::chrono::hours(24)));
+    ASSERT_FALSE(result.has_value());
   }
 
   // // coro_st::co<void> async_wait_any_does_not_compile()

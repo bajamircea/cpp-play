@@ -24,6 +24,8 @@ namespace coro_st
       std::optional<stop_callback<callback>> stop_cb_;
       size_t pending_count_;
       std::exception_ptr exception_;
+      bool nursery_stopped_;
+      bool stopped_;
 
       nursery_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
@@ -31,7 +33,9 @@ namespace coro_st
         nursery_stop_source_{},
         stop_cb_{},
         pending_count_{ 0 },
-        exception_{}
+        exception_{},
+        nursery_stopped_{ false },
+        stopped_{ false }
       {
       }
 
@@ -49,7 +53,7 @@ namespace coro_st
       {
         stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
         {
           parent_ctx_.schedule_cancellation_callback();
           return;
@@ -101,7 +105,7 @@ namespace coro_st
       {
         if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
-          if (!shared_data_.exception_)
+          if (!shared_data_.exception_ && !shared_data_.stopped_)
           {
             std::exception_ptr e = co_awaiter_.get_result_exception();
             if (e)
@@ -117,6 +121,15 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
+        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          if (!shared_data_.nursery_stop_source_.stop_requested())
+          {
+            shared_data_.stopped_ = true;
+            shared_data_.nursery_stop_source_.request_stop();
+          }
+        }
+
         complete_and_self_destroy();
       }
 
@@ -184,7 +197,7 @@ namespace coro_st
       {
         if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
-          if (!shared_data_.exception_)
+          if (!shared_data_.exception_ && !shared_data_.stopped_)
           {
             std::exception_ptr e = co_awaiter_.get_result_exception();
             if (e)
@@ -200,6 +213,15 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
+        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        {
+          if (!shared_data_.nursery_stop_source_.stop_requested())
+          {
+            shared_data_.stopped_ = true;
+            shared_data_.nursery_stop_source_.request_stop();
+          }
+        }
+
         complete_and_self_destroy();
       }
 

@@ -33,7 +33,7 @@ namespace
 
   TEST(co_chain_root_run)
   {
-    auto result = coro_st::run(async_buzz());
+    auto result = coro_st::run(async_buzz()).value();
     ASSERT_EQ("abc", result);
   }
 

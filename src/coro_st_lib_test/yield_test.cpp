@@ -14,7 +14,7 @@ namespace
 
   TEST(yield_chain_root_run)
   {
-    coro_st::run(coro_st::async_yield());
+    coro_st::run(coro_st::async_yield()).value();
   }
 
   TEST(yield_lambda_return_int)
@@ -23,7 +23,7 @@ namespace
       co_await coro_st::async_yield();
       co_return 42;
     };
-    int result = coro_st::run(async_lambda());
+    int result = coro_st::run(async_lambda()).value();
 
     ASSERT_EQ(42, result);
   }

@@ -53,7 +53,7 @@ namespace
     coro_st::run(coro_st::async_wait_any(
       coro_st::async_yield(),
       coro_st::async_sleep_for(std::chrono::seconds(0))
-    ));
+    )).value();
   }
 
   coro_st::co<int> async_some_wait()
@@ -71,7 +71,7 @@ namespace
 
   TEST(wait_all_inside_co)
   {
-    auto result = coro_st::run(async_some_wait());
+    auto result = coro_st::run(async_some_wait()).value();
     ASSERT_EQ(42, result);
   }
 
@@ -85,7 +85,7 @@ namespace
         }),
         coro_st::async_yield()
       )
-    ));
+    )).value();
     ASSERT_EQ(1, result.index);
     ASSERT_EQ(42, std::get<0>(result.value));
   }
@@ -101,6 +101,14 @@ namespace
       async_lambda(),
       coro_st::async_suspend_forever()
     )), std::runtime_error, "Ups!");
+  }
+
+  TEST(wait_all_stopped)
+  {
+    auto result = coro_st::run(coro_st::async_wait_all(
+      coro_st::async_suspend_forever(),
+      coro_st::async_just_stopped()));
+    ASSERT_FALSE(result.has_value());
   }
 
   // coro_st::co<void> async_wait_any_does_not_compile()

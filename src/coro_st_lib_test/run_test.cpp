@@ -3,6 +3,7 @@
 #include "../coro_st_lib/run.h"
 
 #include "../coro_st_lib/co.h"
+#include "../coro_st_lib/just_stopped.h"
 
 namespace
 {
@@ -13,7 +14,7 @@ namespace
 
   TEST(run_co_return_int)
   {
-    int result = coro_st::run(async_foo());
+    int result = coro_st::run(async_foo()).value();
 
     ASSERT_EQ(42, result);
   }
@@ -23,7 +24,7 @@ namespace
     auto async_lambda = []() -> coro_st::co<int> {
       co_return 42;
     };
-    int result = coro_st::run(async_lambda());
+    int result = coro_st::run(async_lambda()).value();
 
     ASSERT_EQ(42, result);
   }
@@ -33,7 +34,7 @@ namespace
     auto async_lambda = []() -> coro_st::co<void> {
       co_return;
     };
-    coro_st::run(async_lambda());
+    coro_st::run(async_lambda()).value();
   }
 
   TEST(run_lambda_exception)
@@ -57,7 +58,7 @@ namespace
   {
     int val = 0;
 
-    coro_st::run(async_buzz_ref(val));
+    coro_st::run(async_buzz_ref(val)).value();
 
     ASSERT_EQ(42, val);
   }
@@ -71,7 +72,7 @@ namespace
   {
     int val = 42;
 
-    int result = coro_st::run(async_buzz_const_ref(val + 1));
+    int result = coro_st::run(async_buzz_const_ref(val + 1)).value();
 
     ASSERT_EQ(val, result);
   }
@@ -95,8 +96,15 @@ namespace
 
   TEST(run_chain)
   {
-    std::string result = coro_st::run(async_chain_root());
+    std::string result = coro_st::run(async_chain_root()).value();
 
     ASSERT_EQ("start 123 stop", result);
+  }
+
+  TEST(run_stopped)
+  {
+    auto result = coro_st::run(coro_st::async_just_stopped());
+
+    ASSERT_FALSE(result.has_value());
   }
 } // anonymous namespace

@@ -16,7 +16,7 @@ namespace
 
   // TEST(sleep_chain_root_run)
   // {
-  //   coro_st::run(coro_st::async_sleep_for(std::chrono::seconds(0)));
+  //   coro_st::run(coro_st::async_sleep_for(std::chrono::seconds(0))).value();
   // }
 
   // TEST(sleep_lambda_return_int)
@@ -25,7 +25,7 @@ namespace
   //     co_await coro_st::async_sleep_for(std::chrono::seconds(0));
   //     co_return 42;
   //   };
-  //   int result = coro_st::run(async_lambda());
+  //   int result = coro_st::run(async_lambda()).value();
 
   //   ASSERT_EQ(42, result);
   // }
