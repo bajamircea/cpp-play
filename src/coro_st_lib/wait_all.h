@@ -51,7 +51,7 @@ namespace coro_st
 
         if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.schedule_cancellation();
           return;
         }
 
@@ -61,7 +61,7 @@ namespace coro_st
           return;
         }
 
-        parent_ctx_.schedule_continuation_callback();
+        parent_ctx_.schedule_continuation();
       }
 
       void on_parent_cancel() noexcept
@@ -238,7 +238,7 @@ namespace coro_st
 
         if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
-          shared_data_.parent_ctx_.schedule_cancellation_callback();
+          shared_data_.parent_ctx_.schedule_cancellation();
           return true;
         }
 
@@ -282,12 +282,11 @@ namespace coro_st
 
         if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
         {
-          shared_data_.parent_ctx_.schedule_cancellation_callback();
+          shared_data_.parent_ctx_.schedule_cancellation();
           return;
         }
 
-        callback continuation_cb = shared_data_.parent_ctx_.get_continuation_callback();
-        continuation_cb.invoke();
+        shared_data_.parent_ctx_.invoke_continuation();
       }
 
     private:

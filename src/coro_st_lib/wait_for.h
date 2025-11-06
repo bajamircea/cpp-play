@@ -22,13 +22,20 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
+      enum class result_state
+      {
+        none,
+        has_value_or_error,
+        has_stopped,
+        has_timeout,
+      };
+
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      stop_source wait_stop_source_;
-      std::optional<stop_callback<callback>> wait_stop_cb_;
+      stop_source children_stop_source_;
+      std::optional<stop_callback<callback>> parent_stop_cb_;
       size_t pending_count_{ 0 };
-      bool has_result_{ false };
-      bool stopped_{ false };
+      result_state result_state_{ result_state::none };
 
       chain_context task_chain_ctx_;
       context task_ctx_;
@@ -45,13 +52,12 @@ namespace coro_st
       ) :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
-        wait_stop_source_{},
-        wait_stop_cb_{},
-        pending_count_{},
-        has_result_{ false },
-        stopped_{ false },
+        children_stop_source_{},
+        parent_stop_cb_{},
+        pending_count_{ 0 },
+        result_state_{ result_state::none },
         task_chain_ctx_{
-          wait_stop_source_.get_token(),
+          children_stop_source_.get_token(),
           make_member_callback<&awaiter::on_task_chain_continue>(this),
           make_member_callback<&awaiter::on_task_chain_cancel>(this),
           },
@@ -85,11 +91,11 @@ namespace coro_st
           return true;
         }
 
-        wait_stop_cb_.reset();
+        parent_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (result_state_ == result_state::has_stopped)
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.schedule_cancellation();
           return true;
         }
 
@@ -98,9 +104,15 @@ namespace coro_st
 
       ResultType await_resume() const
       {
-        if (!has_result_)
+        switch (result_state_)
         {
-          return std::nullopt;
+          case result_state::none:
+          case result_state::has_stopped:
+            std::terminate();
+          case result_state::has_value_or_error:
+            break;
+          case result_state::has_timeout:
+            return std::nullopt;
         }
 
         if constexpr (std::is_same_v<void, T>)
@@ -116,12 +128,16 @@ namespace coro_st
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        if (!has_result_)
+        switch (result_state_)
         {
-          // was cancelled
-          return {};
+          case result_state::none:
+          case result_state::has_stopped:
+            std::terminate();
+          case result_state::has_value_or_error:
+            return co_awaiter_.get_result_exception();
+          case result_state::has_timeout:
+            return {};
         }
-        return co_awaiter_.get_result_exception();
       }
 
       void start_as_chain_root() noexcept
@@ -137,26 +153,25 @@ namespace coro_st
           return;
         }
 
-        wait_stop_cb_.reset();
+        parent_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (result_state_ == result_state::has_stopped)
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.invoke_cancellation();
           return;
         }
 
-        callback continuation_cb = parent_ctx_.get_continuation_callback();
-        continuation_cb.invoke();
+        parent_ctx_.invoke_continuation();
       }
 
     private:
       void on_shared_continue() noexcept
       {
-        wait_stop_cb_.reset();
+        parent_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
+        if (result_state_ == result_state::has_stopped)
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.schedule_cancellation();
           return;
         }
 
@@ -166,15 +181,16 @@ namespace coro_st
           return;
         }
 
-        parent_ctx_.schedule_continuation_callback();
+        parent_ctx_.schedule_continuation();
       }
 
       void on_task_chain_continue() noexcept
       {
-        if (!parent_ctx_.get_stop_token().stop_requested())
+        if ((result_state_ == result_state::none) ||
+            (result_state_ == result_state::has_timeout))
         {
-          has_result_ = true;
-          wait_stop_source_.request_stop();
+          result_state_ = result_state::has_value_or_error;
+          children_stop_source_.request_stop();
         }
 
         --pending_count_;
@@ -187,13 +203,10 @@ namespace coro_st
 
       void on_task_chain_cancel() noexcept
       {
-        if (!parent_ctx_.get_stop_token().stop_requested())
+        if (result_state_ == result_state::none)
         {
-          if (!wait_stop_source_.stop_requested())
-          {
-            stopped_ = true;
-            wait_stop_source_.request_stop();
-          }
+          result_state_ = result_state::has_stopped;
+          children_stop_source_.request_stop();
         }
 
         --pending_count_;
@@ -206,15 +219,16 @@ namespace coro_st
 
       void init_parent_cancellation_callback() noexcept
       {
-        wait_stop_cb_.emplace(
+        parent_stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
           make_member_callback<&awaiter::on_parent_cancel>(this));
       }
 
       void on_parent_cancel() noexcept
       {
-        wait_stop_cb_.reset();
-        wait_stop_source_.request_stop();
+        parent_stop_cb_.reset();
+        result_state_ = result_state::has_stopped;
+        children_stop_source_.request_stop();
       }
 
       void start_chains() noexcept
@@ -237,7 +251,7 @@ namespace coro_st
         timer_node_.cb = make_member_callback<&awaiter::on_timer>(this);
         parent_ctx_.insert_timer_node(timer_node_);
         timer_stop_cb_.emplace(
-          wait_stop_source_.get_token(),
+          children_stop_source_.get_token(),
           make_member_callback<&awaiter::on_timer_cancel>(this));
       }
 
@@ -245,9 +259,10 @@ namespace coro_st
       {
         timer_stop_cb_.reset();
 
-        if (!parent_ctx_.get_stop_token().stop_requested())
+        if (result_state_ == result_state::none)
         {
-          wait_stop_source_.request_stop();
+          result_state_ = result_state::has_timeout;
+          children_stop_source_.request_stop();
         }
 
         --pending_count_;
@@ -256,22 +271,23 @@ namespace coro_st
           return;
         }
 
-        wait_stop_cb_.reset();
+        parent_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
+        // this is called from the run loop
+        // invoke rather than schedule
+        if (result_state_ == result_state::has_stopped)
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.invoke_cancellation();
           return;
         }
 
         if (parent_handle_)
         {
-          parent_ctx_.schedule_coroutine_resume(parent_handle_);
+          parent_handle_.resume();
           return;
         }
 
-        callback continuation_cb = parent_ctx_.get_continuation_callback();
-        continuation_cb.invoke();
+        parent_ctx_.invoke_continuation();
       }
 
       void on_timer_cancel() noexcept

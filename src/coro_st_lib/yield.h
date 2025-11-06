@@ -30,7 +30,7 @@ namespace coro_st
       {
         if (ctx_.get_stop_token().stop_requested())
         {
-          ctx_.schedule_cancellation_callback();
+          ctx_.schedule_cancellation();
           return;
         }
 
@@ -50,11 +50,11 @@ namespace coro_st
       {
         if (ctx_.get_stop_token().stop_requested())
         {
-          ctx_.schedule_cancellation_callback();
+          ctx_.schedule_cancellation();
           return;
         }
 
-        ctx_.schedule_continuation_callback();
+        ctx_.schedule_continuation();
       }
     };
 

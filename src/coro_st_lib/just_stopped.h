@@ -31,7 +31,7 @@ namespace coro_st
 
       void await_suspend(std::coroutine_handle<>) noexcept
       {
-        issue_stop();
+        ctx_.schedule_cancellation();
       }
 
       constexpr void await_resume() const noexcept
@@ -45,14 +45,7 @@ namespace coro_st
 
       void start_as_chain_root() noexcept
       {
-        issue_stop();
-      }
-
-    private:
-
-      void issue_stop() noexcept
-      {
-        ctx_.schedule_cancellation_callback();
+        ctx_.invoke_cancellation();
       }
     };
 

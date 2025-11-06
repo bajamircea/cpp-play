@@ -57,14 +57,13 @@ namespace
     // it's too late for async_noop
     tl.stop_source.request_stop();
 
-    awaiter.start_as_chain_root();
-
-    ASSERT_FALSE(tl.el.ready_queue_.empty());
-    ASSERT_TRUE(tl.el.timers_heap_.empty());
-
     ASSERT_FALSE(tl.completed);
     ASSERT_FALSE(tl.cancelled);
-    tl.run_pending_work();
+
+    awaiter.start_as_chain_root();
+
+    ASSERT_TRUE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.timers_heap_.empty());
     ASSERT_FALSE(tl.completed);
     ASSERT_TRUE(tl.cancelled);
   }

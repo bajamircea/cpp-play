@@ -74,7 +74,7 @@ namespace coro_st
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.schedule_cancellation();
           return true;
         }
 
@@ -120,12 +120,11 @@ namespace coro_st
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.schedule_cancellation();
           return;
         }
 
-        callback continuation_cb = parent_ctx_.get_continuation_callback();
-        continuation_cb.invoke();
+        parent_ctx_.invoke_continuation();
       }
 
     private:
@@ -138,7 +137,7 @@ namespace coro_st
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
-          parent_ctx_.schedule_cancellation_callback();
+          parent_ctx_.schedule_cancellation();
           return;
         }
 
@@ -148,7 +147,7 @@ namespace coro_st
           return;
         }
 
-        parent_ctx_.schedule_continuation_callback();
+        parent_ctx_.schedule_continuation();
       }
 
       void on_task_continue() noexcept

@@ -50,22 +50,26 @@ namespace coro_st
         std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> child_coro) noexcept
         {
           auto parent_coro = child_coro.promise().parent_coro_;
+
+          // if we have a parent coroutine
           if (parent_coro)
           {
+            if (ctx_.get_stop_token().stop_requested())
+            {
+              ctx_.schedule_cancellation();
+              return std::noop_coroutine();
+            }
             return parent_coro;
           }
 
-          // we're the first one in a chain
+          // we're the first one in a chain in a .resume
+          // from either start_as_chain_root or from the run loop
           if (ctx_.get_stop_token().stop_requested())
           {
-            ctx_.schedule_cancellation_callback();
+            ctx_.invoke_cancellation();
+            return std::noop_coroutine();
           }
-          else
-          {
-            callback continuation_cb = ctx_.get_continuation_callback();
-            continuation_cb.invoke();
-          }
-
+          ctx_.invoke_continuation();
           return std::noop_coroutine();
         }
 

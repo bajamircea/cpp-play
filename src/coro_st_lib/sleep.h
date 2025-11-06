@@ -76,15 +76,14 @@ namespace coro_st
           return;
         }
 
-        callback continuation_cb = ctx_.get_continuation_callback();
-        continuation_cb.invoke();
+        ctx_.invoke_continuation();
       }
 
       void on_cancel() noexcept
       {
         stop_cb_.reset();
         ctx_.remove_timer_node(timer_node_);
-        ctx_.schedule_cancellation_callback();
+        ctx_.schedule_cancellation();
       }
     };
 

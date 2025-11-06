@@ -46,15 +46,29 @@ namespace coro_st
       return chain_ctx_.get_stop_token();
     }
 
-    callback get_continuation_callback() noexcept
+    void invoke_continuation() noexcept
     {
-      return chain_ctx_.get_continuation_callback();
+      callback cb = chain_ctx_.get_continuation_callback();
+      cb.invoke();
     }
 
-    void schedule_continuation_callback() noexcept
+    void schedule_continuation() noexcept
     {
       ready_node& node = chain_ctx_.get_chain_node();
       node.cb = chain_ctx_.get_continuation_callback();
+      event_loop_ctx_.push_ready_node(node);
+    }
+
+    void invoke_cancellation() noexcept
+    {
+      callback cb = chain_ctx_.get_cancellation_callback();
+      cb.invoke();
+    }
+
+    void schedule_cancellation() noexcept
+    {
+      ready_node& node = chain_ctx_.get_chain_node();
+      node.cb = chain_ctx_.get_cancellation_callback();
       event_loop_ctx_.push_ready_node(node);
     }
 
@@ -62,13 +76,6 @@ namespace coro_st
     {
       ready_node& node = chain_ctx_.get_chain_node();
       node.cb = make_resume_coroutine_callback(handle);
-      event_loop_ctx_.push_ready_node(node);
-    }
-
-    void schedule_cancellation_callback() noexcept
-    {
-      ready_node& node = chain_ctx_.get_chain_node();
-      node.cb = chain_ctx_.get_cancellation_callback();
       event_loop_ctx_.push_ready_node(node);
     }
 

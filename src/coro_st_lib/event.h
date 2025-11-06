@@ -19,18 +19,18 @@ namespace coro_st
       {
         friend class event;
 
-        event& evt_;
         context& ctx_;
         std::coroutine_handle<> parent_handle_;
+        event& evt_;
         awaiter* next_waiting_{ nullptr };
         awaiter* prev_waiting_{ nullptr };    
         std::optional<stop_callback<callback>> stop_cb_;
 
       public:
-        awaiter(event& evt, context& ctx) noexcept :
-          evt_{ evt },
+        awaiter(context& ctx, event& evt) noexcept :
           ctx_{ ctx },
           parent_handle_{},
+          evt_{ evt },
           next_waiting_{ nullptr },
           prev_waiting_{ nullptr },
           stop_cb_{ std::nullopt }
@@ -85,14 +85,14 @@ namespace coro_st
             return;
           }
 
-          ctx_.schedule_continuation_callback();
+          ctx_.schedule_continuation();
         }
 
         void on_cancel() noexcept
         {
           stop_cb_.reset();
           evt_.wait_list_.remove(this);
-          ctx_.schedule_cancellation_callback();
+          ctx_.schedule_cancellation();
         }
       };
 
@@ -112,7 +112,7 @@ namespace coro_st
 
         [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
         {
-          return { *evt_, ctx };
+          return { ctx, *evt_ };
         }
       };
 
