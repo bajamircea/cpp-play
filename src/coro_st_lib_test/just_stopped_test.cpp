@@ -54,17 +54,17 @@ namespace
     ASSERT_TRUE(tl.cancelled);
   }
 
-  // coro_st::co<void> async_suspend_forever_does_not_compile()
+  // coro_st::co<void> async_just_stopped_does_not_compile()
   // {
-  //   auto x = coro_st::async_suspend_forever();
+  //   auto x = coro_st::async_just_stopped();
   //   // use of deleted function
   //   co_await std::move(x);
   // }
 
-  // coro_st::co<void> async_suspend_forever_does_not_compile2()
+  // coro_st::co<void> async_just_stopped_does_not_compile2()
   // {
   //   // ignoring return value
-  //   coro_st::async_suspend_forever();
+  //   coro_st::async_just_stopped();
   //   co_return;
   // }
 } // anonymous namespace

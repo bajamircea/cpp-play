@@ -188,3 +188,5 @@ see the examples in `coro_st_lib_test\run_test.cpp`
 - // TODO `event.h`
 - // TODO `just_stopped.h`
 - // TODO `stopped_as_optional.h`
+- // TODO `just.h`
+- // TODO `just_exception.h`

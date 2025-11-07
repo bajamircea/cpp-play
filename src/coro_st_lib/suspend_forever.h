@@ -17,7 +17,7 @@ namespace coro_st
       std::optional<stop_callback<callback>> parent_stop_cb_;
 
     public:
-      awaiter(context& ctx) noexcept :
+      explicit awaiter(context& ctx) noexcept :
         ctx_{ ctx }
       {
       }
@@ -75,7 +75,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
-        return { ctx };
+        return awaiter{ ctx };
       }
     };
 

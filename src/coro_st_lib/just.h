@@ -3,27 +3,36 @@
 #include "context.h"
 
 #include <coroutine>
+#include <type_traits>
+#include <utility>
 
 namespace coro_st
 {
-  class [[nodiscard]] noop_task
+  template<typename T>
+  class [[nodiscard]] just_task
   {
     class [[nodiscard]] awaiter
     {
       context& ctx_;
+      T value_;
 
     public:
-      explicit awaiter(context& ctx) noexcept :
-        ctx_{ ctx }
+      awaiter(context& ctx, T value) noexcept :
+        ctx_{ ctx },
+        value_{ std::move(value) }
       {
       }
 
       awaiter(const awaiter&) = delete;
       awaiter& operator=(const awaiter&) = delete;
 
-      [[nodiscard]] bool await_ready() const noexcept
+      [[nodiscard]] constexpr bool await_ready() const noexcept
       {
-        return !ctx_.get_stop_token().stop_requested();
+        if (ctx_.get_stop_token().stop_requested())
+        {
+          return false;
+        }
+        return true;
       }
 
       void await_suspend(std::coroutine_handle<>) noexcept
@@ -31,8 +40,9 @@ namespace coro_st
         ctx_.schedule_cancellation();
       }
 
-      constexpr void await_resume() const noexcept
+      T await_resume() noexcept
       {
+        return std::move(value_);
       }
 
       std::exception_ptr get_result_exception() const noexcept
@@ -47,14 +57,18 @@ namespace coro_st
           ctx_.invoke_cancellation();
           return;
         }
-
         ctx_.invoke_continuation();
       }
     };
 
     struct [[nodiscard]] work
     {
-      work() noexcept = default;
+      T value_;
+
+      explicit work(T value) noexcept :
+        value_{ std::move(value) }
+      {
+      }
 
       work(const work&) = delete;
       work& operator=(const work&) = delete;
@@ -63,24 +77,32 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
-        return awaiter{ ctx };
+        return { ctx, std::move(value_) };
       }
     };
 
-  public:
-    noop_task() noexcept = default;
+  private:
+    work work_;
 
-    noop_task(const noop_task&) = delete;
-    noop_task& operator=(const noop_task&) = delete;
+  public:
+    explicit just_task(T value) noexcept :
+      work_{ std::move(value) }
+    {
+    }
+
+    just_task(const just_task&) = delete;
+    just_task& operator=(const just_task&) = delete;
 
     [[nodiscard]] work get_work() noexcept
     {
-      return {};
+      return std::move(work_);
     }
   };
 
-  [[nodiscard]] inline noop_task async_noop() noexcept
+  template<typename T>
+    requires(std::is_nothrow_move_constructible_v<T>)
+  [[nodiscard]] just_task<T> async_just(T value) noexcept
   {
-    return {};
+    return just_task{ std::move(value) };
   }
 }

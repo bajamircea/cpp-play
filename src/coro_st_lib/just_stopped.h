@@ -1,11 +1,8 @@
 #pragma once
 
-#include "callback.h"
 #include "context.h"
-#include "stop_util.h"
 
 #include <coroutine>
-#include <optional>
 
 namespace coro_st
 {
@@ -16,7 +13,7 @@ namespace coro_st
       context& ctx_;
 
     public:
-      awaiter(context& ctx) noexcept :
+      explicit awaiter(context& ctx) noexcept :
         ctx_{ ctx }
       {
       }
@@ -60,7 +57,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
-        return { ctx };
+        return awaiter{ ctx };
       }
     };
 
