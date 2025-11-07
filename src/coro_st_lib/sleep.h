@@ -17,14 +17,14 @@ namespace coro_st
       context& ctx_;
       timer_node timer_node_;
       std::coroutine_handle<> parent_handle_;
-      std::optional<stop_callback<callback>> stop_cb_;
+      std::optional<stop_callback<callback>> parent_stop_cb_;
 
     public:
       awaiter(context& ctx, std::chrono::steady_clock::time_point deadline) noexcept :
         ctx_{ ctx },
         timer_node_{ deadline },
         parent_handle_{},
-        stop_cb_{ std::nullopt }
+        parent_stop_cb_{ std::nullopt }
       {
       }
 
@@ -61,14 +61,14 @@ namespace coro_st
       {
         timer_node_.cb = make_member_callback<&awaiter::on_timer>(this);
         ctx_.insert_timer_node(timer_node_);
-        stop_cb_.emplace(
+        parent_stop_cb_.emplace(
           ctx_.get_stop_token(),
           make_member_callback<&awaiter::on_cancel>(this));
       }
 
       void on_timer() noexcept
       {
-        stop_cb_.reset();
+        parent_stop_cb_.reset();
 
         if (parent_handle_)
         {
@@ -76,12 +76,13 @@ namespace coro_st
           return;
         }
 
+        // it's fine to invoke since on_timer is called from the runner loop
         ctx_.invoke_continuation();
       }
 
       void on_cancel() noexcept
       {
-        stop_cb_.reset();
+        parent_stop_cb_.reset();
         ctx_.remove_timer_node(timer_node_);
         ctx_.schedule_cancellation();
       }

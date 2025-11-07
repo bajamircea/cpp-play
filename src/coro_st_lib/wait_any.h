@@ -29,6 +29,11 @@ namespace coro_st
 
   namespace impl
   {
+    static constexpr size_t g_none_result_type = 0;
+    static constexpr size_t g_value_result_type = 1;
+    static constexpr size_t g_error_result_type = 2;
+    static constexpr size_t g_stopped_result_type = 3; 
+
     template<typename T>
     struct wait_any_awaiter_shared_data
     {
@@ -36,16 +41,17 @@ namespace coro_st
 
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      stop_source wait_stop_source_;
-      std::optional<stop_callback<callback>> stop_cb_;
+      std::optional<stop_callback<callback>> parent_stop_cb_;
+      stop_source children_stop_source_;
       size_t pending_count_;
-      std::variant<std::monostate, ResultType, std::exception_ptr, bool> result_;
+      // see g_..._result_type above
+      std::variant<std::monostate, ResultType, std::exception_ptr, std::monostate> result_;
 
       wait_any_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
-        wait_stop_source_{},
-        stop_cb_{},
+        parent_stop_cb_{},
+        children_stop_source_{},
         pending_count_{ 0 },
         result_{}
       {
@@ -56,16 +62,16 @@ namespace coro_st
 
       void init_parent_cancellation_callback() noexcept
       {
-        stop_cb_.emplace(
+        parent_stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
           make_member_callback<&wait_any_awaiter_shared_data::on_parent_cancel>(this));
       }
 
       void on_shared_continue() noexcept
       {
-        stop_cb_.reset();
+        parent_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested() || (3 == result_.index()))
+        if (g_stopped_result_type == result_.index())
         {
           parent_ctx_.schedule_cancellation();
           return;
@@ -82,8 +88,9 @@ namespace coro_st
 
       void on_parent_cancel() noexcept
       {
-        stop_cb_.reset();
-        wait_stop_source_.request_stop();
+        parent_stop_cb_.reset();
+        result_.template emplace<g_stopped_result_type>();
+        children_stop_source_.request_stop();
       }
     };
 
@@ -104,7 +111,7 @@ namespace coro_st
         shared_data_{ shared_data },
         index_{ index },
         chain_ctx_{
-          shared_data_.wait_stop_source_.get_token(),
+          shared_data_.children_stop_source_.get_token(),
           make_member_callback<&wait_any_awaiter_chain_data::on_continue>(this),
           make_member_callback<&wait_any_awaiter_chain_data::on_cancel>(this),
           },
@@ -118,37 +125,34 @@ namespace coro_st
 
       void on_continue() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (g_none_result_type == shared_data_.result_.index())
         {
-          if (0 == shared_data_.result_.index())
+          std::exception_ptr e = co_awaiter_.get_result_exception();
+          if (e)
           {
-            std::exception_ptr e = co_awaiter_.get_result_exception();
-            if (e)
-            {
-              shared_data_.result_.template emplace<2>(e);
-            }
-            else
-            {
-              try
-              {
-                if constexpr (std::is_same_v<void, co_work_result_t<CoWork>>)
-                {
-                  co_awaiter_.await_resume();
-                  shared_data_.result_.template emplace<1>(index_);
-                }
-                else
-                {
-                  shared_data_.result_.template emplace<1>(index_, co_awaiter_.await_resume());
-                }
-              }
-              catch(...)
-              {
-                shared_data_.result_.template emplace<2>(std::current_exception());
-              }
-            }
-
-            shared_data_.wait_stop_source_.request_stop();
+            shared_data_.result_.template emplace<g_error_result_type>(e);
           }
+          else
+          {
+            try
+            {
+              if constexpr (std::is_same_v<void, co_work_result_t<CoWork>>)
+              {
+                co_awaiter_.await_resume();
+                shared_data_.result_.template emplace<g_value_result_type>(index_);
+              }
+              else
+              {
+                shared_data_.result_.template emplace<g_value_result_type>(index_, co_awaiter_.await_resume());
+              }
+            }
+            catch(...)
+            {
+              shared_data_.result_.template emplace<g_error_result_type>(std::current_exception());
+            }
+          }
+
+          shared_data_.children_stop_source_.request_stop();
         }
 
         --shared_data_.pending_count_;
@@ -161,13 +165,10 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (g_none_result_type == shared_data_.result_.index())
         {
-          if (0 == shared_data_.result_.index())
-          {
-            shared_data_.result_.template emplace<3>(true);
-            shared_data_.wait_stop_source_.request_stop();
-          }
+          shared_data_.result_.template emplace<g_stopped_result_type>();
+          shared_data_.children_stop_source_.request_stop();
         }
 
         --shared_data_.pending_count_;
@@ -264,9 +265,9 @@ namespace coro_st
           return true;
         }
 
-        shared_data_.stop_cb_.reset();
+        shared_data_.parent_stop_cb_.reset();
 
-        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (impl::g_stopped_result_type == shared_data_.result_.index())
         {
           shared_data_.parent_ctx_.schedule_cancellation();
           return true;
@@ -279,10 +280,10 @@ namespace coro_st
       {
         switch(shared_data_.result_.index())
         {
-          case 1:
-            return std::move(std::get<1>(shared_data_.result_));
-          case 2:
-            std::rethrow_exception(std::get<2>(shared_data_.result_));
+          case impl::g_value_result_type:
+            return std::move(std::get<impl::g_value_result_type>(shared_data_.result_));
+          case impl::g_error_result_type:
+            std::rethrow_exception(std::get<impl::g_error_result_type>(shared_data_.result_));
           default:
             std::terminate();
         }
@@ -290,11 +291,11 @@ namespace coro_st
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        if (2 != shared_data_.result_.index())
+        if (impl::g_error_result_type != shared_data_.result_.index())
         {
           return {};
         }
-        return std::get<2>(shared_data_.result_);
+        return std::get<impl::g_error_result_type>(shared_data_.result_);
       }
 
       void start_as_chain_root() noexcept
@@ -310,11 +311,11 @@ namespace coro_st
           return;
         }
 
-        shared_data_.stop_cb_.reset();
+        shared_data_.parent_stop_cb_.reset();
 
-        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (impl::g_stopped_result_type == shared_data_.result_.index())
         {
-          shared_data_.parent_ctx_.schedule_cancellation();
+          shared_data_.parent_ctx_.invoke_cancellation();
           return;
         }
 

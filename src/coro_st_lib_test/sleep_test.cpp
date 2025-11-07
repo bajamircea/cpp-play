@@ -14,7 +14,7 @@ namespace
 
   TEST(sleep_chain_root_run)
   {
-    coro_st::run(coro_st::async_sleep_for(std::chrono::seconds(0))).value();
+    [[maybe_unused]] auto result = coro_st::run(coro_st::async_sleep_for(std::chrono::seconds(0))).value();
   }
 
   TEST(sleep_lambda_return_int)

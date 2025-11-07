@@ -24,7 +24,7 @@ namespace coro_st
         event& evt_;
         awaiter* next_waiting_{ nullptr };
         awaiter* prev_waiting_{ nullptr };    
-        std::optional<stop_callback<callback>> stop_cb_;
+        std::optional<stop_callback<callback>> parent_stop_cb_;
 
       public:
         awaiter(context& ctx, event& evt) noexcept :
@@ -33,7 +33,7 @@ namespace coro_st
           evt_{ evt },
           next_waiting_{ nullptr },
           prev_waiting_{ nullptr },
-          stop_cb_{ std::nullopt }
+          parent_stop_cb_{ std::nullopt }
         {
         }
 
@@ -69,14 +69,14 @@ namespace coro_st
         void enqueue_wait_node() noexcept
         {
           evt_.wait_list_.push_back(this);
-          stop_cb_.emplace(
+          parent_stop_cb_.emplace(
             ctx_.get_stop_token(),
             make_member_callback<&awaiter::on_cancel>(this));
         }
 
         void on_event() noexcept
         {
-          stop_cb_.reset();
+          parent_stop_cb_.reset();
           evt_.wait_list_.remove(this);
 
           if (parent_handle_)
@@ -90,7 +90,7 @@ namespace coro_st
 
         void on_cancel() noexcept
         {
-          stop_cb_.reset();
+          parent_stop_cb_.reset();
           evt_.wait_list_.remove(this);
           ctx_.schedule_cancellation();
         }
@@ -156,6 +156,9 @@ public:
     size_t notify_all() noexcept
     {
       size_t count = 0;
+      // in a multithreaded solution where a lock is required
+      // on the wait_list_, it might be more efficient to bulk
+      // schedule them rather than notify one by one in a loop
       while (notify_one())
       {
         ++count;

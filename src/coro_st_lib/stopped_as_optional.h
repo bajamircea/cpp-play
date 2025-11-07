@@ -6,6 +6,7 @@
 #include "stop_util.h"
 #include "value_type_traits.h"
 
+#include <cassert>
 #include <chrono>
 #include <coroutine>
 #include <optional>
@@ -22,11 +23,17 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
+      enum class result_state
+      {
+        none,
+        has_value_or_error,
+        has_stopped,
+      };
+
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      bool started_{ false };
-      bool done_{ false };
-      bool stopped_{ false };
+      bool pending_start_{ false };
+      result_state result_state_{ result_state::none };
 
       chain_context task_chain_ctx_;
       context task_ctx_;
@@ -39,9 +46,8 @@ namespace coro_st
       ) :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
-        started_{ false },
-        done_{ false },
-        stopped_{ false },
+        pending_start_{ false },
+        result_state_{ result_state::none },
         task_chain_ctx_{
           parent_ctx_.get_stop_token(),
           make_member_callback<&awaiter::on_task_continue>(this),
@@ -64,10 +70,11 @@ namespace coro_st
       {
         parent_handle_ = handle;
 
+        pending_start_ = true;
         co_awaiter_.start_as_chain_root();
-        started_ = true;
+        pending_start_ = false;
 
-        if (!done_)
+        if (result_state::none == result_state_)
         {
           return true;
         }
@@ -83,10 +90,11 @@ namespace coro_st
 
       ResultType await_resume() const
       {
-        if (stopped_)
+        if (result_state::has_stopped == result_state_)
         {
           return std::nullopt;
         }
+        assert(result_state::has_value_or_error == result_state_);
 
         if constexpr (std::is_same_v<void, T>)
         {
@@ -101,7 +109,7 @@ namespace coro_st
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        if (stopped_)
+        if (result_state::has_stopped == result_state_)
         {
           return {};
         }
@@ -110,17 +118,18 @@ namespace coro_st
 
       void start_as_chain_root() noexcept
       {
+        pending_start_ = true;
         co_awaiter_.start_as_chain_root();
-        started_ = true;
+        pending_start_ = false;
 
-        if (!done_)
+        if (result_state::none == result_state_)
         {
           return;
         }
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
-          parent_ctx_.schedule_cancellation();
+          parent_ctx_.invoke_cancellation();
           return;
         }
 
@@ -130,7 +139,7 @@ namespace coro_st
     private:
       void on_shared_continue() noexcept
       {
-        if (!started_)
+        if (pending_start_)
         {
           return;
         }
@@ -152,8 +161,7 @@ namespace coro_st
 
       void on_task_continue() noexcept
       {
-        done_ = true;
-
+        result_state_ = result_state::has_value_or_error;
         on_shared_continue();
       }
 
@@ -161,10 +169,8 @@ namespace coro_st
       {
         if (!parent_ctx_.get_stop_token().stop_requested())
         {
-          stopped_ = true;
+          result_state_ = result_state::has_stopped;
         }
-
-        done_ = true;
 
         on_shared_continue();
       }

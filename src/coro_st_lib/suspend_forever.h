@@ -14,7 +14,7 @@ namespace coro_st
     class [[nodiscard]] awaiter
     {
       context& ctx_;
-      std::optional<stop_callback<callback>> stop_cb_;
+      std::optional<stop_callback<callback>> parent_stop_cb_;
 
     public:
       awaiter(context& ctx) noexcept :
@@ -52,14 +52,14 @@ namespace coro_st
     private:
       void configure_cancellation() noexcept
       {
-        stop_cb_.emplace(
+        parent_stop_cb_.emplace(
           ctx_.get_stop_token(),
           make_member_callback<&awaiter::on_cancel>(this));
       }
 
       void on_cancel() noexcept
       {
-        stop_cb_.reset();
+        parent_stop_cb_.reset();
         ctx_.schedule_cancellation();
       }
     };

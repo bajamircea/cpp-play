@@ -14,7 +14,7 @@ namespace
 
   TEST(yield_chain_root_run)
   {
-    coro_st::run(coro_st::async_yield()).value();
+    [[maybe_unused]] auto result = coro_st::run(coro_st::async_yield()).value();
   }
 
   TEST(yield_lambda_return_int)

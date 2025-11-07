@@ -35,7 +35,7 @@ namespace
   TEST(nursery_trivial)
   {
     coro_st::nursery n;
-    coro_st::run(
+    [[maybe_unused]] auto result = coro_st::run(
       n.async_run(
         coro_st::async_yield()
       )).value();
@@ -51,7 +51,7 @@ namespace
       i += 42;
       co_return;
     };
-    coro_st::run(
+    [[maybe_unused]] auto result = coro_st::run(
       n.async_run(
         async_initial_lambda(n, i)
       )).value();
@@ -68,7 +68,7 @@ namespace
       i += 42;
       co_await coro_st::async_suspend_forever();
     };
-    coro_st::run(
+    [[maybe_unused]] auto result = coro_st::run(
       n.async_run(
         async_initial_lambda()
       )).value();
@@ -87,7 +87,7 @@ namespace
       i += 40;
       co_return;
     };
-    coro_st::run(
+    [[maybe_unused]] auto result = coro_st::run(
       n.async_run(
         async_initial_lambda()
       )).value();
@@ -210,11 +210,11 @@ namespace
   // TEST(nursery_does_not_compile3)
   // {
   //   coro_st::nursery n;
-  //   coro_st::run(
+  //   [[maybe_unused]] auto result = coro_st::run(
   //     n.async_run(
   //       []() -> coro_st::co<void> {
   //         co_return;
-  //       }
+  //       } // lambda not invoked
   //     )).value();
   // }
 } // anonymous namespace

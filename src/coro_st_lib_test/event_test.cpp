@@ -14,22 +14,6 @@ namespace
     coro_st::is_co_task<
       coro_st::event::event_wait_task>);
 
-  // TEST(sleep_chain_root_run)
-  // {
-  //   coro_st::run(coro_st::async_sleep_for(std::chrono::seconds(0))).value();
-  // }
-
-  // TEST(sleep_lambda_return_int)
-  // {
-  //   auto async_lambda = []() -> coro_st::co<int> {
-  //     co_await coro_st::async_sleep_for(std::chrono::seconds(0));
-  //     co_return 42;
-  //   };
-  //   int result = coro_st::run(async_lambda()).value();
-
-  //   ASSERT_EQ(42, result);
-  // }
-
   TEST(event_chain_root)
   {
     coro_st_test::test_loop tl;

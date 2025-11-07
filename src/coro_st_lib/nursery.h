@@ -6,6 +6,7 @@
 #include "coro_type_traits.h"
 #include "stop_util.h"
 
+#include <cassert>
 #include <coroutine>
 #include <memory>
 #include <type_traits>
@@ -18,24 +19,28 @@ namespace coro_st
   {
     struct nursery_awaiter_shared_data
     {
+      enum class result_state
+      {
+        completion, // includes case of nursery::request_stop
+        cancellation,
+      };
+
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      stop_source nursery_stop_source_;
-      std::optional<stop_callback<callback>> stop_cb_;
+      std::optional<stop_callback<callback>> parent_stop_cb_;
+      stop_source children_stop_source_;
       size_t pending_count_;
       std::exception_ptr exception_;
-      bool nursery_stopped_;
-      bool stopped_;
+      result_state result_state_{ result_state::completion };
 
       nursery_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
-        nursery_stop_source_{},
-        stop_cb_{},
+        parent_stop_cb_{},
+        children_stop_source_{},
         pending_count_{ 0 },
         exception_{},
-        nursery_stopped_{ false },
-        stopped_{ false }
+        result_state_{ result_state::completion }
       {
       }
 
@@ -44,16 +49,16 @@ namespace coro_st
 
       void init_parent_cancellation_callback() noexcept
       {
-        stop_cb_.emplace(
+        parent_stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
           make_member_callback<&nursery_awaiter_shared_data::on_parent_cancel>(this));
       }
 
       void on_shared_continue() noexcept
       {
-        stop_cb_.reset();
+        parent_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
+        if (result_state::cancellation == result_state_)
         {
           parent_ctx_.schedule_cancellation();
           return;
@@ -70,8 +75,9 @@ namespace coro_st
 
       void on_parent_cancel() noexcept
       {
-        stop_cb_.reset();
-        nursery_stop_source_.request_stop();
+        parent_stop_cb_.reset();
+        result_state_ = result_state::cancellation;
+        children_stop_source_.request_stop();
       }
     };
 
@@ -89,7 +95,7 @@ namespace coro_st
       ) :
         shared_data_{ shared_data },
         chain_ctx_{
-          shared_data_.nursery_stop_source_.get_token(),
+          shared_data_.children_stop_source_.get_token(),
           make_member_callback<&nursery_initial_child::on_continue>(this),
           make_member_callback<&nursery_initial_child::on_cancel>(this),
           },
@@ -103,15 +109,15 @@ namespace coro_st
 
       void on_continue() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (nursery_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {
-          if (!shared_data_.exception_ && !shared_data_.stopped_)
+          if (!shared_data_.exception_)
           {
             std::exception_ptr e = co_awaiter_.get_result_exception();
             if (e)
             {
               shared_data_.exception_ = e;
-              shared_data_.nursery_stop_source_.request_stop();
+              shared_data_.children_stop_source_.request_stop();
             }
           }
         }
@@ -121,12 +127,12 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (nursery_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {
-          if (!shared_data_.nursery_stop_source_.stop_requested())
+          if (!shared_data_.children_stop_source_.stop_requested())
           {
-            shared_data_.stopped_ = true;
-            shared_data_.nursery_stop_source_.request_stop();
+            shared_data_.result_state_ = nursery_awaiter_shared_data::result_state::cancellation;
+            shared_data_.children_stop_source_.request_stop();
           }
         }
 
@@ -181,7 +187,7 @@ namespace coro_st
           std::forward<Args2>(args)... },
         shared_data_{ shared_data },
         chain_ctx_{
-          shared_data_.nursery_stop_source_.get_token(),
+          shared_data_.children_stop_source_.get_token(),
           make_member_callback<&nursery_spawn_child::on_continue>(this),
           make_member_callback<&nursery_spawn_child::on_cancel>(this),
           },
@@ -195,15 +201,15 @@ namespace coro_st
 
       void on_continue() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (nursery_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {
-          if (!shared_data_.exception_ && !shared_data_.stopped_)
+          if (!shared_data_.exception_)
           {
             std::exception_ptr e = co_awaiter_.get_result_exception();
             if (e)
             {
               shared_data_.exception_ = e;
-              shared_data_.nursery_stop_source_.request_stop();
+              shared_data_.children_stop_source_.request_stop();
             }
           }
         }
@@ -213,12 +219,12 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (nursery_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {
-          if (!shared_data_.nursery_stop_source_.stop_requested())
+          if (!shared_data_.children_stop_source_.stop_requested())
           {
-            shared_data_.stopped_ = true;
-            shared_data_.nursery_stop_source_.request_stop();
+            shared_data_.result_state_ = nursery_awaiter_shared_data::result_state::cancellation;
+            shared_data_.children_stop_source_.request_stop();
           }
         }
 
@@ -268,8 +274,8 @@ namespace coro_st
 
       public:
         awaiter(
-          nursery& nursery,
           context& parent_ctx,
+          nursery& nursery,
           CoWork& co_work
         ) :
           nursery_{ nursery },
@@ -279,6 +285,7 @@ namespace coro_st
               shared_data_, co_work
             ) }
         {
+          assert(nullptr == nursery_.impl_);
           nursery_.impl_ = &shared_data_;
         }
 
@@ -310,9 +317,9 @@ namespace coro_st
             return true;
           }
 
-          shared_data_.stop_cb_.reset();
+          shared_data_.parent_stop_cb_.reset();
 
-          if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+          if (impl::nursery_awaiter_shared_data::result_state::cancellation == shared_data_.result_state_)
           {
             shared_data_.parent_ctx_.schedule_cancellation();
             return true;
@@ -323,6 +330,7 @@ namespace coro_st
 
         void await_resume() const
         {
+          assert(impl::nursery_awaiter_shared_data::result_state::completion == shared_data_.result_state_);
           if (shared_data_.exception_)
           {
             std::rethrow_exception(shared_data_.exception_);
@@ -347,11 +355,11 @@ namespace coro_st
             return;
           }
 
-          shared_data_.stop_cb_.reset();
+          shared_data_.parent_stop_cb_.reset();
 
-          if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+          if (impl::nursery_awaiter_shared_data::result_state::cancellation == shared_data_.result_state_)
           {
-            shared_data_.parent_ctx_.schedule_cancellation();
+            shared_data_.parent_ctx_.invoke_cancellation();
             return;
           }
 
@@ -380,7 +388,7 @@ namespace coro_st
 
         [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
         {
-          return awaiter(*nursery_, ctx, co_work_);
+          return awaiter(ctx, *nursery_, co_work_);
         }
       };
 
@@ -424,7 +432,7 @@ namespace coro_st
     void request_stop() noexcept
     {
       assert(nullptr != impl_);
-      impl_->nursery_stop_source_.request_stop();
+      impl_->children_stop_source_.request_stop();
     }
 
     template<typename Fn, typename... Args>

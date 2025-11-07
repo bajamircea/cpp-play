@@ -32,8 +32,8 @@ namespace coro_st
 
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      stop_source children_stop_source_;
       std::optional<stop_callback<callback>> parent_stop_cb_;
+      stop_source children_stop_source_;
       size_t pending_count_{ 0 };
       result_state result_state_{ result_state::none };
 
@@ -52,8 +52,8 @@ namespace coro_st
       ) :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
-        children_stop_source_{},
         parent_stop_cb_{},
+        children_stop_source_{},
         pending_count_{ 0 },
         result_state_{ result_state::none },
         task_chain_ctx_{
@@ -80,7 +80,7 @@ namespace coro_st
       {
         parent_handle_ = handle;
 
-        ++pending_count_;
+        pending_count_ = 1;
         init_parent_cancellation_callback();
 
         start_chains();
@@ -93,7 +93,7 @@ namespace coro_st
 
         parent_stop_cb_.reset();
 
-        if (result_state_ == result_state::has_stopped)
+        if (result_state::has_stopped == result_state_)
         {
           parent_ctx_.schedule_cancellation();
           return true;
@@ -142,7 +142,7 @@ namespace coro_st
 
       void start_as_chain_root() noexcept
       {
-        ++pending_count_;
+        pending_count_ = 1;
         init_parent_cancellation_callback();
 
         start_chains();
@@ -155,7 +155,7 @@ namespace coro_st
 
         parent_stop_cb_.reset();
 
-        if (result_state_ == result_state::has_stopped)
+        if (result_state::has_stopped == result_state_)
         {
           parent_ctx_.invoke_cancellation();
           return;
@@ -169,7 +169,7 @@ namespace coro_st
       {
         parent_stop_cb_.reset();
 
-        if (result_state_ == result_state::has_stopped)
+        if (result_state::has_stopped == result_state_)
         {
           parent_ctx_.schedule_cancellation();
           return;
@@ -186,8 +186,8 @@ namespace coro_st
 
       void on_task_chain_continue() noexcept
       {
-        if ((result_state_ == result_state::none) ||
-            (result_state_ == result_state::has_timeout))
+        if ((result_state::none == result_state_) ||
+            (result_state::has_timeout == result_state_))
         {
           result_state_ = result_state::has_value_or_error;
           children_stop_source_.request_stop();
@@ -203,9 +203,11 @@ namespace coro_st
 
       void on_task_chain_cancel() noexcept
       {
-        if (result_state_ == result_state::none)
+        if (!children_stop_source_.stop_requested())
         {
           result_state_ = result_state::has_stopped;
+          // stop the timer this indirect way
+          // to handle the case where the timer was not started
           children_stop_source_.request_stop();
         }
 
@@ -259,7 +261,7 @@ namespace coro_st
       {
         timer_stop_cb_.reset();
 
-        if (result_state_ == result_state::none)
+        if (result_state::none == result_state_)
         {
           result_state_ = result_state::has_timeout;
           children_stop_source_.request_stop();
@@ -275,7 +277,7 @@ namespace coro_st
 
         // this is called from the run loop
         // invoke rather than schedule
-        if (result_state_ == result_state::has_stopped)
+        if (result_state::has_stopped == result_state_)
         {
           parent_ctx_.invoke_cancellation();
           return;

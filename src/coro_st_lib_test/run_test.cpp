@@ -34,7 +34,7 @@ namespace
     auto async_lambda = []() -> coro_st::co<void> {
       co_return;
     };
-    coro_st::run(async_lambda()).value();
+    [[maybe_unused]] auto result = coro_st::run(async_lambda()).value();
   }
 
   TEST(run_lambda_exception)
@@ -58,7 +58,7 @@ namespace
   {
     int val = 0;
 
-    coro_st::run(async_buzz_ref(val)).value();
+    [[maybe_unused]] auto result = coro_st::run(async_buzz_ref(val)).value();
 
     ASSERT_EQ(42, val);
   }

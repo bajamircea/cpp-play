@@ -16,22 +16,28 @@ namespace coro_st
   {
     struct wait_all_awaiter_shared_data
     {
+      enum class result_state
+      {
+        completion,
+        cancellation,
+      };
+
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      stop_source wait_stop_source_;
-      std::optional<stop_callback<callback>> stop_cb_;
+      std::optional<stop_callback<callback>> parent_stop_cb_;
+      stop_source children_stop_source_;
       size_t pending_count_;
       std::exception_ptr exception_;
-      bool stopped_;
+      result_state result_state_{ result_state::completion };
 
       wait_all_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
-        wait_stop_source_{},
-        stop_cb_{},
+        parent_stop_cb_{},
+        children_stop_source_{},
         pending_count_{ 0 },
         exception_{},
-        stopped_{ false }
+        result_state_{ result_state::completion }
       {
       }
 
@@ -40,16 +46,16 @@ namespace coro_st
 
       void init_parent_cancellation_callback() noexcept
       {
-        stop_cb_.emplace(
+        parent_stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
           make_member_callback<&wait_all_awaiter_shared_data::on_parent_cancel>(this));
       }
 
       void on_shared_continue() noexcept
       {
-        stop_cb_.reset();
+        parent_stop_cb_.reset();
 
-        if (parent_ctx_.get_stop_token().stop_requested() || stopped_)
+        if (result_state::cancellation == result_state_)
         {
           parent_ctx_.schedule_cancellation();
           return;
@@ -66,8 +72,9 @@ namespace coro_st
 
       void on_parent_cancel() noexcept
       {
-        stop_cb_.reset();
-        wait_stop_source_.request_stop();
+        parent_stop_cb_.reset();
+        result_state_ = result_state::cancellation;
+        children_stop_source_.request_stop();
       }
     };
 
@@ -85,7 +92,7 @@ namespace coro_st
       ) :
         shared_data_{ shared_data },
         chain_ctx_{
-          shared_data_.wait_stop_source_.get_token(),
+          shared_data_.children_stop_source_.get_token(),
           make_member_callback<&wait_all_awaiter_chain_data::on_continue>(this),
           make_member_callback<&wait_all_awaiter_chain_data::on_cancel>(this),
           },
@@ -99,15 +106,15 @@ namespace coro_st
 
       void on_continue() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (wait_all_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {
-          if (!shared_data_.exception_ && !shared_data_.stopped_)
+          if (!shared_data_.exception_)
           {
             std::exception_ptr e = co_awaiter_.get_result_exception();
             if (e)
             {
               shared_data_.exception_ = e;
-              shared_data_.wait_stop_source_.request_stop();
+              shared_data_.children_stop_source_.request_stop();
             }
           }
         }
@@ -122,12 +129,12 @@ namespace coro_st
 
       void on_cancel() noexcept
       {
-        if (!shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (wait_all_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {
-          if (!shared_data_.wait_stop_source_.stop_requested())
+          if (!shared_data_.children_stop_source_.stop_requested())
           {
-            shared_data_.stopped_ = true;
-            shared_data_.wait_stop_source_.request_stop();
+            shared_data_.result_state_ = wait_all_awaiter_shared_data::result_state::cancellation;
+            shared_data_.children_stop_source_.request_stop();
           }
         }
 
@@ -201,8 +208,8 @@ namespace coro_st
     public:
       template<std::size_t... I>
       awaiter(
-        std::index_sequence<I...>,
         context& parent_ctx,
+        std::index_sequence<I...>,
         WorksTuple& co_works_tuple
       ) :
         shared_data_{ parent_ctx },
@@ -234,9 +241,9 @@ namespace coro_st
           return true;
         }
 
-        shared_data_.stop_cb_.reset();
+        shared_data_.parent_stop_cb_.reset();
 
-        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (impl::wait_all_awaiter_shared_data::result_state::cancellation == shared_data_.result_state_)
         {
           shared_data_.parent_ctx_.schedule_cancellation();
           return true;
@@ -278,11 +285,11 @@ namespace coro_st
           return;
         }
 
-        shared_data_.stop_cb_.reset();
+        shared_data_.parent_stop_cb_.reset();
 
-        if (shared_data_.parent_ctx_.get_stop_token().stop_requested())
+        if (impl::wait_all_awaiter_shared_data::result_state::cancellation == shared_data_.result_state_)
         {
-          shared_data_.parent_ctx_.schedule_cancellation();
+          shared_data_.parent_ctx_.invoke_cancellation();
           return;
         }
 
@@ -317,7 +324,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
-        return awaiter(WorksTupleSeq{}, ctx, co_works_tuple_);
+        return awaiter(ctx, WorksTupleSeq{}, co_works_tuple_);
       }
     };
 
