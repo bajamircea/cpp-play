@@ -1,11 +1,7 @@
 #pragma once
 
 #include <cassert>
-#include <concepts>
 #include <exception>
-#include <type_traits>
-#include <utility>
-#include <variant>
 
 namespace coro_st
 {

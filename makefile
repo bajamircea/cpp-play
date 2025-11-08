@@ -60,7 +60,7 @@ debug_coro_st_lib_test_OBJ_FILES := $(coro_st_lib_test_CPP_FILES:$(SRC_DIR)/%.cp
 $(debug_coro_st_lib_test_OBJ_FILES) : $(INT_DIR)/debug/coro_st_lib_test/%.o : $(SRC_DIR)/coro_st_lib_test/%.cpp $(INT_DIR)/debug/coro_st_lib_test/%.d | $(INT_DIR)/debug/coro_st_lib_test
 	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
 
-$(BIN_DIR)/debug/test/coro_st_lib_test : $(debug_coro_st_lib_test_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
+$(BIN_DIR)/debug/test/coro_st_lib_test : $(debug_coro_st_lib_test_OBJ_FILES)  | $(BIN_DIR)/debug/test
 	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
 
 $(INT_DIR)/debug/coro_st_lib_test/success.run : $(BIN_DIR)/debug/test/coro_st_lib_test | $(INT_DIR)/debug/coro_st_lib_test
@@ -76,7 +76,7 @@ release_coro_st_lib_test_OBJ_FILES := $(coro_st_lib_test_CPP_FILES:$(SRC_DIR)/%.
 $(release_coro_st_lib_test_OBJ_FILES) : $(INT_DIR)/release/coro_st_lib_test/%.o : $(SRC_DIR)/coro_st_lib_test/%.cpp $(INT_DIR)/release/coro_st_lib_test/%.d | $(INT_DIR)/release/coro_st_lib_test
 	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
 
-$(BIN_DIR)/release/test/coro_st_lib_test : $(release_coro_st_lib_test_OBJ_FILES) $(INT_DIR)/release/test_lib.a $(INT_DIR)/release/test_main_lib.a | $(BIN_DIR)/release/test
+$(BIN_DIR)/release/test/coro_st_lib_test : $(release_coro_st_lib_test_OBJ_FILES)  | $(BIN_DIR)/release/test
 	$(CXX) $(LDFLAGS) $(release_FLAGS) -o $@ $^
 
 $(INT_DIR)/release/coro_st_lib_test/success.run : $(BIN_DIR)/release/test/coro_st_lib_test | $(INT_DIR)/release/coro_st_lib_test
@@ -86,62 +86,6 @@ $(INT_DIR)/release/coro_st_lib_test/success.run : $(BIN_DIR)/release/test/coro_s
 release : $(INT_DIR)/release/coro_st_lib_test/success.run
 
 DEP_FILES += $(release_coro_st_lib_test_OBJ_FILES:.o=.d)
-
-# Rules for test_lib
-
-test_lib_CPP_FILES := $(wildcard $(SRC_DIR)/test_lib/*.cpp)
-
-debug_test_lib_OBJ_FILES := $(test_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
-
-$(debug_test_lib_OBJ_FILES) : $(INT_DIR)/debug/test_lib/%.o : $(SRC_DIR)/test_lib/%.cpp $(INT_DIR)/debug/test_lib/%.d | $(INT_DIR)/debug/test_lib
-	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
-
-$(INT_DIR)/debug/test_lib.a : $(debug_test_lib_OBJ_FILES) | $(INT_DIR)/debug
-	ar rcs $@ $^
-
-debug : $(INT_DIR)/debug/test_lib.a
-
-DEP_FILES += $(debug_test_lib_OBJ_FILES:.o=.d)
-
-release_test_lib_OBJ_FILES := $(test_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
-
-$(release_test_lib_OBJ_FILES) : $(INT_DIR)/release/test_lib/%.o : $(SRC_DIR)/test_lib/%.cpp $(INT_DIR)/release/test_lib/%.d | $(INT_DIR)/release/test_lib
-	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
-
-$(INT_DIR)/release/test_lib.a : $(release_test_lib_OBJ_FILES) | $(INT_DIR)/release
-	ar rcs $@ $^
-
-release : $(INT_DIR)/release/test_lib.a
-
-DEP_FILES += $(release_test_lib_OBJ_FILES:.o=.d)
-
-# Rules for test_main_lib
-
-test_main_lib_CPP_FILES := $(wildcard $(SRC_DIR)/test_main_lib/*.cpp)
-
-debug_test_main_lib_OBJ_FILES := $(test_main_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
-
-$(debug_test_main_lib_OBJ_FILES) : $(INT_DIR)/debug/test_main_lib/%.o : $(SRC_DIR)/test_main_lib/%.cpp $(INT_DIR)/debug/test_main_lib/%.d | $(INT_DIR)/debug/test_main_lib
-	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
-
-$(INT_DIR)/debug/test_main_lib.a : $(debug_test_main_lib_OBJ_FILES) | $(INT_DIR)/debug
-	ar rcs $@ $^
-
-debug : $(INT_DIR)/debug/test_main_lib.a
-
-DEP_FILES += $(debug_test_main_lib_OBJ_FILES:.o=.d)
-
-release_test_main_lib_OBJ_FILES := $(test_main_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
-
-$(release_test_main_lib_OBJ_FILES) : $(INT_DIR)/release/test_main_lib/%.o : $(SRC_DIR)/test_main_lib/%.cpp $(INT_DIR)/release/test_main_lib/%.d | $(INT_DIR)/release/test_main_lib
-	$(CXX) $(CXXFLAGS) $(release_FLAGS) -c -o $@ $<
-
-$(INT_DIR)/release/test_main_lib.a : $(release_test_main_lib_OBJ_FILES) | $(INT_DIR)/release
-	ar rcs $@ $^
-
-release : $(INT_DIR)/release/test_main_lib.a
-
-DEP_FILES += $(release_test_main_lib_OBJ_FILES:.o=.d)
 
 # Folders creation
 $(BIN_DIR) $(INT_DIR):
@@ -159,12 +103,6 @@ $(INT_DIR)/debug : | $(INT_DIR)
 $(INT_DIR)/debug/coro_st_lib_test : | $(INT_DIR)/debug
 	mkdir $@
 
-$(INT_DIR)/debug/test_lib : | $(INT_DIR)/debug
-	mkdir $@
-
-$(INT_DIR)/debug/test_main_lib : | $(INT_DIR)/debug
-	mkdir $@
-
 $(BIN_DIR)/release : | $(BIN_DIR)
 	mkdir $@
 
@@ -175,12 +113,6 @@ $(INT_DIR)/release : | $(INT_DIR)
 	mkdir $@
 
 $(INT_DIR)/release/coro_st_lib_test : | $(INT_DIR)/release
-	mkdir $@
-
-$(INT_DIR)/release/test_lib : | $(INT_DIR)/release
-	mkdir $@
-
-$(INT_DIR)/release/test_main_lib : | $(INT_DIR)/release
 	mkdir $@
 
 ## To clean and build run 'make clean && make'
