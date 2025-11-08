@@ -3,19 +3,10 @@
 import os
 
 def write_makefile(out):
-    configs = ["debug", "release"]
+    configs = ["release"]
 
     projects = [
-        ("clrs_lib_test", ["test_lib", "test_main_lib"]),
         ("coro_st_lib_test", ["test_lib", "test_main_lib"]),
-        ("cpp_util_lib_test", ["test_lib", "test_main_lib"]),
-        ("cstdio_lib", []),
-        ("cstdio_lib_test", ["cstdio_lib", "test_lib", "test_main_lib"]),
-        ("fibonacci", ["fibonacci_lib"]),
-        ("fibonacci_lib", []),
-        ("fibonacci_lib_test", ["fibonacci_lib", "test_lib", "test_main_lib"]),
-        ("how_vector_works", []),
-        ("sedgewick_lib_test", ["test_lib", "test_main_lib"]),
         ("test_lib", []),
         ("test_main_lib", []),
     ]
@@ -55,7 +46,7 @@ STD_FLAGS = --std=c++23 -fno-rtti
 WARN_FLAGS = -Wall -Wpedantic -Wextra -Werror
 debug_FLAGS = -g -D_DEBUG=1 -fsanitize=address
 ## It seems that g++ on -O3 has some false positives on dangling pointer errors
-release_FLAGS = -O3 -march=native -Wno-dangling-pointer
+release_FLAGS = -O3 -march=native
 CXXFLAGS = $(STD_FLAGS) $(DEP_FLAGS) $(WARN_FLAGS)
 LDFLAGS = $(STD_FLAGS) $(WARN_FLAGS)
 
