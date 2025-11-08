@@ -37,11 +37,9 @@ namespace coro_st
       size_t pending_count_{ 0 };
       result_state result_state_{ result_state::none };
 
-      chain_context task_chain_ctx1_;
       context task_ctx1_;
       CoAwaiter1 co_awaiter1_;
 
-      chain_context task_chain_ctx2_;
       context task_ctx2_;
       CoAwaiter2 co_awaiter2_;
 
@@ -57,19 +55,9 @@ namespace coro_st
         children_stop_source_{},
         pending_count_{ 0 },
         result_state_{ result_state::none },
-        task_chain_ctx1_{
-          children_stop_source_.get_token(),
-          make_member_callback<&awaiter::on_task1_chain_continue>(this),
-          make_member_callback<&awaiter::on_task1_chain_cancel>(this),
-          },
-        task_ctx1_{ parent_ctx_, task_chain_ctx1_ },
+        task_ctx1_{ children_stop_source_.get_token() },
         co_awaiter1_{ co_work1.get_awaiter(task_ctx1_) },
-        task_chain_ctx2_{
-          children_stop_source_.get_token(),
-          make_member_callback<&awaiter::on_task2_chain_continue>(this),
-          make_member_callback<&awaiter::on_task2_chain_cancel>(this),
-          },
-        task_ctx2_{ parent_ctx_, task_chain_ctx2_ },
+        task_ctx2_{ children_stop_source_.get_token() },
         co_awaiter2_{ co_work2.get_awaiter(task_ctx2_) }
       {
       }

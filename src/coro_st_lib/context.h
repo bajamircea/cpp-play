@@ -1,32 +1,27 @@
 #pragma once
 
-#include "chain_context.h"
-
+#include "stop_util.h"
 #include <coroutine>
 
 namespace coro_st
 {
   class context
   {
-    chain_context& chain_ctx_;
+    stop_token token_;
 
   public:
-    context(chain_context& chain_ctx) noexcept :
-      chain_ctx_{ chain_ctx }
+    explicit context(stop_token token) noexcept :
+      token_{ token }
     {
     }
 
-    context(context&, chain_context& new_chain_ctx) noexcept :
-      chain_ctx_{ new_chain_ctx }
-    {
-    }
 
     context(const context&) = delete;
     context& operator=(const context&) = delete;
 
     stop_token get_stop_token() noexcept
     {
-      return chain_ctx_.get_stop_token();
+      return token_;
     }
 
     void invoke_continuation() noexcept

@@ -2,7 +2,6 @@
 
 #include "callback.h"
 #include "stop_util.h"
-#include "chain_context.h"
 #include "context.h"
 #include "coro_type_traits.h"
 #include "unique_coroutine_handle.h"

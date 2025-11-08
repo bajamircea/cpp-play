@@ -6,19 +6,12 @@
 
 namespace
 {
-  void nothing_fn(void*) noexcept {}
-
   template<coro_st::is_co_task CoTask>
   void run2(CoTask co_task)
   {
     coro_st::stop_source main_stop_source;
 
-    coro_st::chain_context chain_ctx{
-      main_stop_source.get_token(),
-      coro_st::callback{ nullptr, nothing_fn },
-      coro_st::callback{ nullptr, nothing_fn }
-    };
-    coro_st::context ctx{ chain_ctx };
+    coro_st::context ctx{ main_stop_source.get_token() };
 
     auto co_awaiter = co_task.get_work().get_awaiter(ctx);
 
