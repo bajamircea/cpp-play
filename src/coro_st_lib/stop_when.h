@@ -70,64 +70,17 @@ namespace coro_st
         return false;
       }
 
-      bool await_suspend(std::coroutine_handle<> handle) noexcept
+      void await_suspend(std::coroutine_handle<>) noexcept
       {
-        parent_handle_ = handle;
-
-        pending_count_ = 1;
-        init_parent_cancellation_callback();
-
-        start_chains();
-
-        --pending_count_;
-        if (0 != pending_count_)
-        {
-          return true;
-        }
-
-        parent_stop_cb_.reset();
-
-        if (result_state::has_stopped1 == result_state_)
-        {
-          parent_ctx_.schedule_cancellation();
-          return true;
-        }
-
-        return false;
       }
 
       void await_resume()
       {
-        switch (result_state_)
-        {
-          default:
-          case result_state::none:
-          case result_state::has_stopped1:
-            std::terminate();
-          case result_state::has_value_or_error1:
-            co_awaiter1_.await_resume();
-            return;
-          case result_state::has_error2:
-            std::rethrow_exception(co_awaiter2_.get_result_exception());
-          case result_state::has_stopped2:
-            return;
-        }
       }
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        switch (result_state_)
-        {
-          case result_state::none:
-          case result_state::has_stopped1:
-            std::terminate();
-          case result_state::has_value_or_error1:
-            return co_awaiter1_.get_result_exception();
-          case result_state::has_error2:
-            return co_awaiter2_.get_result_exception();
-          case result_state::has_stopped2:
-            return {};
-        }
+        return {};
       }
 
       void start_as_chain_root() noexcept

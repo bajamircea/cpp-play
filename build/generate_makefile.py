@@ -3,7 +3,7 @@
 import os
 
 def write_makefile(out):
-    configs = ["release"]
+    configs = ["debug", "release"]
 
     projects = [
         ("coro_st_lib_test", ["test_lib", "test_main_lib"]),

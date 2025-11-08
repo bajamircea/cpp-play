@@ -43,17 +43,33 @@ LDFLAGS = $(STD_FLAGS) $(WARN_FLAGS)
 ## To build all 'make'
 .DEFAULT: all
 
-.PHONY: all release clean
+.PHONY: all debug release clean
 
-all : release
+all : debug release
 
-release :
+debug release :
 
 DEP_FILES :=
 
 # Rules for coro_st_lib_test
 
 coro_st_lib_test_CPP_FILES := $(wildcard $(SRC_DIR)/coro_st_lib_test/*.cpp)
+
+debug_coro_st_lib_test_OBJ_FILES := $(coro_st_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_coro_st_lib_test_OBJ_FILES) : $(INT_DIR)/debug/coro_st_lib_test/%.o : $(SRC_DIR)/coro_st_lib_test/%.cpp $(INT_DIR)/debug/coro_st_lib_test/%.d | $(INT_DIR)/debug/coro_st_lib_test
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(BIN_DIR)/debug/test/coro_st_lib_test : $(debug_coro_st_lib_test_OBJ_FILES) $(INT_DIR)/debug/test_lib.a $(INT_DIR)/debug/test_main_lib.a | $(BIN_DIR)/debug/test
+	$(CXX) $(LDFLAGS) $(debug_FLAGS) -o $@ $^
+
+$(INT_DIR)/debug/coro_st_lib_test/success.run : $(BIN_DIR)/debug/test/coro_st_lib_test | $(INT_DIR)/debug/coro_st_lib_test
+	$^
+	touch $@
+
+debug : $(INT_DIR)/debug/coro_st_lib_test/success.run
+
+DEP_FILES += $(debug_coro_st_lib_test_OBJ_FILES:.o=.d)
 
 release_coro_st_lib_test_OBJ_FILES := $(coro_st_lib_test_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
 
@@ -75,6 +91,18 @@ DEP_FILES += $(release_coro_st_lib_test_OBJ_FILES:.o=.d)
 
 test_lib_CPP_FILES := $(wildcard $(SRC_DIR)/test_lib/*.cpp)
 
+debug_test_lib_OBJ_FILES := $(test_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_test_lib_OBJ_FILES) : $(INT_DIR)/debug/test_lib/%.o : $(SRC_DIR)/test_lib/%.cpp $(INT_DIR)/debug/test_lib/%.d | $(INT_DIR)/debug/test_lib
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(INT_DIR)/debug/test_lib.a : $(debug_test_lib_OBJ_FILES) | $(INT_DIR)/debug
+	ar rcs $@ $^
+
+debug : $(INT_DIR)/debug/test_lib.a
+
+DEP_FILES += $(debug_test_lib_OBJ_FILES:.o=.d)
+
 release_test_lib_OBJ_FILES := $(test_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
 
 $(release_test_lib_OBJ_FILES) : $(INT_DIR)/release/test_lib/%.o : $(SRC_DIR)/test_lib/%.cpp $(INT_DIR)/release/test_lib/%.d | $(INT_DIR)/release/test_lib
@@ -91,6 +119,18 @@ DEP_FILES += $(release_test_lib_OBJ_FILES:.o=.d)
 
 test_main_lib_CPP_FILES := $(wildcard $(SRC_DIR)/test_main_lib/*.cpp)
 
+debug_test_main_lib_OBJ_FILES := $(test_main_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/debug/%.o)
+
+$(debug_test_main_lib_OBJ_FILES) : $(INT_DIR)/debug/test_main_lib/%.o : $(SRC_DIR)/test_main_lib/%.cpp $(INT_DIR)/debug/test_main_lib/%.d | $(INT_DIR)/debug/test_main_lib
+	$(CXX) $(CXXFLAGS) $(debug_FLAGS) -c -o $@ $<
+
+$(INT_DIR)/debug/test_main_lib.a : $(debug_test_main_lib_OBJ_FILES) | $(INT_DIR)/debug
+	ar rcs $@ $^
+
+debug : $(INT_DIR)/debug/test_main_lib.a
+
+DEP_FILES += $(debug_test_main_lib_OBJ_FILES:.o=.d)
+
 release_test_main_lib_OBJ_FILES := $(test_main_lib_CPP_FILES:$(SRC_DIR)/%.cpp=$(INT_DIR)/release/%.o)
 
 $(release_test_main_lib_OBJ_FILES) : $(INT_DIR)/release/test_main_lib/%.o : $(SRC_DIR)/test_main_lib/%.cpp $(INT_DIR)/release/test_main_lib/%.d | $(INT_DIR)/release/test_main_lib
@@ -105,6 +145,24 @@ DEP_FILES += $(release_test_main_lib_OBJ_FILES:.o=.d)
 
 # Folders creation
 $(BIN_DIR) $(INT_DIR):
+	mkdir $@
+
+$(BIN_DIR)/debug : | $(BIN_DIR)
+	mkdir $@
+
+$(BIN_DIR)/debug/test : | $(BIN_DIR)/debug
+	mkdir $@
+
+$(INT_DIR)/debug : | $(INT_DIR)
+	mkdir $@
+
+$(INT_DIR)/debug/coro_st_lib_test : | $(INT_DIR)/debug
+	mkdir $@
+
+$(INT_DIR)/debug/test_lib : | $(INT_DIR)/debug
+	mkdir $@
+
+$(INT_DIR)/debug/test_main_lib : | $(INT_DIR)/debug
 	mkdir $@
 
 $(BIN_DIR)/release : | $(BIN_DIR)
