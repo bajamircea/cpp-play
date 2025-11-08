@@ -111,30 +111,25 @@ namespace coro_st
 
       [[nodiscard]] constexpr bool await_ready() const noexcept
       {
-        return false;
+        return true;
       }
 
       std::coroutine_handle<promise_type> await_suspend(std::coroutine_handle<> parent_coro) noexcept
       {
-        std::coroutine_handle<promise_type> child_coro = unique_child_coro_.get();
-        assert(!child_coro.promise().parent_coro_);
-        child_coro.promise().parent_coro_ = parent_coro;
-        return child_coro;
       }
 
-      T await_resume()
+      void await_resume()
       {
-        return unique_child_coro_.get().promise().get_result();
+        return;
       }
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        return unique_child_coro_.get().promise().get_result_exception();
+        return {};
       }
 
       void start_as_chain_root() noexcept
       {
-        unique_child_coro_.get().resume();
       }
     };
 
