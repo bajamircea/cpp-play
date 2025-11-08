@@ -63,7 +63,7 @@ namespace
 
       dummy_co get_return_object() noexcept
       {
-        return { std::coroutine_handle<promise_type>::from_promise(*this) };
+        return {std::coroutine_handle<promise_type>::from_promise(*this)};
       }
 
       std::suspend_always initial_suspend() noexcept

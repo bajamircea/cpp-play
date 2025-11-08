@@ -30,7 +30,7 @@ namespace coro_st
 
       co get_return_object() noexcept
       {
-        return { std::coroutine_handle<promise_type>::from_promise(*this) };
+        return {std::coroutine_handle<promise_type>::from_promise(*this)};
       }
 
       std::suspend_always initial_suspend() noexcept
@@ -122,7 +122,7 @@ namespace coro_st
         return child_coro;
       }
 
-      T await_resume() const
+      T await_resume()
       {
         return unique_child_coro_.get().promise().get_result();
       }
@@ -155,7 +155,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
-        return { ctx, std::move(unique_child_coro_) };
+        return {ctx, std::move(unique_child_coro_)};
       }
     };
 

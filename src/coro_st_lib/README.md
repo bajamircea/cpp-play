@@ -366,7 +366,7 @@ associated test folder:
           - e.g. if one child returns `int`, the other `void` and the third `short`
             then the struct of has and `size_t index` and an `int value` as member
         - if there is no common type, you need to arrange a common type e.g. by
-          returning a variant or using an adaptor like `async_into_type` (see below)
+          returning a `std::variant` of the individual types
     - if the parent is cancelled, `async_wait_any` cancels all it's children
     - if a first completing child initiates a cancellation/stop then the 
       cancellation is propagated to the parent
@@ -386,6 +386,30 @@ associated test folder:
     - called `timeout` in some libraries
     - returns an optional of the task return type (`void_result` instead of `void`)
       - the optional is `nullopt` if the task is cancelled due to duration
+    - same functionality can be achieved with
+      `co_await async_wait_any(task, async_sleep(duration))` except than:
+      - `async_wait_for` optional return is easier to use/check than
+        the index approach of of `async_wait_any`
+      - `async_wait_for` is more optimal in terms of resources it needs
+        to track progress
+        - including that it does not start the timer if the provided task
+          completes immediately
+- `stop_when.h`
+  - `co_await async_stop_when(task1, task2)`
+    - run task1 and task2, cancel the other when the first completes
+    - returns a `std::optional` for the return type of task1
+      - if task2 completes or stops first return a `nullopt`
+      - if task1 stops instead of completing then stop is propagated to the parent
+    - called `take_until` elsewhere
+    - name from appendix of P2175r0/libunifex
+    - e.g. `co_await async_stop_when(task, async_sleep(duration))` is
+      equivalent to `co_await async_wait_for(task, duration)`
+    - but `async_stop_when` is a generalization of `async_wait_for`
+      for when we want to stop task1 for other reasons than time elapesed
+      e.g. stop when CTRL-C was pressed
+      `co_await async_stop_when(task, async_ctrl_c_pressed())`
+    - compared with `async_wait_any` it has similar benefits in usage and resources
+      as `async_wait_for`
 - `call_capture.h`
   - `call_capture` used by the nursery to capture a function and the arguments
     for `spawn_child` so that they can be kept alive until the (child) coroutine
@@ -459,7 +483,3 @@ associated test folder:
       - but be mindful of throwing, as exceptions are propagated, but it's very
         expensive
     - useful for testing with tasks that immediately produce an exception/error
-- // TODO `stop_when.h`
-  - called `take_until` elsewhere
-  - name from appendix of P2175r0/libunifex
-- // TODO `into_type.h`

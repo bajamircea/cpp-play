@@ -388,7 +388,7 @@ namespace coro_st
 
         [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
         {
-          return awaiter(ctx, *nursery_, co_work_);
+          return {ctx, *nursery_, co_work_};
         }
       };
 

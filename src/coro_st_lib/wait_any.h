@@ -232,8 +232,8 @@ namespace coro_st
     public:
       template<std::size_t... I>
       awaiter(
-        std::index_sequence<I...>,
         context& parent_ctx,
+        std::index_sequence<I...>,
         WorksTuple& co_works_tuple
       ) :
         shared_data_{ parent_ctx },
@@ -276,7 +276,7 @@ namespace coro_st
         return false;
       }
 
-      ResultType await_resume() const
+      ResultType await_resume()
       {
         switch(shared_data_.result_.index())
         {
@@ -350,7 +350,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
-        return awaiter(WorksTupleSeq{}, ctx, co_works_tuple_);
+        return {ctx, WorksTupleSeq{}, co_works_tuple_};
       }
     };
 

@@ -40,7 +40,7 @@ namespace coro_st
         ctx_.schedule_cancellation();
       }
 
-      void await_resume()
+      void await_resume() const
       {
         std::rethrow_exception(ex_);
       }
@@ -77,7 +77,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
-        return { ctx, std::move(ex_) };
+        return {ctx, std::move(ex_)};
       }
     };
 

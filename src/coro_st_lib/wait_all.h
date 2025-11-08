@@ -146,7 +146,7 @@ namespace coro_st
         shared_data_.on_shared_continue();
       }
 
-      auto get_result() const
+      auto get_result()
       {
         if constexpr (std::is_same_v<void, co_work_result_t<CoWork>>)
         {
@@ -252,7 +252,7 @@ namespace coro_st
         return false;
       }
 
-      ResultType await_resume() const
+      ResultType await_resume()
       {
         if (shared_data_.exception_)
         {
@@ -324,7 +324,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
-        return awaiter(ctx, WorksTupleSeq{}, co_works_tuple_);
+        return {ctx, WorksTupleSeq{}, co_works_tuple_};
       }
     };
 

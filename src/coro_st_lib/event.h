@@ -112,7 +112,7 @@ namespace coro_st
 
         [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
         {
-          return { ctx, *evt_ };
+          return {ctx, *evt_};
         }
       };
 

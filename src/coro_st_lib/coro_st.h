@@ -23,6 +23,7 @@
 #include "wait_any.h"
 #include "wait_all.h"
 #include "wait_for.h"
+#include "stop_when.h"
 #include "call_capture.h"
 #include "nursery.h"
 #include "event.h"

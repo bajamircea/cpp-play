@@ -105,7 +105,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
       {
-        return { ctx, deadline_ };
+        return {ctx, deadline_};
       }
     };
 
@@ -129,6 +129,6 @@ namespace coro_st
 
   [[nodiscard]] inline sleep_task async_sleep_for(std::chrono::steady_clock::duration sleep_duration) noexcept
   {
-    return { std::chrono::steady_clock::now() + sleep_duration };
+    return {std::chrono::steady_clock::now() + sleep_duration};
   }
 }

@@ -8,12 +8,14 @@ namespace coro_st
 {
   class callback
   {
+    using pure_callback_fn = void (*)(void* x) noexcept;
+
     void* x_{ nullptr };
-    void (*fn_)(void* x) noexcept { nullptr };
+    pure_callback_fn fn_ { nullptr };
 
   public:
     callback() noexcept = default;
-    callback(void* x, void (*fn)(void* x) noexcept) noexcept :
+    callback(void* x, pure_callback_fn fn) noexcept :
       x_{ x },
       fn_{ fn }
     {

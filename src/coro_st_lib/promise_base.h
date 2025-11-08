@@ -29,7 +29,7 @@ namespace coro_st
       result_.template emplace<2>(std::current_exception());
     }
 
-    T get_result() const
+    T get_result()
     {
       switch(result_.index())
       {

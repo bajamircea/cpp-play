@@ -79,15 +79,10 @@ namespace
     ASSERT_EQ(42, result.value());
   }
 
-  coro_st::co<int> async_some_int_immediate()
-  {
-    co_return 42;
-  }
-
   TEST(wait_for_int_has_value_immediate)
   {
     auto result = coro_st::run(coro_st::async_wait_for(
-      async_some_int_immediate(),
+      coro_st::async_just(42),
       std::chrono::hours(24)
     )).value();
     ASSERT_TRUE(result.has_value());
@@ -161,13 +156,21 @@ namespace
     ASSERT_FALSE(result.has_value());
   }
 
-  // // coro_st::co<void> async_wait_any_does_not_compile()
-  // // {
-  // //   auto x = coro_st::async_wait_any(
-  // //     coro_st::async_suspend_forever(),
-  // //     coro_st::async_sleep_for(std::chrono::seconds(0))
-  // //   );
-  // //   // use of deleted function
-  // //   co_await std::move(x);
-  // // }
+  // coro_st::co<void> async_wait_for_does_not_compile()
+  // {
+  //   auto x = coro_st::async_wait_for(
+  //     coro_st::async_suspend_forever(),
+  //     std::chrono::seconds(0));
+  //   // use of deleted function
+  //   co_await std::move(x);
+  // }
+
+  // coro_st::co<void> async_wait_for_does_not_compile2()
+  // {
+  //   // ignoring return value
+  //   coro_st::async_wait_for(
+  //     coro_st::async_suspend_forever(),
+  //     std::chrono::seconds(0));
+  //   co_return;
+  // }
 } // anonymous namespace

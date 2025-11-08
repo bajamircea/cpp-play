@@ -88,7 +88,7 @@ namespace coro_st
         return false;
       }
 
-      ResultType await_resume() const
+      ResultType await_resume()
       {
         if (result_state::has_stopped == result_state_)
         {
@@ -192,7 +192,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
-        return awaiter(ctx, co_work_);
+        return {ctx, co_work_};
       }
     };
 

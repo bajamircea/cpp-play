@@ -20,8 +20,8 @@ namespace
         void * promise_address = this;
         void * frame_address =
           std::coroutine_handle<promise_type>::from_promise(*this).address();
-        return { reinterpret_cast<char*>(promise_address) -
-          reinterpret_cast<char*>(frame_address) };
+        return {reinterpret_cast<char*>(promise_address) -
+          reinterpret_cast<char*>(frame_address)};
       }
 
       std::suspend_never initial_suspend() noexcept

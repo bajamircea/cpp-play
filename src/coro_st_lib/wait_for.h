@@ -6,6 +6,7 @@
 #include "stop_util.h"
 #include "value_type_traits.h"
 
+#include <cassert>
 #include <chrono>
 #include <coroutine>
 #include <optional>
@@ -102,7 +103,7 @@ namespace coro_st
         return false;
       }
 
-      ResultType await_resume() const
+      ResultType await_resume()
       {
         switch (result_state_)
         {
@@ -235,7 +236,8 @@ namespace coro_st
 
       void start_chains() noexcept
       {
-        ++pending_count_;
+        assert(1 == pending_count_);
+        pending_count_ = 2;
         co_awaiter_.start_as_chain_root();
 
         if (1 == pending_count_)
@@ -327,7 +329,7 @@ namespace coro_st
 
       [[nodiscard]] awaiter get_awaiter(context& ctx)
       {
-        return awaiter(ctx, co_work_, deadline_);
+        return {ctx, co_work_, deadline_};
       }
     };
 
