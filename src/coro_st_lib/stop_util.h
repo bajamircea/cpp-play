@@ -6,6 +6,8 @@
 #include <cstddef>
 #include <utility>
 
+#include <stop_token>
+
 namespace cpp_util
 {
   // Intrusive list
