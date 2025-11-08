@@ -1,7 +1,5 @@
 #include "../test_lib/test.h"
 
-#include "../coro_st_lib/stop_when.h"
-
 #include "../coro_st_lib/coro_st.h"
 
 namespace

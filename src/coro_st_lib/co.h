@@ -38,59 +38,10 @@ namespace coro_st
         return {};
       }
 
-      struct final_awaiter
-      {
-        context& ctx_;
-
-        [[nodiscard]] constexpr bool await_ready() const noexcept
-        {
-          return false;
-        }
-
-        std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> child_coro) noexcept
-        {
-          auto parent_coro = child_coro.promise().parent_coro_;
-
-          // if we have a parent coroutine
-          if (parent_coro)
-          {
-            if (ctx_.get_stop_token().stop_requested())
-            {
-              ctx_.schedule_cancellation();
-              return std::noop_coroutine();
-            }
-            return parent_coro;
-          }
-
-          // we're the first one in a chain in a .resume
-          // from either start_as_chain_root or from the run loop
-          if (ctx_.get_stop_token().stop_requested())
-          {
-            ctx_.invoke_cancellation();
-            return std::noop_coroutine();
-          }
-          ctx_.invoke_continuation();
-          return std::noop_coroutine();
-        }
-
-        [[noreturn]] constexpr void await_resume() const noexcept
-        {
-          std::unreachable();
-          //std::terminate();
-        }
-      };
-
-      final_awaiter final_suspend() noexcept
+      std::suspend_always final_suspend() noexcept
       {
         assert(pctx_ != nullptr);
-        return {*pctx_};
-      }
-
-      template<coro_st::is_co_task CoTask>
-      auto await_transform(CoTask co_task)
-      {
-        assert(pctx_ != nullptr);
-        return co_task.get_work().get_awaiter(*pctx_);
+        return {};
       }
     };
 
