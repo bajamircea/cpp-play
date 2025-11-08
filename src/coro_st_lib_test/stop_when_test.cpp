@@ -159,7 +159,7 @@ namespace
   // on g++ that made me use -Wno-dangling-pointer on g++ -O3 build
   TEST(stop_when_exception2)
   {
-    auto async_lambda = []() -> coro_st::co<void> {
+    auto async_lambda = []() -> coro_st::co {
       co_return;
     };
 

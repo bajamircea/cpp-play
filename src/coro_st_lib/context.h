@@ -15,33 +15,12 @@ namespace coro_st
     {
     }
 
-
     context(const context&) = delete;
     context& operator=(const context&) = delete;
 
     stop_token get_stop_token() noexcept
     {
       return token_;
-    }
-
-    void invoke_continuation() noexcept
-    {
-    }
-
-    void schedule_continuation() noexcept
-    {
-    }
-
-    void invoke_cancellation() noexcept
-    {
-    }
-
-    void schedule_cancellation() noexcept
-    {
-    }
-
-    void schedule_coroutine_resume(std::coroutine_handle<void>) noexcept
-    {
     }
   };
 }

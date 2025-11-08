@@ -97,14 +97,6 @@ namespace coro_st
         }
 
         parent_stop_cb_.reset();
-
-        if (result_state::has_stopped1 == result_state_)
-        {
-          parent_ctx_.invoke_cancellation();
-          return;
-        }
-
-        parent_ctx_.invoke_continuation();
       }
 
     private:

@@ -60,7 +60,6 @@ namespace coro_st
       void on_cancel() noexcept
       {
         parent_stop_cb_.reset();
-        ctx_.schedule_cancellation();
       }
     };
 

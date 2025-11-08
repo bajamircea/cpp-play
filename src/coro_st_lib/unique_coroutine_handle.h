@@ -5,29 +5,7 @@
 
 namespace cpp_util
 {
-  // see unique_handle.md
-
   template<typename Traits>
-  concept unique_handle_traits = requires(
-    typename Traits::handle_type h, const typename Traits::handle_type ch)
-  {
-    { Traits::invalid_value() } noexcept;
-    { typename Traits::handle_type(Traits::invalid_value()) } noexcept;
-    { h = Traits::invalid_value() } noexcept;
-    { Traits::close_handle(ch) } noexcept;
-    { typename Traits::handle_type(std::move(h)) } noexcept;
-    { typename Traits::handle_type(ch) } noexcept;
-  };
-
-  template<typename Traits>
-  concept unique_handle_custom_is_valid_traits =
-    unique_handle_traits<Traits> &&
-    requires(const typename Traits::handle_type ch)
-  {
-    { Traits::is_valid(ch) } noexcept -> std::convertible_to<bool>;
-  };
-
-  template<unique_handle_traits Traits>
   class [[nodiscard]] unique_handle
   {
   public:
@@ -101,10 +79,7 @@ namespace cpp_util
 
     bool is_valid() const noexcept
     {
-      if constexpr (unique_handle_custom_is_valid_traits<Traits>)
-        return Traits::is_valid(h_);
-      else
-        return h_ != Traits::invalid_value();
+      return h_ != Traits::invalid_value();
     }
 
     explicit operator bool() const noexcept

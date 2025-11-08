@@ -9,7 +9,6 @@
 
 namespace coro_st
 {
-  template<typename T>
   class [[nodiscard]] co
   {
   public:
@@ -89,7 +88,7 @@ namespace coro_st
         return true;
       }
 
-      std::coroutine_handle<promise_type> await_suspend(std::coroutine_handle<> parent_coro) noexcept
+      void await_suspend(std::coroutine_handle<>) noexcept
       {
       }
 
