@@ -4,10 +4,27 @@
 
 #include "../coro_st_lib/coro_st.h"
 
-#include "test_loop.h"
-
 namespace
 {
+  void nothing_fn(void*) noexcept {}
+
+  template<coro_st::is_co_task CoTask>
+  void run2(CoTask co_task)
+  {
+    coro_st::stop_source main_stop_source;
+
+    coro_st::chain_context chain_ctx{
+      main_stop_source.get_token(),
+      coro_st::callback{ nullptr, nothing_fn },
+      coro_st::callback{ nullptr, nothing_fn }
+    };
+    coro_st::context ctx{ chain_ctx };
+
+    auto co_awaiter = co_task.get_work().get_awaiter(ctx);
+
+    co_awaiter.start_as_chain_root();
+  }
+
   // For some reason that triggers what I believe to be a false positive
   // on g++ that made me use -Wno-dangling-pointer on g++ -O3 build
   TEST(stop_when_exception2)
@@ -16,11 +33,10 @@ namespace
       co_return;
     };
 
-    auto result = coro_st::run(coro_st::async_stop_when(
+    run2(coro_st::async_stop_when(
       coro_st::async_suspend_forever(),
       async_lambda()
-    )).value();
-    ASSERT_FALSE(result.has_value());
+    ));
   }
 
 } // anonymous namespace

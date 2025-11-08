@@ -2,7 +2,6 @@
 
 #include "callback.h"
 #include "stop_util.h"
-#include "ready_queue.h"
 
 #include <cassert>
 
@@ -13,7 +12,6 @@ namespace coro_st
     stop_token token_;
     callback continuation_cb_{};
     callback cancellation_cb_{};
-    ready_node node_{};
 
   public:
     chain_context(
@@ -43,11 +41,6 @@ namespace coro_st
     callback get_cancellation_callback() noexcept
     {
       return cancellation_cb_;
-    }
-
-    ready_node& get_chain_node() noexcept
-    {
-      return node_;
     }
   };
 }
