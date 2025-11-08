@@ -21,21 +21,11 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
-      enum class result_state
-      {
-        none,
-        has_value_or_error1,
-        has_stopped1,
-        has_error2,
-        has_stopped2,
-      };
-
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
       std::optional<stop_callback<callback>> parent_stop_cb_;
       stop_source children_stop_source_;
       size_t pending_count_{ 0 };
-      result_state result_state_{ result_state::none };
 
       context task_ctx1_;
       CoAwaiter1 co_awaiter1_;
@@ -54,7 +44,6 @@ namespace coro_st
         parent_stop_cb_{},
         children_stop_source_{},
         pending_count_{ 0 },
-        result_state_{ result_state::none },
         task_ctx1_{ children_stop_source_.get_token() },
         co_awaiter1_{ co_work1.get_awaiter(task_ctx1_) },
         task_ctx2_{ children_stop_source_.get_token() },
@@ -111,7 +100,6 @@ namespace coro_st
       void on_parent_cancel() noexcept
       {
         parent_stop_cb_.reset();
-        result_state_ = result_state::has_stopped1;
         children_stop_source_.request_stop();
       }
 
