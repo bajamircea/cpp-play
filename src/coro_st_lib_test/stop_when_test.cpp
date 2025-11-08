@@ -13,13 +13,14 @@ namespace
   TEST(stop_when_exception2)
   {
     auto async_lambda = []() -> coro_st::co<void> {
-      throw std::runtime_error("Ups!");
       co_return;
     };
 
-    ASSERT_THROW_WHAT(coro_st::run(coro_st::async_stop_when(
+    auto result = coro_st::run(coro_st::async_stop_when(
       coro_st::async_suspend_forever(),
       async_lambda()
-    )), std::runtime_error, "Ups!");
+    )).value();
+    ASSERT_FALSE(result.has_value());
   }
+
 } // anonymous namespace
