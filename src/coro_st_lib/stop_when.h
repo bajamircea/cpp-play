@@ -4,7 +4,6 @@
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
-#include "value_type_traits.h"
 
 #include <cassert>
 #include <coroutine>
@@ -19,8 +18,6 @@ namespace coro_st
     using CoWork2 = co_task_work_t<CoTask2>;
     using CoAwaiter1 = co_task_awaiter_t<CoTask1>;
     using CoAwaiter2 = co_task_awaiter_t<CoTask2>;
-    using T = co_task_result_t<CoTask1>;
-    using ResultType = std::optional<value_type_traits::value_type_t<T>>;
 
     class [[nodiscard]] awaiter
     {
@@ -111,7 +108,7 @@ namespace coro_st
         return false;
       }
 
-      ResultType await_resume()
+      void await_resume()
       {
         switch (result_state_)
         {
@@ -120,19 +117,12 @@ namespace coro_st
           case result_state::has_stopped1:
             std::terminate();
           case result_state::has_value_or_error1:
-            if constexpr (std::is_same_v<void, T>)
-            {
-              co_awaiter1_.await_resume();
-              return void_result{};
-            }
-            else
-            {
-              return co_awaiter1_.await_resume();
-            }
+            co_awaiter1_.await_resume();
+            return;
           case result_state::has_error2:
             std::rethrow_exception(co_awaiter2_.get_result_exception());
           case result_state::has_stopped2:
-            return std::nullopt;
+            return;
         }
       }
 
