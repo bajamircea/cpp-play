@@ -1,9 +1,7 @@
 #pragma once
 
 #include "context.h"
-#include "coro_type_traits.h"
 #include "unique_coroutine_handle.h"
-#include "promise_base.h"
 
 #include <cassert>
 #include <coroutine>
@@ -15,9 +13,11 @@ namespace coro_st
   class [[nodiscard]] co
   {
   public:
-    class promise_type : public promise_base<T>
+    class promise_type
     {
       friend co;
+
+      std::exception_ptr exception_{};
 
       context* pctx_{ nullptr };
       std::coroutine_handle<> parent_coro_;
@@ -43,6 +43,30 @@ namespace coro_st
         assert(pctx_ != nullptr);
         return {};
       }
+
+      void return_void() noexcept
+      {
+      }
+
+      void unhandled_exception() noexcept
+      {
+        assert(nullptr == exception_);
+        exception_ = std::current_exception();
+      }
+
+      void get_result() const
+      {
+        if (exception_)
+        {
+          std::rethrow_exception(exception_);
+        }
+      }
+
+      std::exception_ptr get_result_exception() const noexcept
+      {
+        return exception_;
+      }
+
     };
 
   private:
