@@ -103,6 +103,10 @@ namespace coro_st
       awaiter(context& ctx, unique_coroutine_handle<promise_type>&& unique_child_coro) noexcept :
         unique_child_coro_{ std::move(unique_child_coro) }
       {
+        // For some reason that triggers what I believe to be a false positive
+        // on g++ that made me use -Wno-dangling-pointer on g++ -O3 build
+        // but the context should outlive the awaiter which should outlive the
+        // promise on the coroutine frame (which gets destroyed by this awaiter)
         unique_child_coro_.get().promise().pctx_ = &ctx;
       }
 
