@@ -1,3 +1,7 @@
+// -std=c++23 -Wdangling-pointer -O3
+// -Werror
+// /O2 /std:c++20
+
 #include <cassert>
 #include <cstddef>
 #include <coroutine>
@@ -47,23 +51,6 @@ namespace coro_st
     }
   };
 
-  template<typename T, void (*fn)(T&) noexcept>
-  struct make_function_callback_impl
-  {
-    static void invoke(void* x_void) noexcept
-    {
-      assert(x_void != nullptr);
-      T* x = reinterpret_cast<T*>(x_void);
-      return std::invoke(fn, *x);
-    }
-  };
-
-  template<auto FnPtr, typename T>
-  callback make_function_callback(T& x)
-  {
-    return callback{ &x, &make_function_callback_impl<T, FnPtr>::invoke };
-  }
-
   template<typename T, void (T::*member_fn)() noexcept>
   struct make_member_callback_impl
   {
@@ -80,29 +67,10 @@ namespace coro_st
   {
     return callback{ x, &make_member_callback_impl<T, MemberFnPtr>::invoke };
   }
-
-  inline callback make_resume_coroutine_callback(std::coroutine_handle<> handle)
-  {
-    return callback{ handle.address(), +[](void* x) noexcept {
-      std::coroutine_handle<> original_handle = std::coroutine_handle<>::from_address(x);
-      original_handle.resume();
-    }};
-  }
 }
 
 namespace cpp_util
 {
-  // Intrusive list
-  //
-  // Note: useful to use by deleting a node based on a reference to that node
-  // - intrusive
-  // - non-ownning
-  // - double linked
-  // - linear
-  // - end iterator is nullptr
-  // - header points to head and tail
-  // - no dummy node
-  // - no cached size
   template<typename Node, Node* Node::*next, Node* Node::*prev>
   class intrusive_list
   {
@@ -111,9 +79,6 @@ namespace cpp_util
   public:
     intrusive_list() noexcept = default;
 
-    // Not owning, therefore copy does not copy nodes.
-    // Delete copy to avoid mistakes where head and tail get updated
-    // for a copy out of sync with the original
     intrusive_list(const intrusive_list&) = delete;
     intrusive_list& operator=(const intrusive_list&) = delete;
 
@@ -221,14 +186,12 @@ namespace coro_st
 
   class stop_source;
 
-  template <typename Fn>
   class stop_callback;
 
   class stop_token
   {
     friend stop_source;
 
-    template <typename Fn>
     friend class stop_callback;
 
     stop_source* source_ = nullptr;
@@ -246,7 +209,6 @@ namespace coro_st
 
   class stop_source
   {
-    template <typename Fn>
     friend class stop_callback;
 
     bool stop_{ false };
@@ -295,8 +257,7 @@ namespace coro_st
     return source_->stop_requested();
   }
 
-  template<>
-  class stop_callback<callback>
+  class stop_callback
   {
     stop_source* source_ = nullptr;
     stop_list_node node_;
@@ -326,46 +287,6 @@ namespace coro_st
       {
         source_->callbacks_.remove(&node_);
       }
-    }
-  };
-
-  template <typename Fn>
-  class stop_callback
-  {
-    stop_source* source_ = nullptr;
-    Fn fn_;
-    stop_list_node node_;
-  public:
-    stop_callback(stop_token token, Fn&& fn) noexcept :
-      source_{ token.source_ }, fn_{ std::move(fn) }
-    {
-      assert(source_ != nullptr);
-      if (source_->stop_requested())
-      {
-        fn_();
-      }
-      else
-      {
-        node_.cb = make_member_callback<&stop_callback::invoke>(this);
-        source_->callbacks_.push_back(&node_);
-      }
-    }
-
-    stop_callback(const stop_callback&) = delete;
-    stop_callback& operator=(const stop_callback&) = delete;
-
-    ~stop_callback()
-    {
-      if (node_.cb.is_callable())
-      {
-        source_->callbacks_.remove(&node_);
-      }
-    }
-
-  private:
-    void invoke() noexcept
-    {
-      fn_();
     }
   };
 }
@@ -430,7 +351,6 @@ namespace coro_st
   template<typename T>
   concept is_co_work = requires(T x, context ctx)
     {
-      // removed noexcept, in some cases allocation is required
       { x.get_awaiter(ctx) } -> is_co_awaiter;
     } &&
     std::is_nothrow_move_constructible_v<T> &&
@@ -679,7 +599,7 @@ namespace coro_st
     class [[nodiscard]] awaiter
     {
       context& ctx_;
-      std::optional<stop_callback<callback>> parent_stop_cb_;
+      std::optional<stop_callback> parent_stop_cb_;
 
     public:
       explicit awaiter(context& ctx) noexcept :
@@ -772,7 +692,7 @@ namespace coro_st
     {
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
-      std::optional<stop_callback<callback>> parent_stop_cb_;
+      std::optional<stop_callback> parent_stop_cb_;
       stop_source children_stop_source_;
       size_t pending_count_{ 0 };
 
@@ -860,7 +780,6 @@ namespace coro_st
 
         if (1 == pending_count_)
         {
-          // co_awaiter_ completed early, no need to sleep
           return;
         }
 
@@ -945,22 +864,6 @@ namespace test
 
 #define TEST(func) void func(); test::test_base func ## _instance{func, #func, __FILE__, __LINE__}; void func()
 
-#define FAIL_TEST(reason) test::fail_current(__FILE__, __LINE__, "FAILED_TEST(" #reason ")")
-
-#define ASSERT_TRUE(cond) if (cond) {} else { test::fail_current(__FILE__, __LINE__, "ASSERT failed '" #cond "' was false"); }
-
-#define ASSERT_FALSE(cond) if (cond) { test::fail_current(__FILE__, __LINE__, "ASSERT_FALSE failed '" #cond "' was true"); }
-
-#define ASSERT_EQ(expected, actual) if (expected == actual) {} else { test::fail_current(__FILE__, __LINE__, "ASSERT_EQ failed for expected: '" #expected "' and actual '" #actual "'"); }
-
-#define ASSERT_NE(expected, actual) if (expected == actual) { test::fail_current(__FILE__, __LINE__, "ASSERT_NE failed for expected: '" #expected "' and actual '" #actual "'"); }
-
-#define ASSERT_THROW(expr, ex) try{ {expr;} test::fail_current(__FILE__, __LINE__, "ASSERT_THROW failed for expression '" #expr "'"); } catch (const ex &) {}
-
-#define ASSERT_NO_THROW(expr) { bool assert_no_throw = true; try{ {expr;} assert_no_throw = false; } catch(...) {} if (assert_no_throw) { test::fail_current(__FILE__, __LINE__, "ASSERT_NO_THROW failed for expression '" #expr "'"); }
-
-#define ASSERT_THROW_WHAT(expr, ex, what_str) try{ {expr;} test::fail_current(__FILE__, __LINE__, "ASSERT_THROW_WHAT failed for expression '" #expr "'"); } catch (const ex & e) { ASSERT_EQ(what_str, std::string(e.what())); }
-
 namespace
 {
   test::test_base * head_test = nullptr;
@@ -971,30 +874,6 @@ namespace
   struct test_exception
   {
   };
-
-  void log_exception()
-  {
-    try
-    {
-      throw;
-    }
-    catch (const test_exception &)
-    {
-    }
-    catch (const std::runtime_error & e)
-    {
-      std::cout << "  caught std::runtime_error: " << e.what() << "\n";
-    }
-    catch (const std::exception & e)
-    {
-      std::cout << "  caught std::exception: " << e.what() << "\n";
-    }
-    catch (...)
-    {
-      std::cout << "  caught unknown exception\n";
-    }
-  }
-
 } // anonymous namespace
 
 namespace test
@@ -1035,7 +914,6 @@ namespace test
       catch(...)
       {
         crt_failed = true;
-        log_exception();
       }
 
       if (crt_failed)
