@@ -848,11 +848,10 @@ namespace test
 
   struct test_base
   {
-    test_base(test_fn fn, const char * name, const char * file, int line);
+    test_base(test_fn fn, const char * name, int line);
 
     test_fn fn_;
     const char * name_;
-    const char * file_;
     const int line_;
     test_base * next_;
   };
@@ -862,7 +861,7 @@ namespace test
   int run();
 } // namespace test
 
-#define TEST(func) void func(); test::test_base func ## _instance{func, #func, __FILE__, __LINE__}; void func()
+#define TEST(func) void func(); test::test_base func ## _instance{func, #func, __LINE__}; void func()
 
 namespace
 {
@@ -878,18 +877,17 @@ namespace
 
 namespace test
 {
-  test_base::test_base(test_fn fn, const char * name, const char * file, int line) :
-    fn_{ fn }, name_{ name }, file_{ file }, line_{ line }, next_{ head_test }
+  test_base::test_base(test_fn fn, const char * name, int line) :
+    fn_{ fn }, name_{ name }, line_{ line }, next_{ head_test }
   {
     head_test = this;
   }
 
-  void fail_current(const char * file, int line, const char * message)
+  void fail_current(int line, const char * message)
   {
     crt_failed = true;
     std::cout
-      << file << ":" << line
-      << ":1: error: "
+      << line << ":1: error: "
       << crt_test->name_ << " " << message << "\n";
     throw test_exception();
   }
@@ -920,8 +918,7 @@ namespace test
       {
         any_failed = true;
         std::cout
-          << crt_test->file_ << ":" << crt_test->line_
-          << ":1: error: "
+          << crt_test->line_ << ":1: error: "
           << crt_test->name_ << " failed\n";
       }
     }
@@ -942,7 +939,7 @@ namespace test
 namespace
 {
   template<coro_st::is_co_task CoTask>
-  void run2(CoTask co_task)
+  void run(CoTask co_task)
   {
     coro_st::stop_source main_stop_source;
 
@@ -953,15 +950,15 @@ namespace
     co_awaiter.start_as_chain_root();
   }
 
-  // For some reason that triggers what I believe to be a false positive
-  // on g++ that made me use -Wno-dangling-pointer on g++ -O3 build
+  // This is the test that triggers what I believe to be a false positive
+  // on g++ by -Wno-dangling-pointer on -O3
   TEST(stop_when_exception2)
   {
     auto async_lambda = []() -> coro_st::co {
       co_return;
     };
 
-    run2(coro_st::async_stop_when(
+    run(coro_st::async_stop_when(
       coro_st::async_suspend_forever(),
       async_lambda()
     ));
