@@ -35,10 +35,11 @@ namespace
   TEST(nursery_trivial)
   {
     coro_st::nursery n;
-    [[maybe_unused]] auto result = coro_st::run(
+    auto run_result = coro_st::run(
       n.async_run(
         coro_st::async_yield()
-      )).value();
+      ));
+    ASSERT_TRUE(run_result.has_value());
   }
 
   TEST(nursery_lambda_and_stop)
@@ -51,10 +52,11 @@ namespace
       i += 42;
       co_return;
     };
-    [[maybe_unused]] auto result = coro_st::run(
+    auto run_result = coro_st::run(
       n.async_run(
         async_initial_lambda(n, i)
-      )).value();
+      ));
+    ASSERT_TRUE(run_result.has_value());
     ASSERT_EQ(42, i);
   }
 
@@ -68,10 +70,11 @@ namespace
       i += 42;
       co_await coro_st::async_suspend_forever();
     };
-    [[maybe_unused]] auto result = coro_st::run(
+    auto run_result = coro_st::run(
       n.async_run(
         async_initial_lambda()
-      )).value();
+      ));
+    ASSERT_TRUE(run_result.has_value());
     ASSERT_EQ(42, i);
   }
 
@@ -87,10 +90,11 @@ namespace
       i += 40;
       co_return;
     };
-    [[maybe_unused]] auto result = coro_st::run(
+    auto run_result = coro_st::run(
       n.async_run(
         async_initial_lambda()
-      )).value();
+      ));
+    ASSERT_TRUE(run_result.has_value());
     ASSERT_EQ(42, i);
   }
 
@@ -210,11 +214,12 @@ namespace
   // TEST(nursery_does_not_compile3)
   // {
   //   coro_st::nursery n;
-  //   [[maybe_unused]] auto result = coro_st::run(
+  //   auto run_result = coro_st::run(
   //     n.async_run(
   //       []() -> coro_st::co<void> {
   //         co_return;
   //       } // lambda not invoked
-  //     )).value();
+  //     ));
+  //   ASSERT_TRUE(run_result.has_value());
   // }
 } // anonymous namespace

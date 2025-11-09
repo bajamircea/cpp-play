@@ -50,10 +50,11 @@ namespace
 
   TEST(wait_all_trivial)
   {
-    [[maybe_unused]] auto result = coro_st::run(coro_st::async_wait_any(
+    auto run_result = coro_st::run(coro_st::async_wait_any(
       coro_st::async_yield(),
       coro_st::async_sleep_for(std::chrono::seconds(0))
-    )).value();
+    ));
+    ASSERT_TRUE(run_result.has_value());
   }
 
   coro_st::co<int> async_some_wait()

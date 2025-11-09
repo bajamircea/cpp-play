@@ -149,7 +149,7 @@ see the very basic examples in `coro_st_lib_test\run_test.cpp`.
 Here is a description in logical order of the contents library. For usage see the
 associated test folder:
 - `synthetic_coroutine.h`
-  - NOT USED (see below why)! 
+  - NOT USED: see below why
   - demonstrates a technique where you could have a coroutine frame on the stack
   - `coroutine_frame_abi` is the ABI where the coroutine frame has two function pointers
   - `synthetic_resumable_coroutine_frame`
@@ -348,6 +348,15 @@ associated test folder:
     - check for cancellation
     - if not cancelled it does not even suspend
     - useful to allow cancellation in long running activities
+- `wait_any_two.h`
+  - `co_await async_wait_any_two(task1, task2)`
+    - NOT USED: written as a learning tool,
+      use `async_wait_any`, there is no good reason not to
+    - version of `async_wait_any` with simpler code avoding complexity for just two tasks
+      - no variadic arguments
+      - no need for tuple
+      - requires return type is the same for both tasks
+      - on completion, it does not indicate which of the two tasks completed (misses the index)
 - `wait_any_type_traits.h`
   - helper for the return type of `co_await async_wait_any(...)` (see below)
 - `wait_any.h`

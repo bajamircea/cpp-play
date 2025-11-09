@@ -14,7 +14,8 @@ namespace
 
   TEST(noop_chain_root_run)
   {
-    [[maybe_unused]] auto result = coro_st::run(coro_st::async_noop()).value();
+    auto run_result = coro_st::run(coro_st::async_noop());
+    ASSERT_TRUE(run_result.has_value());
   }
 
   TEST(noop_lambda_return_int)
