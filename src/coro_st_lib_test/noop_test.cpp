@@ -88,6 +88,9 @@ namespace
 
     ASSERT_TRUE(reached_noop);
 
+    ASSERT_FALSE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.timers_heap_.empty());
+    tl.run_pending_work();
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
 

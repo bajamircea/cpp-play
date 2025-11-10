@@ -62,14 +62,20 @@ namespace coro_st
             return parent_coro;
           }
 
-          // we're the first one in a chain in a .resume
-          // from either start_as_chain_root or from the run loop
+          // We're the first one in a chain in a .resume
+          // from either start_as_chain_root or from the run loop,
+          // so we could invoke instead of schedule.
+          // But MSVC 2022 still uses the coroutine frame for
+          // `return std::noop_coroutine();` (probably bug) 
+          // and if the cancellation or continuation deletes the coroutine frame
+          // (as in the case of the nursery), then we get "use after free".
+          // Hence schedule rather than invoke
           if (ctx_.get_stop_token().stop_requested())
           {
-            ctx_.invoke_cancellation();
+            ctx_.schedule_cancellation();
             return std::noop_coroutine();
           }
-          ctx_.invoke_continuation();
+          ctx_.schedule_continuation();
           return std::noop_coroutine();
         }
 

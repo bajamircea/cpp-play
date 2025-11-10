@@ -42,6 +42,7 @@ namespace cpp_util
       tail_ = other.tail_;
       other.head_ = nullptr;
       other.tail_ = nullptr;
+      return *this;
     }
 
     bool empty() const noexcept

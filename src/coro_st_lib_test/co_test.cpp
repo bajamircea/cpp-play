@@ -47,6 +47,9 @@ namespace
 
     awaiter.start_as_chain_root();
 
+    ASSERT_FALSE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.timers_heap_.empty());
+    tl.run_pending_work();
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
 

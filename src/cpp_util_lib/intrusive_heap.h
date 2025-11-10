@@ -53,6 +53,7 @@ namespace cpp_util
       size_ = other.size_;
       other.min_node_ = nullptr;
       other.size_ = 0;
+      return *this;
     }
 
     bool empty() const noexcept

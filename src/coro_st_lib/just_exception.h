@@ -26,7 +26,7 @@ namespace coro_st
       awaiter(const awaiter&) = delete;
       awaiter& operator=(const awaiter&) = delete;
 
-      [[nodiscard]] constexpr bool await_ready() const noexcept
+      [[nodiscard]] bool await_ready() const noexcept
       {
         if (ctx_.get_stop_token().stop_requested())
         {
