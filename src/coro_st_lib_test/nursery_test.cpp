@@ -42,6 +42,19 @@ namespace
     ASSERT_TRUE(run_result.has_value());
   }
 
+  TEST(nursery_lambda_trivial)
+  {
+    coro_st::nursery n;
+    auto async_initial_lambda = []() -> coro_st::co<void> {
+      co_return;
+    };
+    auto run_result = coro_st::run(
+      n.async_run(
+        async_initial_lambda()
+      ));
+    ASSERT_TRUE(run_result.has_value());
+  }
+
   TEST(nursery_lambda_and_stop)
   {
     int i = 0;
