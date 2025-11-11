@@ -1,10 +1,64 @@
+# Incorrect use of coroutine frame instead of the stack in `std::coroutine_handle<> await_suspend`.
 
-https://lewissbaker.github.io/2017/11/17/understanding-operator-co-await#synchronisation-free-async-code
+This branch contains info on reproducing an issue with the Microsoft C++ compiler.
 
-Raymond Chen's "The Old New Thing" blog: "C++ coroutines: The problem of the DispatcherQueue task that runs too soon, part 4"
+## Summary
+The problem occurs in `await_suspend` which returns a `std::coroutine_handle<>` (as opposed
+to returning `bool` for example).
+The problem is caused by the compiler storing local variables in the `await_suspend` function
+on the coroutine frame instead of the stack.
+
+
+## Notes on reproduction code
+
+The reproduction code in `src/repro_test/main.cpp` shows the problem if compiled with
+the Microsoft C++ compiler with the flags `/std:c++20 /fsanitize=address` (see below for sample
+outputs of the address sanitizer).
+
+The reproduction code pattern is:
+```cpp
+std::coroutine_handle<> await_suspend(std::coroutine_handle<>) noexcept
+{
+  // ... delete the coroutine frame here, which deletes this awaitable object.
+
+  // Then in the code for `return std::noop_coroutine()`, an assembly instruction like
+  // "mov rdx,qword ptr [rsp+0D8h]" incorrectly retrieves from the stack
+  // an address pointing to (now deallocated) coroutine frame.
+  // Compiling with the address sanitizer is used to detect a use after free violation.
+  return std::noop_coroutine();
+}
+```
+
+There are three examples in the reproduction code:
+- Example 1: repro in await_suspend returning a coroutine_handle
+- Example 2: repro in await_suspend of final_suspend returning a coroutine_handle
+- Example 3: shows that await_suspend returning bool behaves correctly
+
+## Impact
+
+There are genuine reasons why in `async_suspend` the continuation will be concurrent with
+`async_await`, this requires that once the the continuation has ben handed over, member
+variables of awaiter should not be used as the awaiter could be destroyed. For examples
+demonstrating the technique see:
+- Lewis Baker: "Synchronisation-free async code"
+  https://lewissbaker.github.io/2017/11/17/understanding-operator-co-await#synchronisation-free-async-code
+-  Raymond Chen's "The Old New Thing" blog: "C++ coroutines: The problem of the DispatcherQueue task that runs too soon, part 4"
 https://devblogs.microsoft.com/oldnewthing/20191226-00/?p=103268
 
-ASAN output from EXAMPLE 1
+Although the reproduction code deletes the coroutine frame here and returns
+`std::noop_coroutine()`, we also encountered the issue when the coroutine is resumed
+in parallel from another thread before `await_suspend` completes in the first thread.
+
+The bug requires workarounds such as:
+- don't use `await_suspend` which returns a `std::coroutine_handle<>`
+- restrict usage of coroutines to a single thread
+- defer continuation for a later time after `await_suspend` completes
+  (i.e. after the return of `resume()`)
+
+GCC and Clang do not encounter this issue.
+
+
+## ASAN output from EXAMPLE 1
 ```
 =================================================================
 ==10116==ERROR: AddressSanitizer: heap-use-after-free on address 0x113ec83a0088 at pc 0x7ff71739232b bp 0x000f59f3f490 sp 0x000f59f3f498
@@ -96,7 +150,7 @@ C:\Users\builder\Desktop\repro\x64\Debug\repro.exe (process 10116) exited with c
 Press any key to close this window . . .
 ```
 
-ASAN output from EXAMPLE 2
+## ASAN output from EXAMPLE 2
 ```
 =================================================================
 ==15328==ERROR: AddressSanitizer: heap-use-after-free on address 0x120b021a01f8 at pc 0x7ff75f1e203b bp 0x007d1a17f7c0 sp 0x007d1a17f7c8

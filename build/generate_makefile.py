@@ -6,7 +6,7 @@ def write_makefile(out):
     configs = ["debug", "release"]
 
     projects = [
-        ("coro_st_lib_test", []),
+        ("repro_test", []),
     ]
 
     out.write('''\
