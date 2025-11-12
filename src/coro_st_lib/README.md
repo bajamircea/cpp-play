@@ -224,10 +224,17 @@ The basic rules are somehow complex:
     for the `co::final_awaiter::await_suspend`.
   - to cancel: `schedule_cancellation` (to avoid stack growth; we're already in a
     `.resume()`)
+- To resume a coroutine outside `await_suspend` follow the rules of immediate vs.
+  scheduled that apply there. The equivalent of immediate is to call `.resume()`
+  on the coroutine handle. The equivalend of scheduled is `schedule_coroutine_resume`.
 - When in `start_as_chain_root`:
   - call `invoke_continuation` or `invoke_cancellation`, the parent does reference
     counting (usually some `pending_counter` named variable) to prevent uncontrolled
-    stack growth
+    stack growth.
+- When in the shared completion function e.g. wait_any `on_shared_continue()`
+  - This is not called if we have the wait_any `start_as_chain_root()` or
+    wait_any `await_suspend()` on the stack because the pending reference count prevents
+    it. We schedule there because we're possible inside some `.resume()`.
 - When in the `on_cancel` of `stop_cb_.emplace(ctx_.get_stop_token(), ...on_cancel)`:
   - call `schedule_cancellation` because `on_cancel` might be triggered at the point
     of `.emplace` e.g. in `await_suspend`
