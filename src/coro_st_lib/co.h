@@ -66,7 +66,7 @@ namespace coro_st
           // from either start_as_chain_root or from the run loop,
           // so we could invoke instead of schedule.
           // But MSVC 2022 still uses the coroutine frame for
-          // `return std::noop_coroutine();` (probably bug) 
+          // `return std::noop_coroutine();` (probably bug)
           // and if the cancellation or continuation deletes the coroutine frame
           // (as in the case of the nursery), then we get "use after free".
           // Hence schedule rather than invoke

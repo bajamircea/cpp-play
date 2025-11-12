@@ -30,11 +30,15 @@
 
 # What is this?
 
-Purely single threaded coroutine framework. Pure single threadness is quite
+It's a coroutine library for creating tasks that can suspend in `co_await` and inteleave
+with other tasks running.
+
+It is purely single threaded. Pure single threadness is quite
 a limitation to actual real usage. But it's useful:
 - as a learning tool (coroutine library code is complicated enough without
   adding multithreading to the mix)
 - as a benchmark against which threading support can be measured
+- as a starting point for other coroutine tasks libraries for speciffic cases.
 
 The threading model is:
 - single threaded (obviously)
@@ -65,6 +69,8 @@ prone).
 
 
 # Design choices
+
+## Structured concurency
 
 **We want to have structured concurrency** with (relatively) simple reasoning
 rules about work lifetimes.
@@ -112,22 +118,29 @@ then the remaining will be cancelled.
 Cancellation support is thus baked in thoughout.
 
 
-# Implementing a `co_await`able function that is not a coroutine
+## Implementing a `co_await`able function that is not a coroutine
 
-Coroutine are easy to create, but require a nominal heap allocation.
+Coroutines are easy to create (have a function that returns a
+`co<some type>` and uses `co_await` and/or `co_return` in the body),
+but require a nominal heap allocation.
+
 Things like `async_wait_any` are implemented low level, they
 are not a coroutine, they can avoid allocations. There is an
 advantage for the leaves of coroutine chains to not require
 allocations (especially if called in a loop). But they are
 harder to code.
 
-This framework uses a pattern where things that can be `co_await`ed are a `is_co_task` concept. Many of the methods in the implementation are `noexcept`.
+This framework uses a pattern where things that can be `co_await`ed are
+a `is_co_task` concept. ``async_wait_any` returns a task, but also `co` is a task.
+Many of the methods in the implementation are `noexcept`.
 
 - `is_co_task` concept for a type:
-  - which cannot be moved
+  - which cannot be moved (to avoid creation arguments getting out out scope
+    before `co_await`)
   - has a method `get_work() noexcept` returning a `is_co_work`
 - `is_co_work` concept for a type:
-  - which can be moved
+  - which can be moved (e.g. children tasks get transformed into work and moved
+    into the work type of the `wait_any_task`)
   - has a method `get_awaiter(context&)` returning a `is_co_awaiter`
     - `get_awaiter` is NOT noexcept
 - `is_co_awaiter` concept for a type:
@@ -137,6 +150,103 @@ This framework uses a pattern where things that can be `co_await`ed are a `is_co
     - `start_as_chain_root() noexcept` for when trampolined from outside a coroutine
     - `get_result_exception() noexcept` to check e.g. in `async_wait_all` if a child
       had an error (exception means error)
+
+
+## Sequence of calls on a task
+
+A task like the `sleep_task` can be run from a parent coroutine like:
+- `co_await async_sleep_for(10ms);`
+or from another parent that is not a coroutine:
+- `auto result run(async_sleep_for(10ms))` (the parent is run)
+- or `async_await_any(async_sleep_for(10ms), ...)` (the parent is `await_any`)
+
+In both cases `async_sleep_for(10ms)` returns a `sleep_task`
+
+When run from a coroutine, it goes through the following workflow:
+- `co::await_transform` takes the task by value and returns an awaiter:
+  `return task.get_work().get_awaiter(context);`
+  - the context is the context of the parent coroutine.
+- then `await_ready` is called on the awaiter
+- then if `await_ready` returned false `await_suspend` is called
+- in `await_suspend` the awaiter receives the parent coroutine
+- eventually it needs to resume the parent coroutine (for success i.e.
+  value or error) or call the cancellation callback from the parent_context,
+  exactly once and exactly one of the two callback
+- for success the parent coroutine will call `await_resume` on the awaiter
+  to get the result or to throw an exception (exceptions are expensive because
+  they keep on being caught and re-thrown).
+
+When run from parent that is not a coroutine e.g. `run`, :
+- the task is taken by value
+- an awaiter is obtained by the parent via a similar sequence
+  `auto awaiter = task.get_work().get_awaiter(context);`
+  - the context is the usually created by the parent (which is not a coroutine
+    here).
+- `awaiter.start_as_chain_root()` is called to start it (a parent coroutine is
+  not supplied)
+- eventually it needs call the completion callback (for success i.e.
+  value or error) or the cancellation callback from the `context`,
+  exactly once and exactly one of the two callback.
+- for value or exception the parent might call `get_result_exception()` to figure
+  out if there was an exception
+- then the parent might call `await_resume`
+
+NOTE: an awaiter can find out that it was cancelled by using the `stop_token` from the
+`context` that was used to create the awaiter in `get_awaiter`.
+
+## Why this sequence of calls?
+
+Long topic, short answer: it's a combination of the C++ coroutine model (`await_ready`,
+`await_suspend` and `await_resume` where the result is pulled) and the sender/receiver
+model (where the completion/cancellation methods are provided by the parent, the receiver).
+
+The continuation (e.g. context) is provided before `start_as_chain_root` to avoid races
+between attaching the continuation and the concurrent activity. That's similar to
+`connect` followed by `start` in the sender/receiver model.
+
+
+## Schedule vs immediate invocation of the completion
+
+To call the completion callback (for success i.e. value or error) or the cancellation
+callback the `context` provides the options to do that immediately or to schedule them
+soon on the `ready_queue`.
+
+Ideally we want them immediately, but we want to avoid stack overflows and need to work
+around Microsoft C++ current bugs.
+
+The stack overflows can be caused by being in a `.resume()` and calling another
+`.resume()` without using a technique like symmetric transfer or scheduling work for later.
+
+The basic rules are somehow complex:
+- When in `await_suspend`:
+  - if you want to choose to resume the parent coroutine: use the `bool` returning
+    version of `await_suspend` and return `false` to resume the parent. See below
+    for the `co::final_awaiter::await_suspend`.
+  - to cancel: `schedule_cancellation` (to avoid stack growth; we're already in a
+    `.resume()`)
+- When in `start_as_chain_root`:
+  - call `invoke_continuation` or `invoke_cancellation`, the parent does reference
+    counting (usually some `pending_counter` named variable) to prevent uncontrolled
+    stack growth
+- When in the `on_cancel` of `stop_cb_.emplace(ctx_.get_stop_token(), ...on_cancel)`:
+  - call `schedule_cancellation` because `on_cancel` might be triggered at the point
+    of `.emplace` e.g. in `await_suspend`
+- When in a function called from the run loop e.g. `on_timer` for the awaiter of
+  `async_sleep_for`:
+  - call `invoke_continuation` or `invoke_cancellation`, because we're at the root
+- In `co::final_awaiter::await_suspend` we call `schedule_completion` and
+  `schedule_cancellation` because:
+  - we have to `schedule_cancellation` anyway for when we have a parent coroutine,
+    reason is: we're already in a `.resume()`
+  - we need to work around a bug in Microsoft C++ compiler which impacts `await_suspend`
+    which returns a `coroutine_handle`
+  - the `final_awaiter` has to return a `coroutine_handle` (i.e. the symmetric transfer
+    style one) for when the parent was also a coroutine
+  - but the bug causes the coroutine frame to be used instead of the stack (this does
+    not seem to impact the versions of `await_suspend` that return `bool` or `void`)
+  - therefore we can't call `invoke_continuation` or `invoke_cancellation` because
+    they might destroy the coroutine frome (e.g. if this is a child of a nursery)
+  - therefore we call the `schedule_...` variations
 
 
 # Code description
