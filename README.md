@@ -37,7 +37,7 @@ There are three examples in the reproduction code:
 ## Impact
 
 There are genuine reasons why in `async_suspend` the continuation will be concurrent with
-`async_await`, this requires that once the the continuation has ben handed over, member
+`async_await`, this requires that once the the continuation has been handed over, member
 variables of awaiter should not be used as the awaiter could be destroyed. For examples
 demonstrating the technique see:
 - Lewis Baker: "Synchronisation-free async code"
