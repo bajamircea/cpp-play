@@ -226,7 +226,7 @@ The basic rules are somehow complex:
     `.resume()`)
 - To resume a coroutine outside `await_suspend` follow the rules of immediate vs.
   scheduled that apply there. The equivalent of immediate is to call `.resume()`
-  on the coroutine handle. The equivalend of scheduled is `schedule_coroutine_resume`.
+  on the coroutine handle. The equivalent of scheduled is `schedule_coroutine_resume`.
 - When in `start_as_chain_root`:
   - call `invoke_continuation` or `invoke_cancellation`, the parent does reference
     counting (usually some `pending_counter` named variable) to prevent uncontrolled
@@ -252,7 +252,7 @@ The basic rules are somehow complex:
   - but the bug causes the coroutine frame to be used instead of the stack (this does
     not seem to impact the versions of `await_suspend` that return `bool` or `void`)
   - therefore we can't call `invoke_continuation` or `invoke_cancellation` because
-    they might destroy the coroutine frome (e.g. if this is a child of a nursery)
+    they might destroy the coroutine from (e.g. if this is a child of a nursery)
   - therefore we call the `schedule_...` variations
 
 
