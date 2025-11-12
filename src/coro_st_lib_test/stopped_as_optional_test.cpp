@@ -139,12 +139,21 @@ namespace
     )), std::runtime_error, "Ups!");
   }
 
-  // // coro_st::co<void> async_stopped_as_optional_does_not_compile()
-  // // {
-  // //   auto x = coro_st::async_stopped_as_optional(
-  // //     coro_st::async_suspend_forever()
-  // //   );
-  // //   // use of deleted function
-  // //   co_await std::move(x);
-  // // }
+  // coro_st::co<void> async_stopped_as_optional_does_not_compile()
+  // {
+  //   auto x = coro_st::async_stopped_as_optional(
+  //     coro_st::async_suspend_forever()
+  //   );
+  //   // use of deleted function
+  //   co_await std::move(x);
+  // }
+
+  // coro_st::co<void> async_stopped_as_optional_does_not_compile2()
+  // {
+  //   // ignoring return value
+  //   coro_st::async_stopped_as_optional(
+  //     coro_st::async_suspend_forever()
+  //   );
+  //   co_return;
+  // }
 } // anonymous namespace

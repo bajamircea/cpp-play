@@ -8,17 +8,14 @@
 
 #include <cassert>
 #include <coroutine>
-#include <optional>
 
 namespace coro_st
 {
-  template<is_co_task CoTask>
-  class [[nodiscard]] stopped_as_optional_task
+  template<typename T, is_co_task CoTask>
+  class [[nodiscard]] cast_result_task
   {
     using CoWork = co_task_work_t<CoTask>;
     using CoAwaiter = co_task_awaiter_t<CoTask>;
-    using T = co_task_result_t<CoTask>;
-    using ResultType = std::optional<value_type_traits::value_type_t<T>>;
 
     class [[nodiscard]] awaiter
     {
@@ -78,7 +75,7 @@ namespace coro_st
           return true;
         }
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (result_state::has_stopped == result_state_)
         {
           parent_ctx_.schedule_cancellation();
           return true;
@@ -87,18 +84,12 @@ namespace coro_st
         return false;
       }
 
-      ResultType await_resume()
+      T await_resume()
       {
-        if (result_state::has_stopped == result_state_)
-        {
-          return std::nullopt;
-        }
-        assert(result_state::has_value_or_error == result_state_);
-
         if constexpr (std::is_same_v<void, T>)
         {
           co_awaiter_.await_resume();
-          return void_result{};
+          return;
         }
         else
         {
@@ -108,10 +99,6 @@ namespace coro_st
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        if (result_state::has_stopped == result_state_)
-        {
-          return {};
-        }
         return co_awaiter_.get_result_exception();
       }
 
@@ -126,7 +113,7 @@ namespace coro_st
           return;
         }
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (result_state::has_stopped == result_state_)
         {
           parent_ctx_.invoke_cancellation();
           return;
@@ -143,7 +130,7 @@ namespace coro_st
           return;
         }
 
-        if (parent_ctx_.get_stop_token().stop_requested())
+        if (result_state::has_stopped == result_state_)
         {
           parent_ctx_.schedule_cancellation();
           return;
@@ -169,11 +156,7 @@ namespace coro_st
 
       void on_task_cancel() noexcept
       {
-        if (!parent_ctx_.get_stop_token().stop_requested())
-        {
-          result_state_ = result_state::has_stopped;
-        }
-
+        result_state_ = result_state::has_stopped;
         on_shared_continue();
       }
     };
@@ -202,13 +185,13 @@ namespace coro_st
     work work_;
 
   public:
-    stopped_as_optional_task(CoTask& co_task) noexcept :
+    cast_result_task(CoTask& co_task) noexcept :
       work_{ co_task }
     {
     }
 
-    stopped_as_optional_task(const stopped_as_optional_task&) = delete;
-    stopped_as_optional_task& operator=(const stopped_as_optional_task&) = delete;
+    cast_result_task(const cast_result_task&) = delete;
+    cast_result_task& operator=(const cast_result_task&) = delete;
 
     [[nodiscard]] work get_work() noexcept
     {
@@ -216,10 +199,10 @@ namespace coro_st
     }
   };
 
-  template<is_co_task CoTask>
-  [[nodiscard]] stopped_as_optional_task<CoTask>
-    async_stopped_as_optional(CoTask co_task)
+  template<typename T, is_co_task CoTask>
+  [[nodiscard]] cast_result_task<T, CoTask>
+    async_cast_result(CoTask co_task)
   {
-    return stopped_as_optional_task<CoTask>{ co_task };
+    return cast_result_task<T, CoTask>{ co_task };
   }
 }
