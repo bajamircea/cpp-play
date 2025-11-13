@@ -13,7 +13,7 @@ on the coroutine frame instead of the stack.
 
 The reproduction code in `src/repro_test/main.cpp` shows the problem if compiled with
 the Microsoft C++ compiler with the flags `/std:c++20 /fsanitize=address` (see below for sample
-outputs of the address sanitizer).
+outputs of the address sanitizer when the executable is run).
 
 The reproduction code pattern is:
 ```cpp
@@ -28,6 +28,11 @@ std::coroutine_handle<> await_suspend(std::coroutine_handle<>) noexcept
   return std::noop_coroutine();
 }
 ```
+
+We also encountered the issue when the coroutine is resumed in parallel from another thread
+before `await_suspend` completes in the first thread. It's just that the technique of
+using ASAN to detect free after use is 100% reliable compared with trying to get the timing
+right in a multi-threaded case. 
 
 There are three examples in the reproduction code:
 - Example 1: repro in await_suspend returning a coroutine_handle
@@ -44,10 +49,6 @@ demonstrating the technique see:
   https://lewissbaker.github.io/2017/11/17/understanding-operator-co-await#synchronisation-free-async-code
 -  Raymond Chen's "The Old New Thing" blog: "C++ coroutines: The problem of the DispatcherQueue task that runs too soon, part 4"
 https://devblogs.microsoft.com/oldnewthing/20191226-00/?p=103268
-
-Although the reproduction code deletes the coroutine frame here and returns
-`std::noop_coroutine()`, we also encountered the issue when the coroutine is resumed
-in parallel from another thread before `await_suspend` completes in the first thread.
 
 The bug requires workarounds such as:
 - don't use `await_suspend` which returns a `std::coroutine_handle<>`
