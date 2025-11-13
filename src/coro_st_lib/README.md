@@ -235,6 +235,7 @@ The basic rules are somehow complex:
   - This is not called if we have the wait_any `start_as_chain_root()` or
     wait_any `await_suspend()` on the stack because the pending reference count prevents
     it. We schedule there because we're possible inside some `.resume()`.
+    TODO: is that right? can't we do immediate? e.g. how about inside the `async_cast`?
 - When in the `on_cancel` of `stop_cb_.emplace(ctx_.get_stop_token(), ...on_cancel)`:
   - call `schedule_cancellation` because `on_cancel` might be triggered at the point
     of `.emplace` e.g. in `await_suspend`
