@@ -31,3 +31,4 @@
 #include "stopped_as_optional.h"
 #include "just.h"
 #include "just_exception.h"
+#include "cast.h"

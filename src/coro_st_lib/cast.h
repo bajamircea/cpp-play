@@ -1,10 +1,8 @@
 #pragma once
 
-#include "callback.h"
 #include "context.h"
 #include "coro_type_traits.h"
 #include "stop_util.h"
-#include "value_type_traits.h"
 
 #include <cassert>
 #include <coroutine>
@@ -12,7 +10,7 @@
 namespace coro_st
 {
   template<typename T, is_co_task CoTask>
-  class [[nodiscard]] cast_result_task
+  class [[nodiscard]] cast_task
   {
     using CoWork = co_task_work_t<CoTask>;
     using CoAwaiter = co_task_awaiter_t<CoTask>;
@@ -185,13 +183,13 @@ namespace coro_st
     work work_;
 
   public:
-    cast_result_task(CoTask& co_task) noexcept :
+    cast_task(CoTask& co_task) noexcept :
       work_{ co_task }
     {
     }
 
-    cast_result_task(const cast_result_task&) = delete;
-    cast_result_task& operator=(const cast_result_task&) = delete;
+    cast_task(const cast_task&) = delete;
+    cast_task& operator=(const cast_task&) = delete;
 
     [[nodiscard]] work get_work() noexcept
     {
@@ -200,9 +198,9 @@ namespace coro_st
   };
 
   template<typename T, is_co_task CoTask>
-  [[nodiscard]] cast_result_task<T, CoTask>
-    async_cast_result(CoTask co_task)
+  [[nodiscard]] cast_task<T, CoTask>
+    async_cast(CoTask co_task)
   {
-    return cast_result_task<T, CoTask>{ co_task };
+    return cast_task<T, CoTask>{ co_task };
   }
 }

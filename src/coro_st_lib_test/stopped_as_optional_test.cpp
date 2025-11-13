@@ -65,7 +65,7 @@ namespace
     co_return 42;
   }
 
-  TEST(async_stopped_as_optional_int_has_value)
+  TEST(stopped_as_optional_int_has_value)
   {
     auto result = coro_st::run(coro_st::async_stopped_as_optional(
       async_some_int()
@@ -79,7 +79,7 @@ namespace
     co_return 42;
   }
 
-  TEST(async_stopped_as_optional_int_has_value_immediate)
+  TEST(stopped_as_optional_int_has_value_immediate)
   {
     auto result = coro_st::run(coro_st::async_stopped_as_optional(
       async_some_int_immediate()
@@ -94,7 +94,7 @@ namespace
     co_return 42;
   }
 
-  TEST(async_stopped_as_optional_int_nullopt)
+  TEST(stopped_as_optional_int_nullopt)
   {
     auto result = coro_st::run(coro_st::async_stopped_as_optional(
       async_some_int_stopped()
@@ -110,13 +110,13 @@ namespace
     co_return result;
   }
 
-  TEST(async_stopped_as_optional_inside_co)
+  TEST(stopped_as_optional_inside_co)
   {
     auto result = coro_st::run(async_some_stopped()).value();
     ASSERT_FALSE(result.has_value());
   }
 
-  TEST(async_stopped_as_optional_tree)
+  TEST(stopped_as_optional_tree)
   {
     auto result = coro_st::run(coro_st::async_stopped_as_optional(
       coro_st::async_wait_all(
@@ -127,7 +127,7 @@ namespace
     ASSERT_FALSE(result.has_value());
   }
 
-  TEST(async_stopped_as_optional_exception)
+  TEST(stopped_as_optional_exception)
   {
     auto async_lambda = []() -> coro_st::co<void> {
       throw std::runtime_error("Ups!");

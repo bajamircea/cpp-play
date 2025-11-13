@@ -609,17 +609,23 @@ associated test folder:
       - but be mindful of throwing, as exceptions are propagated, but it's very
         expensive
     - useful for testing with tasks that immediately produce an exception/error
-- `cast_result.h`
-  - `async_cast_result`
+- `cast.h`
+  - `async_cast`
     - useful to get a common type to use with `async_wait_any`, compensates
       for the design of `async_wait_any` that tries to avoid creating too many types
     - to e.g. convert to a `variant` or convert to `void` to ignore
 ```cpp
     using common_type = std::variant<int, std::string>;
     auto result = co_await coro_st::async_wait_any(
-      coro_st::async_cast_result<common_type>(async_some_c_str()),
-      coro_st::async_cast_result<common_type>(async_some_int()),
-      coro_st::async_cast_result<common_type>(async_some_str())
+      coro_st::async_cast<common_type>(async_some_c_str()),
+      coro_st::async_cast<common_type>(async_some_int()),
+      coro_st::async_cast<common_type>(async_some_str())
     );
     static_assert(std::is_same_v<common_type, result>);
 ```
+- `then.h`
+  - `async_then(task, fn)`
+    - applies function to the result of the task
+    - returns `void_result` if the fuction returns void
+    - if the function throws, the result converts to error/exception
+    - similar to the sender/receiver then 
