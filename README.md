@@ -2,6 +2,11 @@
 
 This branch contains info on reproducing an issue with the Microsoft C++ compiler.
 
+Reported here:
+https://developercommunity.visualstudio.com/t/Incorrect-use-of-coroutine-frame-instead/10999039
+
+Turns out it was fixed in Visual Studio 2026.
+
 ## Summary
 The problem occurs in `await_suspend` which returns a `std::coroutine_handle<>` (as opposed
 to returning `bool` for example).
