@@ -179,7 +179,7 @@ namespace coro_st
       wait_all_awaiter_chain_data_tuple_builder(const wait_all_awaiter_chain_data_tuple_builder&) = delete;
       wait_all_awaiter_chain_data_tuple_builder& operator=(const wait_all_awaiter_chain_data_tuple_builder&) = delete;
 
-      operator wait_all_awaiter_chain_data<CoWork>() const
+      operator wait_all_awaiter_chain_data<CoWork>() const noexcept
       {
         return {*shared_data_, *co_work_};
       }
