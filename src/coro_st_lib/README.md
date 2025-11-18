@@ -176,7 +176,7 @@ When run from a coroutine, it goes through the following workflow:
   to get the result or to throw an exception (exceptions are expensive because
   they keep on being caught and re-thrown).
 
-When run from parent that is not a coroutine e.g. `run`, :
+When run from parent that is not a coroutine e.g. `run`:
 - the task is taken by value
 - an awaiter is obtained by the parent via a similar sequence
   `auto awaiter = task.get_work().get_awaiter(context);`
