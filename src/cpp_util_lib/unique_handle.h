@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <utility>
 
 namespace cpp_util
@@ -54,7 +55,7 @@ namespace cpp_util
 
     template<typename Arg1, typename Arg2, typename ... Args>
       requires(std::is_nothrow_constructible_v<handle_type, Arg1, Arg2, Args...>)
-    unique_handle(Arg1 && arg1, Arg2 && arg2, Args && ... args) noexcept
+    unique_handle(Arg1&& arg1, Arg2&& arg2, Args&& ... args) noexcept
       :
       h_{ std::forward<Arg1>(arg1), std::forward<Arg2>(arg2), std::forward<Args>(args) ... }
     {
@@ -65,16 +66,16 @@ namespace cpp_util
       close_if_valid();
     }
 
-    unique_handle(const unique_handle &) = delete;
-    unique_handle & operator=(const unique_handle &) = delete;
+    unique_handle(const unique_handle&) = delete;
+    unique_handle& operator=(const unique_handle&) = delete;
 
-    unique_handle(unique_handle && other) noexcept :
+    unique_handle(unique_handle&& other) noexcept :
       h_{ std::move(other.h_) }
     {
       other.h_ = Traits::invalid_value();
     }
 
-    unique_handle & operator=(unique_handle && other) noexcept
+    unique_handle& operator=(unique_handle&& other) noexcept
     {
       handle_type tmp = std::move(other.h_);
       other.h_ = Traits::invalid_value();
@@ -84,16 +85,6 @@ namespace cpp_util
     }
 
     handle_type get() const noexcept
-    {
-      return h_;
-    }
-
-    handle_type * handle_pointer() noexcept
-    {
-      return &h_;
-    }
-
-    handle_type & ref() noexcept
     {
       return h_;
     }
@@ -132,6 +123,42 @@ namespace cpp_util
       {
         Traits::close_handle(h_);
       }
+    }
+
+  public:
+    class ptr_t
+    {
+      friend unique_handle;
+
+      handle_type& h_;
+
+      explicit ptr_t(handle_type& h) noexcept : h_{ h }
+      {
+      }
+    public:
+      ptr_t(const ptr_t&) = delete;
+      ptr_t& operator=(const ptr_t&) = delete;
+
+      operator handle_type*() const noexcept
+      {
+        return &h_;
+      }
+    };
+
+    [[nodiscard]] auto out_ptr() noexcept
+    {
+      if (is_valid())
+      {
+        Traits::close_handle(h_);
+        h_ = Traits::invalid_value();
+      }
+
+      return ptr_t(h_);
+    }
+
+    [[nodiscard]] auto in_out_ptr() noexcept
+    {
+      return ptr_t(h_);
     }
   };
 }

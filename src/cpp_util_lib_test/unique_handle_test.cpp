@@ -125,23 +125,30 @@ namespace
     ASSERT_TRUE(g_values_closed.empty());
   }
 
-  void some_init_api(int* ret)
+  void some_c_api(int* ret, int expected, int new_value)
   {
-    *ret = 42;
+    ASSERT_EQ(expected, *ret);
+    *ret = new_value;
   }
 
-  TEST(unique_handle_pointer)
+  TEST(unique_handle_out_ptr_inout_ptr)
   {
     g_values_closed.clear();
 
     {
       simple_test_handle x;
-      some_init_api(x.handle_pointer());
 
+      some_c_api(x.out_ptr(), -1, 42);
       ASSERT_EQ(42, x.get());
+
+      some_c_api(x.out_ptr(), -1, 43);
+      ASSERT_EQ(43, x.get());
+
+      some_c_api(x.in_out_ptr(), 43, 44);
+      ASSERT_EQ(44, x.get());
     }
 
-    ASSERT_EQ((std::vector{42}), g_values_closed);
+    ASSERT_EQ((std::vector{42, 44}), g_values_closed);
   }
 
   struct test_reinterpret_handle_traits
