@@ -131,7 +131,7 @@ allocations (especially if called in a loop). But they are
 harder to code.
 
 This framework uses a pattern where things that can be `co_await`ed are
-a `is_co_task` concept. ``async_wait_any` returns a task, but also `co` is a task.
+a `is_co_task` concept. `async_wait_any` returns a task, but also `co` is a task.
 Many of the methods in the implementation are `noexcept`.
 
 - `is_co_task` concept for a type:
