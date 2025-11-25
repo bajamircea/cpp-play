@@ -212,18 +212,23 @@ callback the `context` provides the options to do that immediately or to schedul
 soon on the `ready_queue`.
 
 Ideally we want them immediately, but we want to avoid stack overflows and need to work
-around Microsoft C++ current bugs.
+around Microsoft C++ bug(s).
+- [Incorrect use of coroutine frame instead of the stack in std::coroutine_handle<>
+  await_suspend](https://developercommunity.visualstudio.com/t/Incorrect-use-of-coroutine-frame-instead/10999039)
+  - this was fixed in Visual Studio 2026
 
-The stack overflows can be caused by being in a `.resume()` and calling another
+The stack overflows can be caused by being in a `.resume()` and calling eventually another
 `.resume()` without using a technique like symmetric transfer or scheduling work for later.
 
+TODO: revist the rules below, because it might be simpler: maybe all we need is to not call
+`.resume()` when we might already be in `.resume()` AND work around the Visual Studio bug.
 The basic rules are somehow complex:
 - When in `await_suspend`:
   - if you want to choose to resume the parent coroutine: use the `bool` returning
     version of `await_suspend` and return `false` to resume the parent. See below
     for the `co::final_awaiter::await_suspend`.
   - to cancel: `schedule_cancellation` (to avoid stack growth; we're already in a
-    `.resume()`)
+    `.resume()`) TODO: is that right?
 - To resume a coroutine outside `await_suspend` follow the rules of immediate vs.
   scheduled that apply there. The equivalent of immediate is to call `.resume()`
   on the coroutine handle. The equivalent of scheduled is `schedule_coroutine_resume`.
@@ -247,7 +252,8 @@ The basic rules are somehow complex:
   - we have to `schedule_cancellation` anyway for when we have a parent coroutine,
     reason is: we're already in a `.resume()`
   - we need to work around a bug in Microsoft C++ compiler which impacts `await_suspend`
-    which returns a `coroutine_handle`
+    which returns a `coroutine_handle` (the bug was fixed though in Visual Studio 2026)
+    TODO: revisit this if support for older versions is not required
   - the `final_awaiter` has to return a `coroutine_handle` (i.e. the symmetric transfer
     style one) for when the parent was also a coroutine
   - but the bug causes the coroutine frame to be used instead of the stack (this does
@@ -495,7 +501,7 @@ associated test folder:
         - if there is no common type, you need to arrange a common type e.g. by
           returning a `std::variant` of the individual types
     - if the parent is cancelled, `async_wait_any` cancels all it's children
-    - if a first completing child initiates a cancellation/stop then the 
+    - if a first completing child initiates a cancellation/stop then the
       cancellation is propagated to the parent
 - `wait_all.h`
   - `co_await async_wait_all(...)`
@@ -557,7 +563,7 @@ associated test folder:
       - from the initial task or other children start further
         children with `n.spawn_child(...)`
         - `spawn_child` uses a heap allocation to store the child
-          info for the lifetime of the child 
+          info for the lifetime of the child
         - the syntax is a bit weird on the style of `std::bind`
           rather than a normal call as in normal `co_await`s
         - use `std::ref` to avoid accidental copy of arguments
@@ -629,4 +635,4 @@ associated test folder:
     - applies function to the result of the task
     - returns `void_result` if the fuction returns void
     - if the function throws, the result converts to error/exception
-    - similar to the sender/receiver then 
+    - similar to the sender/receiver then

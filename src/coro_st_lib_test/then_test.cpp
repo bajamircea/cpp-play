@@ -140,7 +140,7 @@ namespace
 
   TEST(then_exception)
   {
-    ASSERT_THROW_WHAT(coro_st::run(async_some_then_exception()).value(),std::runtime_error, "Ups!");
+    ASSERT_THROW_WHAT(coro_st::run(async_some_then_exception()),std::runtime_error, "Ups!");
   }
 
   // coro_st::co<void> async_then_does_not_compile()

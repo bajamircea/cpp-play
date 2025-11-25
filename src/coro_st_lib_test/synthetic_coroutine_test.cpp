@@ -37,7 +37,7 @@ namespace
       void return_void() noexcept
       {
       }
-  
+
       void unhandled_exception() noexcept
       {
         std::terminate();

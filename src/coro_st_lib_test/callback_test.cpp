@@ -40,7 +40,7 @@ namespace
         called = true;
       }
     };
-    
+
     X x{ called };
 
     cb = coro_st::make_member_callback<&X::set_called>(&x);

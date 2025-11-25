@@ -23,7 +23,7 @@ namespace coro_st
         std::coroutine_handle<> parent_handle_;
         event& evt_;
         awaiter* next_waiting_{ nullptr };
-        awaiter* prev_waiting_{ nullptr };    
+        awaiter* prev_waiting_{ nullptr };
         std::optional<stop_callback<callback>> parent_stop_cb_;
 
       public:

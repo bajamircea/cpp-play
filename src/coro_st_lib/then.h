@@ -18,7 +18,7 @@ namespace coro_st
     using CoWork = co_task_work_t<CoTask>;
     using CoAwaiter = co_task_awaiter_t<CoTask>;
     using TaskResultType = co_task_result_t<CoTask>;
-    using FnResultType = 
+    using FnResultType =
       std::conditional_t<
           std::is_same_v<void, TaskResultType>,
           std::invoke_result<Fn>,
@@ -30,7 +30,7 @@ namespace coro_st
       static constexpr size_t g_none_result_type = 0;
       static constexpr size_t g_value_result_type = 1;
       static constexpr size_t g_error_result_type = 2;
-      static constexpr size_t g_stopped_result_type = 3; 
+      static constexpr size_t g_stopped_result_type = 3;
 
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;

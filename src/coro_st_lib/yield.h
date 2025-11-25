@@ -49,7 +49,7 @@ namespace coro_st
       void start_as_chain_root() noexcept
       {
         // unusually we don't invoke, we schedule instead
-        // that's the nature of yield 
+        // that's the nature of yield
         if (ctx_.get_stop_token().stop_requested())
         {
           ctx_.schedule_cancellation();

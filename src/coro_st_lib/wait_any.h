@@ -32,7 +32,7 @@ namespace coro_st
     static constexpr size_t g_none_result_type = 0;
     static constexpr size_t g_value_result_type = 1;
     static constexpr size_t g_error_result_type = 2;
-    static constexpr size_t g_stopped_result_type = 3; 
+    static constexpr size_t g_stopped_result_type = 3;
 
     template<typename T>
     struct wait_any_awaiter_shared_data
