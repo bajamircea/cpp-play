@@ -331,7 +331,7 @@ using unique_coroutine_handle = cpp_util::unique_handle<unique_coroutine_handle_
 
 - Shows usage where a templated version is used for `::WTSFreeMemory`.
   Similar cases exist for `LocalFree` (also shown below), `CoTaskMemFree` etc.
-- It also shows a case where the `handle_pointer()` method is used
+- It also shows a case where the `out_ptr()` method is used
   for API that takes a pointer to the handle, albeit a complex one
   where a `reinterpret_cast` is also used. For a simpler case see
   `RegOpenKeyExW`.
@@ -353,7 +353,7 @@ wts_free_memory_raii<T> query_session_information(DWORD sessionId, WTS_INFO_CLAS
   DWORD bytesReturned = 0;
   BOOL result = ::WTSQuerySessionInformationW(
     WTS_CURRENT_SERVER_HANDLE, sessionId, wtsInfoClass,
-    reinterpret_cast<LPWSTR>(return_value.handle_pointer()),
+    reinterpret_cast<LPWSTR>(return_value.out_ptr()),
     &bytesReturned);
   error::throw_if_false_getlasterror(result, "WTSQuerySessionInformation");
 

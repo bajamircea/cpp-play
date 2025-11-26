@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+#include <type_traits>
 #include <utility>
 
 namespace cpp_util
@@ -54,7 +56,7 @@ namespace cpp_util
 
     template<typename Arg1, typename Arg2, typename ... Args>
       requires(std::is_nothrow_constructible_v<handle_type, Arg1, Arg2, Args...>)
-    unique_handle(Arg1 && arg1, Arg2 && arg2, Args && ... args) noexcept
+    unique_handle(Arg1&& arg1, Arg2&& arg2, Args&& ... args) noexcept
       :
       h_{ std::forward<Arg1>(arg1), std::forward<Arg2>(arg2), std::forward<Args>(args) ... }
     {
@@ -65,16 +67,16 @@ namespace cpp_util
       close_if_valid();
     }
 
-    unique_handle(const unique_handle &) = delete;
-    unique_handle & operator=(const unique_handle &) = delete;
+    unique_handle(const unique_handle&) = delete;
+    unique_handle& operator=(const unique_handle&) = delete;
 
-    unique_handle(unique_handle && other) noexcept :
+    unique_handle(unique_handle&& other) noexcept :
       h_{ std::move(other.h_) }
     {
       other.h_ = Traits::invalid_value();
     }
 
-    unique_handle & operator=(unique_handle && other) noexcept
+    unique_handle& operator=(unique_handle&& other) noexcept
     {
       handle_type tmp = std::move(other.h_);
       other.h_ = Traits::invalid_value();
@@ -88,12 +90,18 @@ namespace cpp_util
       return h_;
     }
 
-    handle_type * handle_pointer() noexcept
+    handle_type* out_ptr() noexcept
+    {
+      reset();
+      return &h_;
+    }
+
+    handle_type* inout_ptr() noexcept
     {
       return &h_;
     }
 
-    handle_type & ref() noexcept
+    handle_type& inout_ref() noexcept
     {
       return h_;
     }
