@@ -6,6 +6,7 @@
 
 #include <coroutine>
 #include <optional>
+#include <utility>
 
 namespace coro_st
 {
@@ -37,6 +38,7 @@ namespace coro_st
 
       constexpr void await_resume() const noexcept
       {
+        std::unreachable();
       }
 
       std::exception_ptr get_result_exception() const noexcept
