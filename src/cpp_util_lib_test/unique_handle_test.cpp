@@ -66,7 +66,7 @@ namespace
     return true;
   }
 
-  struct simple_test_handle_traits
+  struct simple_test_handle_traits : cpp_util::unique_handle_inout_and_out_ptr_access
   {
     using handle_type = int;
     static constexpr auto invalid_value() noexcept { return -1; }
@@ -103,7 +103,7 @@ namespace
       ASSERT_FALSE(z);
     }
 
-    std::vector<action> expected = {{"close", 1}, {"close", 0}};
+    std::vector<action> expected = {{"close", 1}, {"close", 0},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -121,7 +121,7 @@ namespace
       ASSERT_EQ(0, y.get());
     }
 
-    std::vector<action> expected = {{"close", 0}};
+    std::vector<action> expected = {{"close", 0},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -140,7 +140,7 @@ namespace
       ASSERT_EQ(0, y.get());
     }
 
-    std::vector<action> expected = {{"close", 0}};
+    std::vector<action> expected = {{"close", 0},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -152,12 +152,12 @@ namespace
       simple_test_handle x(0);
       x.reset(1);
 
-      std::vector<action> before_scope_exit = {{"close", 0}};
+      std::vector<action> before_scope_exit = {{"close", 0},};
       ASSERT_EQ(before_scope_exit, g_actions);
       ASSERT_EQ(1, x.get());
     }
 
-    std::vector<action> expected = {{"close", 0}, {"close", 1}};
+    std::vector<action> expected = {{"close", 0}, {"close", 1},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -184,12 +184,12 @@ namespace
       simple_test_handle x;
       ASSERT_TRUE(c_api_out_ptr(-1, 42, x.out_ptr()));
 
-      std::vector<action> before_scope_exit = {{"out", 42}};
+      std::vector<action> before_scope_exit = {{"out", 42},};
       ASSERT_EQ(before_scope_exit, g_actions);
       ASSERT_EQ(42, x.get());
     }
 
-    std::vector<action> expected = {{"out", 42}, {"close", 42}};
+    std::vector<action> expected = {{"out", 42}, {"close", 42},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -201,12 +201,12 @@ namespace
       simple_test_handle x(43);
       ASSERT_TRUE(c_api_out_ptr(-1, 42, x.out_ptr()));
 
-      std::vector<action> before_scope_exit = {{"close", 43}, {"out", 42}};
+      std::vector<action> before_scope_exit = {{"close", 43}, {"out", 42},};
       ASSERT_EQ(before_scope_exit, g_actions);
       ASSERT_EQ(42, x.get());
     }
 
-    std::vector<action> expected = {{"close", 43}, {"out", 42}, {"close", 42}};
+    std::vector<action> expected = {{"close", 43}, {"out", 42}, {"close", 42},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -218,13 +218,13 @@ namespace
       simple_test_handle x(43);
       ASSERT_FALSE(c_api_out_ptr(-1, 100, x.out_ptr()));
 
-      std::vector<action> before_scope_exit = {{"close", 43}};
+      std::vector<action> before_scope_exit = {{"close", 43},};
       ASSERT_EQ(before_scope_exit, g_actions);
       ASSERT_EQ(-1, x.get());
       ASSERT_FALSE(x.is_valid());
     }
 
-    std::vector<action> expected = {{"close", 43}};
+    std::vector<action> expected = {{"close", 43},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -239,7 +239,7 @@ namespace
       // live too long and go throgh the `else` branch
       if(c_api_out_ptr(-1, 42, x.out_ptr()) && x.is_valid())
       {
-        std::vector<action> before_scope_exit = {{"out", 42}};
+        std::vector<action> before_scope_exit = {{"out", 42},};
         ASSERT_EQ(before_scope_exit, g_actions);
         ASSERT_EQ(42, x.get());
       }
@@ -249,7 +249,7 @@ namespace
       }
     }
 
-    std::vector<action> expected = {{"out", 42}, {"close", 42}};
+    std::vector<action> expected = {{"out", 42}, {"close", 42},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -261,12 +261,12 @@ namespace
       simple_test_handle x;
       ASSERT_TRUE(c_api_inout_ptr(-1, 42, x.inout_ptr()));
 
-      std::vector<action> before_scope_exit = {{"inout(in)", -1}, {"inout(out)", 42}};
+      std::vector<action> before_scope_exit = {{"inout(in)", -1}, {"inout(out)", 42},};
       ASSERT_EQ(before_scope_exit, g_actions);
       ASSERT_EQ(42, x.get());
     }
 
-    std::vector<action> expected = {{"inout(in)", -1}, {"inout(out)", 42}, {"close", 42}};
+    std::vector<action> expected = {{"inout(in)", -1}, {"inout(out)", 42}, {"close", 42},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -278,12 +278,12 @@ namespace
       simple_test_handle x(43);
       ASSERT_TRUE(c_api_inout_ptr(43, 42, x.inout_ptr()));
 
-      std::vector<action> before_scope_exit = {{"inout(in)", 43}, {"inout(out)", 42}};
+      std::vector<action> before_scope_exit = {{"inout(in)", 43}, {"inout(out)", 42},};
       ASSERT_EQ(before_scope_exit, g_actions);
       ASSERT_EQ(42, x.get());
     }
 
-    std::vector<action> expected = {{"inout(in)", 43}, {"inout(out)", 42}, {"close", 42}};
+    std::vector<action> expected = {{"inout(in)", 43}, {"inout(out)", 42}, {"close", 42},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -300,7 +300,7 @@ namespace
       ASSERT_EQ(43, x.get());
     }
 
-    std::vector<action> expected = {{"close", 43}};
+    std::vector<action> expected = {{"close", 43},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -315,7 +315,7 @@ namespace
       // live too long and go throgh the `else` branch
       if(c_api_inout_ptr(-1, 42, x.inout_ptr()) && x.is_valid())
       {
-        std::vector<action> before_scope_exit = {{"inout(in)", -1}, {"inout(out)", 42}};
+        std::vector<action> before_scope_exit = {{"inout(in)", -1}, {"inout(out)", 42},};
         ASSERT_EQ(before_scope_exit, g_actions);
         ASSERT_EQ(42, x.get());
       }
@@ -325,7 +325,7 @@ namespace
       }
     }
 
-    std::vector<action> expected = {{"inout(in)", -1}, {"inout(out)", 42}, {"close", 42}};
+    std::vector<action> expected = {{"inout(in)", -1}, {"inout(out)", 42}, {"close", 42},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -337,7 +337,7 @@ namespace
     ASSERT_EQ(x.inout_ptr(), &x.inout_ref());
   }
 
-  struct test_reinterpret_handle_traits
+  struct test_reinterpret_handle_traits :  cpp_util::unique_handle_out_ptr_access
   {
     using handle_type = void *;
     // not using constexpr for invalid_value()
@@ -363,11 +363,11 @@ namespace
       test_reinterpret_handle x(nullptr);
     }
 
-    std::vector<action> expected = {{"close void*", 42}};
+    std::vector<action> expected = {{"close void*", 42},};
     ASSERT_EQ(expected, g_actions);
   }
 
-  struct test_reinterpret_handle_is_valid_traits
+  struct test_reinterpret_handle_is_valid_traits : cpp_util::unique_handle_out_ptr_access
   {
     using handle_type = void *;
     // not using constexpr for invalid_value() or is_valid()
@@ -400,11 +400,11 @@ namespace
       test_reinterpret_handle_is_valid x(reinterpret_cast<void *>(100));
     }
 
-    std::vector<action> expected = {{"close void*", 43}};
+    std::vector<action> expected = {{"close void*", 43},};
     ASSERT_EQ(expected, g_actions);
   }
 
-  struct test_bool_handle_traits
+  struct test_bool_handle_traits : cpp_util::unique_handle_basic_access
   {
     using handle_type = bool;
     static constexpr auto invalid_value() noexcept { return false; }
@@ -423,7 +423,7 @@ namespace
       test_bool_handle x(true);
     }
 
-    std::vector<action> expected = {{"close bool", 1}};
+    std::vector<action> expected = {{"close bool", 1},};
     ASSERT_EQ(expected, g_actions);
   }
 
@@ -431,7 +431,7 @@ namespace
     off,
     on
   };
-  struct test_enum_handle_traits
+  struct test_enum_handle_traits : cpp_util::unique_handle_basic_access
   {
     using handle_type = test_cleanup_action;
     static constexpr auto invalid_value() noexcept { return test_cleanup_action::off; }
@@ -450,11 +450,11 @@ namespace
       test_enum_handle x(test_cleanup_action::on);
     }
 
-    std::vector<action> expected = {{"close enum", 1}};
+    std::vector<action> expected = {{"close enum", 1},};
     ASSERT_EQ(expected, g_actions);
   }
 
-  struct test_bool_data_handle_traits
+  struct test_bool_data_handle_traits : cpp_util::unique_handle_basic_access
   {
     struct handle_type {
       int data;
@@ -482,8 +482,116 @@ namespace
       test_bool_data_handle x(45, true);
     }
 
-    std::vector<action> expected = {{"close data", 45}};
+    std::vector<action> expected = {{"close data", 45},};
     ASSERT_EQ(expected, g_actions);
   }
 
+  struct some_c_struct
+  {
+    int lots;
+    int of;
+    int data;
+  };
+
+  bool c_api_some_c_struct_out_ptr(
+    int in_lots_expected, int out_lots_value,
+    int in_of_expected, int out_of_value,
+    int in_data_expected, int out_data_value,
+    some_c_struct* out)
+  {
+    if (nullptr == out)
+    {
+      return false;
+    }
+    ASSERT_EQ(in_lots_expected, out->lots);
+    ASSERT_EQ(in_of_expected, out->of);
+    ASSERT_EQ(in_data_expected, out->data);
+
+    if (out_lots_value == 100)
+    {
+      // simulate error
+      return false;
+    }
+    g_actions.push_back({ "out c_struct",
+      out_lots_value + out_of_value + out_data_value });
+    out->lots = out_lots_value;
+    out->of = out_of_value;
+    out->data = out_data_value;
+    return true;
+  }
+
+  struct test_c_struct_data_handle_traits :  cpp_util::unique_handle_out_ptr_access
+  {
+    using handle_type = some_c_struct;
+    static constexpr auto invalid_value() noexcept
+    {
+      return handle_type{};
+    }
+    static bool is_valid(const handle_type& h) noexcept
+    {
+      return (0!= h.lots) || (0 != h.of);
+    }
+    static void close_handle(const handle_type& h) noexcept
+    {
+      g_actions.push_back({"close c_struct", h.lots + h.of});
+    }
+  };
+  // assert custom is_valid works
+  static_assert(cpp_util::unique_handle_custom_is_valid_traits<test_c_struct_data_handle_traits>);
+  using test_c_struct_data_handle = cpp_util::unique_handle<test_c_struct_data_handle_traits>;
+
+  TEST(unique_handle_c_struct_data_trivial)
+  {
+    g_actions.clear();
+
+    {
+      test_c_struct_data_handle x;
+
+      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 40, 0, 2, 0, 1, x.out_ptr()));
+    }
+
+    std::vector<action> expected = {{"out c_struct", 43}, {"close c_struct", 42},};
+    ASSERT_EQ(expected, g_actions);
+  }
+
+  TEST(unique_handle_c_struct_data_already_has_value)
+  {
+    g_actions.clear();
+
+    {
+      test_c_struct_data_handle x;
+
+      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 40, 0, 2, 0, 1, x.out_ptr()));
+      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 30, 0, 2, 0, 1, x.out_ptr()));
+    }
+
+    std::vector<action> expected = {
+      {"out c_struct", 43}, {"close c_struct", 42},
+      {"out c_struct", 33}, {"close c_struct", 32},
+    };
+    ASSERT_EQ(expected, g_actions);
+  }
+
+
+  TEST(unique_handle_c_struct_data_already_has_value_and_fail)
+  {
+    g_actions.clear();
+
+    {
+      test_c_struct_data_handle x;
+
+      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 40, 0, 2, 0, 1, x.out_ptr()));
+      ASSERT_FALSE(c_api_some_c_struct_out_ptr(0, 100, 0, 0, 0, 0, x.out_ptr()));
+
+      std::vector<action> before_scope_exit = {
+        {"out c_struct", 43}, {"close c_struct", 42},
+      };
+      ASSERT_EQ(before_scope_exit, g_actions);
+    }
+
+    std::vector<action> expected = {
+      {"out c_struct", 43}, {"close c_struct", 42},
+    };
+    ASSERT_EQ(expected, g_actions);
+  }
 } // anonymous namespace

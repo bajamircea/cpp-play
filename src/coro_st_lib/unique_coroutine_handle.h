@@ -7,7 +7,7 @@
 namespace coro_st
 {
   template<typename Promise>
-  struct unique_coroutine_handle_traits
+  struct unique_coroutine_handle_traits : cpp_util::unique_handle_basic_access
   {
     using handle_type = std::coroutine_handle<Promise>;
     static constexpr auto invalid_value() noexcept { return nullptr; }

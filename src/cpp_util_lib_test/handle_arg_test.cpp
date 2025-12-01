@@ -8,7 +8,7 @@ namespace
 {
   std::vector<int> g_values_used;
 
-  struct test_handle_traits
+  struct test_handle_traits : cpp_util::unique_handle_out_ptr_access
   {
     using handle_type = int;
     static constexpr auto invalid_value() noexcept { return -1; }
@@ -37,7 +37,7 @@ namespace
   }
 
   template<typename T>
-  struct test_handle_template_traits
+  struct test_handle_template_traits : cpp_util::unique_handle_out_ptr_access
   {
     using handle_type = T;
     static constexpr auto invalid_value() noexcept { return -1; }

@@ -4,29 +4,56 @@
 #include <type_traits>
 #include <utility>
 
+/*
+Basic usage (for more info see unique_handle.md):
+
+struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
+{
+  using handle_type = FILE*;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(std::fclose(h));
+  }
+};
+using file_handle = cpp_util::unique_handle<file_handle_traits>;
+*/
+
 namespace cpp_util
 {
-  // see unique_handle.md
+  struct unique_handle_basic_access {};
+  struct unique_handle_out_ptr_access : unique_handle_basic_access {};
+  struct unique_handle_inout_and_out_ptr_access : unique_handle_out_ptr_access {};
+
+  namespace detail
+  {
+    template<typename Traits>
+    concept trait_custom_is_valid = requires(const typename Traits::handle_type const_h)
+    {
+      { Traits::is_valid(const_h) } noexcept -> std::convertible_to<bool>;
+    };
+  }
 
   template<typename Traits>
-  concept unique_handle_traits = requires(
-    typename Traits::handle_type h, const typename Traits::handle_type ch)
-  {
-    { Traits::invalid_value() } noexcept;
-    { typename Traits::handle_type(Traits::invalid_value()) } noexcept;
-    { h = Traits::invalid_value() } noexcept;
-    { Traits::close_handle(ch) } noexcept;
-    { typename Traits::handle_type(std::move(h)) } noexcept;
-    { typename Traits::handle_type(ch) } noexcept;
-  };
+  concept unique_handle_traits =
+    std::derived_from<Traits, unique_handle_basic_access> &&
+    requires(
+      typename Traits::handle_type h, const typename Traits::handle_type const_h)
+    {
+      requires std::is_nothrow_copy_constructible_v<typename Traits::handle_type>;
+      requires std::is_nothrow_move_constructible_v<typename Traits::handle_type>;
+      { Traits::invalid_value() } noexcept;
+      { typename Traits::handle_type(Traits::invalid_value()) } noexcept;
+      { h = Traits::invalid_value() } noexcept;
+      { Traits::close_handle(h) } noexcept;
+    };
 
   template<typename Traits>
   concept unique_handle_custom_is_valid_traits =
     unique_handle_traits<Traits> &&
-    requires(const typename Traits::handle_type ch)
-  {
-    { Traits::is_valid(ch) } noexcept -> std::convertible_to<bool>;
-  };
+    requires(const typename Traits::handle_type const_h)
+    {
+      { Traits::is_valid(const_h) } noexcept -> std::convertible_to<bool>;
+    };
 
   template<unique_handle_traits Traits>
   class [[nodiscard]] unique_handle
@@ -91,17 +118,20 @@ namespace cpp_util
     }
 
     handle_type* out_ptr() noexcept
+      requires std::derived_from<Traits, unique_handle_out_ptr_access>
     {
       reset();
       return &h_;
     }
 
     handle_type* inout_ptr() noexcept
+      requires std::derived_from<Traits, unique_handle_inout_and_out_ptr_access>
     {
       return &h_;
     }
 
     handle_type& inout_ref() noexcept
+      requires std::derived_from<Traits, unique_handle_inout_and_out_ptr_access>
     {
       return h_;
     }
@@ -109,9 +139,17 @@ namespace cpp_util
     bool is_valid() const noexcept
     {
       if constexpr (unique_handle_custom_is_valid_traits<Traits>)
+      {
         return Traits::is_valid(h_);
+      }
       else
+      {
+        static_assert(requires(handle_type h){
+          { h == Traits::invalid_value() } noexcept;
+          { h != Traits::invalid_value() } noexcept;
+        });
         return h_ != Traits::invalid_value();
+      }
     }
 
     explicit operator bool() const noexcept

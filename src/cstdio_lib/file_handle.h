@@ -7,7 +7,7 @@
 
 namespace cstdio
 {
-  struct file_handle_traits
+  struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
   {
     using handle_type = FILE *;
     static constexpr auto invalid_value() noexcept { return nullptr; }
