@@ -1274,6 +1274,12 @@ and `.out_ptr()`:
 - `.inout_ref()` for effective access avoiding the copy via `.get()`
   - that's really a renamed `.ref()`
 
+The asymmetry that there is a `.inout_ref()`, but no `.out_ref()` is because while there are
+very few cases where you might want a reference (e.g. when the "handle" is a struct, to
+avoid copying the struct), I've not encountered a case where you want to `.reset()` before
+access, usually the `.reset()` did happen when the handle was initialized via a `out_ptr`
+C API.
+
 
 ## Micro design decissions
 
