@@ -1295,7 +1295,10 @@ bool foo(const char* file_name, const char* mode)
 ```
 The particular C version above avoids testing `file` before closing, it only tested
 the `result` and assumes that the `file` is not `nullptr`. It might gain something
-out of that, though it's playing with fire.
+out of that, though it's playing with fire. NOTE: this is a trick similar to the
+one used in linear find value with sentinel equal to the value where the loop only
+has to test for the sentinel, not for the end, compared with the `std::find` that
+needs to test for end and value in the loop.
 
 Performance-wise the `unique_ptr` C++ version tests the `FILE*` in addition to the
 `result` and requires the compiler to optmise out the move operations.
