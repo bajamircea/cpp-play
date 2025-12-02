@@ -1139,56 +1139,6 @@ are similarities:
 </table>
 
 
-## Why use handle_arg, why not use raw handles?
-
-In the example above we had
-```cpp
-service_handle open_service(
-  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
-```
-
-It creates a barrier when we want to distinguish between the `SC_HANDLE`
-returned from `OpenSCManagerW` and the one returned by `OpenServiceW`.
-The barrier is permeable as the `service_manager_arg` can also be constructed
-with a raw `SC_HANDLE` that we can obtain by calling `get()` on a `service_handle`,
-but it is still a barrier.
-
-
-## Comparison (equality in particular) and std::hash
-
-`std::unique_ptr` implements equality, but it does not make sense. The
-only instances that are equal have a `nullptr` value. The values that are
-not `nullptr` better be unique. Another smell is that a equality is
-linked to copy (a copy should be equal to the original), but `std::unique_ptr`
-is not copyable.
-
-`unique_handle` is in a similar situation. I did not implement equality,
-comparison or `std::hash`.
-
-
-## swap
-Did not yet have to implement, could be, if needed.
-
-
-## Design of constraints in unique_handle_traits
-
-```cpp
-  template<unique_handle_traits Traits>
-  class [[nodiscard]] unique_handle
-```
-
-`unique_handle_traits` is a concept that tries to enforce requirements on
-`unique_handle` trait types e.g. to ensure that `close_handle` is a `noexcept`
-function (because it's called from the destructor of `unique_handle`) or
-that the `handle_type` is constructible without exceptions (this is
-what `get` does)
-
-There is an additional `unique_handle_custom_is_valid_traits` that can be
-used via a `static_assert` to check that `is_valid` is provided correctly
-by the traits class: this was a compromise to avoid duplicating `unique_handle`
-for that scenario.
-
-
 ## `.ref()`, `.ptr()`, `.out_ptr()` etc. 
 
 The predecesor of `unique_handle`, `raii_with_invalid_value` provided
@@ -1274,11 +1224,141 @@ and `.out_ptr()`:
 - `.inout_ref()` for effective access avoiding the copy via `.get()`
   - that's really a renamed `.ref()`
 
+
+## Why no `.out_ref()`?
+
 The asymmetry that there is a `.inout_ref()`, but no `.out_ref()` is because while there are
 very few cases where you might want a reference (e.g. when the "handle" is a struct, to
 avoid copying the struct), I've not encountered a case where you want to `.reset()` before
 access, usually the `.reset()` did happen when the handle was initialized via a `out_ptr`
 C API.
+
+
+## Performance of `.out_ptr()` vs direct pointer access
+
+How does using `.out_ptr()` like this:
+```cpp
+file_handle open_file(const char* file_name, const char* mode)
+{
+  file_handle return_value;
+  auto result = std::fopen_s(return_value.out_ptr(), file_name, mode);
+  if (0 != result)
+  {
+    throw std::runtime_error("fopen_s failed");
+  }
+  return return_value;
+}
+```
+compares with just using the pointer:
+```cpp
+file_handle open_file(const char* file_name, const char* mode)
+{
+  file_handle return_value;
+  auto result = std::fopen_s(return_value.ptr(), file_name, mode);
+  if (0 != result)
+  {
+    throw std::runtime_error("fopen_s failed");
+  }
+  return return_value;
+}
+```
+The difference is that `.out_ptr()` unnecessaryly re-assigns the
+`invalid_value()` to the handle inside the `unique_handle`, to
+one that the default constructor already assigned the `invalid_value()`.
+
+As far as I could see, using the compiler explorer at https://godbolt.org/,
+this re-assignment is optimised out by the compiler in `/O2`/release
+builds.
+
+But if this is your concern, you can use `.inout_ptr()`, which is just
+`.ptr()` really. We have `.out_ptr()` to address the concern of those
+worried that the handle might not be set to `invalid_value()` before
+calling the C API.
+
+## Performance of `unique_handle` vs C
+
+How does it compare with the C alternative:
+```c
+bool foo(const char* file_name, const char* mode)
+{
+  FILE* file;
+  errno_t result;
+  result = fopen_s(&file, file_name, mode);
+  if (0 != result)
+  {
+    return false;
+  }
+
+  fclose(file);
+  return true;
+}
+```
+The particular C version above avoids testing `file` before closing, it only tested
+the `result` and assumes that the `file` is not `nullptr`. It might gain something
+out of that, though it's playing with fire.
+
+Performance-wise the `unique_ptr` C++ version tests the `FILE*` in addition to the
+`result` and requires the compiler to optmise out the move operations.
+
+The advantages of the `unique_ptr` C++ version are that it:
+- allows reuse: you only need to wrap `fopen_s` once in your application
+- prevents coding errors where the file is not closed on some return branch
+
+
+## Why use handle_arg, why not use raw handles?
+
+In the example above we had
+```cpp
+service_handle open_service(
+  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
+```
+
+It creates a barrier when we want to distinguish between the `SC_HANDLE`
+returned from `OpenSCManagerW` and the one returned by `OpenServiceW`.
+The barrier is permeable as the `service_manager_arg` can also be constructed
+with a raw `SC_HANDLE` that we can obtain by calling `get()` on a `service_handle`,
+but it is still a barrier.
+
+
+## Comparison (equality in particular) and std::hash
+
+`std::unique_ptr` implements equality, but it does not make sense. The
+only instances that are equal have a `nullptr` value. The values that are
+not `nullptr` better be unique. Another smell is that a equality is
+linked to copy (a copy should be equal to the original), but `std::unique_ptr`
+is not copyable.
+
+`unique_handle` is in a similar situation. I did not implement equality,
+comparison or `std::hash`.
+
+There is potentially the case where one would want to implement a C API
+in C++ and provide handles via that C API, and needs order or hash to
+efficiently search for opened handles in some data structure. Well,
+`unique_handle` was not designed for that, it was designed for using
+C APIs that deal with handles rather than implementing them.
+
+
+## swap
+Did not yet have to implement, could be, if needed.
+
+
+## Design of constraints in unique_handle_traits
+
+```cpp
+  template<unique_handle_traits Traits>
+  class [[nodiscard]] unique_handle
+```
+
+`unique_handle_traits` is a concept that tries to enforce requirements on
+`unique_handle` trait types e.g. to ensure that `close_handle` is a `noexcept`
+function (because it's called from the destructor of `unique_handle`) or
+that the `handle_type` is constructible without exceptions (this is
+what `get` does)
+
+There is an additional `unique_handle_custom_is_valid_traits` that can be
+used via a `static_assert` to check that `is_valid` is provided correctly
+by the traits class: this was a compromise to avoid duplicating `unique_handle`
+for that scenario.
 
 
 ## Micro design decissions
