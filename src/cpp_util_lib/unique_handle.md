@@ -3,7 +3,7 @@
 It's a RAII minimalist wrapper for C API handles (resource cleanup of resources coming from C
 APIs). Think: like `std::unique_ptr`, but for C API handles.
 
-`std::unique_handle` is really simple, minimalistic code; I recomment you have a look and read
+`std::unique_handle` is really simple, minimalistic code; I recommend you have a look and read
 it (ignore the concept definitions at the top on a first read, they are meant to help ensure
 it's used correctly).
 
@@ -1139,7 +1139,7 @@ are similarities:
 </table>
 
 
-## `.ref()`, `.ptr()`, `.out_ptr()` etc. 
+## `.ref()`, `.ptr()`, `.out_ptr()` etc.
 
 The predecesor of `unique_handle`, `raii_with_invalid_value` provided
 just `.ptr()`, without the `out` and `inout` variations.
@@ -1293,20 +1293,30 @@ bool foo(const char* file_name, const char* mode)
   return true;
 }
 ```
-The particular C version above avoids testing `file` before closing, it only tested
-the `result` and assumes that the `file` is not `nullptr`. It might gain something
-out of that, though it's playing with fire. NOTE: this is a trick similar to the
-one used in linear find value with sentinel equal to the value where the loop only
-has to test for the sentinel, not for the end, compared with the `std::find` that
-needs to test for end and value in the loop.
 
-Performance-wise the `unique_ptr` C++ version tests the `FILE*` in addition to the
-`result` and requires the compiler to optmise out the move operations.
+The particular C version above avoids initializing `file` and also avoid testing
+`file` before closing, it only tested the `result` and assumes that the `file` is
+not `nullptr`. It might gain something out of that, though it's playing with fire.
+NOTE: this is a trick similar to the one used in linear find value with sentinel
+equal to the value where the loop only has to test for the value, not for the end,
+compared with the `std::find` that needs to test for end and value in the loop.
 
-The advantages of the `unique_ptr` C++ version are that it:
+NOTE: the code above, relies on the contract that the C API (`fopen_s` in this
+case) only sets the `out_ptr` if it succeeds, we make all sort of assumptions about
+C APIs: equally we assume in the `unique_handle` usage that on failure the `out_ptr`
+is not garbage.
+
+Performance-wise the `unique_handle` C++ version initializes the handle member to the
+invalid value, tests the `FILE*` in addition to the `result` and requires the
+compiler to optmise out the move operations.
+
+The advantages of the `unique_handle` C++ version are that it:
 - allows reuse: you only need to wrap `fopen_s` once in your application
 - prevents coding errors where the file is not closed on some return branch
 
+You could maybe claw back the initialization by using a uninitialized raw pointer
+when calling the C API, and declaring and initializing a `unique_handle` after the
+C API in the success case, but you go back to error prone code that's not as reusable.
 
 ## Why use handle_arg, why not use raw handles?
 
@@ -1364,7 +1374,7 @@ by the traits class: this was a compromise to avoid duplicating `unique_handle`
 for that scenario.
 
 
-## Micro design decissions
+## Micro design decisions
 
 ### Why traits inheritance for access configuration
 

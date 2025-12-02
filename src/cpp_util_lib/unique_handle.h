@@ -24,14 +24,12 @@ namespace cpp_util
   struct unique_handle_out_ptr_access : unique_handle_basic_access {};
   struct unique_handle_inout_and_out_ptr_access : unique_handle_out_ptr_access {};
 
-  namespace detail
+  template<typename Traits>
+  concept unique_handle_custom_is_valid_traits =
+      requires(const typename Traits::handle_type const_h)
   {
-    template<typename Traits>
-    concept trait_custom_is_valid = requires(const typename Traits::handle_type const_h)
-    {
       { Traits::is_valid(const_h) } noexcept -> std::convertible_to<bool>;
-    };
-  }
+  };
 
   template<typename Traits>
   concept unique_handle_traits =
@@ -45,15 +43,12 @@ namespace cpp_util
       { typename Traits::handle_type(Traits::invalid_value()) } noexcept;
       { h = Traits::invalid_value() } noexcept;
       { Traits::close_handle(h) } noexcept;
-    };
-
-  template<typename Traits>
-  concept unique_handle_custom_is_valid_traits =
-    unique_handle_traits<Traits> &&
-    requires(const typename Traits::handle_type const_h)
-    {
-      { Traits::is_valid(const_h) } noexcept -> std::convertible_to<bool>;
-    };
+    } && (
+      unique_handle_custom_is_valid_traits<Traits> ||
+      requires(typename Traits::handle_type h) {
+          { h == Traits::invalid_value() } noexcept;
+          { h != Traits::invalid_value() } noexcept;
+    });
 
   template<unique_handle_traits Traits>
   class [[nodiscard]] unique_handle

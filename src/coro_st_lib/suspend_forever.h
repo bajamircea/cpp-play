@@ -38,7 +38,10 @@ namespace coro_st
 
       constexpr void await_resume() const noexcept
       {
-        std::unreachable();
+        // this should be marked `std::unreacheable()`
+        // but enforcing it gives unreachable code warnings in MSVC
+        // when used e.g. in wait_for, wait_any etc. when they
+        // call await_resume() for the child
       }
 
       std::exception_ptr get_result_exception() const noexcept
