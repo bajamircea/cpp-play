@@ -73,7 +73,7 @@ namespace coro_st
 
         if (g_stopped_result_type == result_.index())
         {
-          parent_ctx_.schedule_cancellation();
+          parent_ctx_.schedule_stopped();
           return;
         }
 
@@ -83,7 +83,7 @@ namespace coro_st
           return;
         }
 
-        parent_ctx_.schedule_continuation();
+        parent_ctx_.schedule_result_ready();
       }
 
       void on_parent_cancel() noexcept
@@ -270,7 +270,7 @@ namespace coro_st
 
         if (impl::g_stopped_result_type == shared_data_.result_.index())
         {
-          shared_data_.parent_ctx_.schedule_cancellation();
+          shared_data_.parent_ctx_.schedule_stopped();
           return true;
         }
 
@@ -316,11 +316,11 @@ namespace coro_st
 
         if (impl::g_stopped_result_type == shared_data_.result_.index())
         {
-          shared_data_.parent_ctx_.invoke_cancellation();
+          shared_data_.parent_ctx_.invoke_stopped();
           return;
         }
 
-        shared_data_.parent_ctx_.invoke_continuation();
+        shared_data_.parent_ctx_.invoke_result_ready();
       }
 
     private:

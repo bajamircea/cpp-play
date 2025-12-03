@@ -60,7 +60,7 @@ namespace coro_st
 
         if (result_state::cancellation == result_state_)
         {
-          parent_ctx_.schedule_cancellation();
+          parent_ctx_.schedule_stopped();
           return;
         }
 
@@ -70,7 +70,7 @@ namespace coro_st
           return;
         }
 
-        parent_ctx_.schedule_continuation();
+        parent_ctx_.schedule_result_ready();
       }
 
       void on_parent_cancel() noexcept
@@ -323,7 +323,7 @@ namespace coro_st
 
           if (impl::nursery_awaiter_shared_data::result_state::cancellation == shared_data_.result_state_)
           {
-            shared_data_.parent_ctx_.schedule_cancellation();
+            shared_data_.parent_ctx_.schedule_stopped();
             return true;
           }
 
@@ -361,11 +361,11 @@ namespace coro_st
 
           if (impl::nursery_awaiter_shared_data::result_state::cancellation == shared_data_.result_state_)
           {
-            shared_data_.parent_ctx_.invoke_cancellation();
+            shared_data_.parent_ctx_.invoke_stopped();
             return;
           }
 
-          shared_data_.parent_ctx_.invoke_continuation();
+          shared_data_.parent_ctx_.invoke_result_ready();
         }
       };
 

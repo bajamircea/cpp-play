@@ -28,7 +28,7 @@ namespace coro_st
 
       void await_suspend(std::coroutine_handle<>) noexcept
       {
-        ctx_.schedule_cancellation();
+        ctx_.schedule_stopped();
       }
 
       constexpr void await_resume() const noexcept
@@ -42,7 +42,7 @@ namespace coro_st
 
       void start() noexcept
       {
-        ctx_.invoke_cancellation();
+        ctx_.invoke_stopped();
       }
     };
 

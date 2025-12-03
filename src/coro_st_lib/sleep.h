@@ -77,14 +77,14 @@ namespace coro_st
         }
 
         // it's fine to invoke since on_timer is called from the runner loop
-        ctx_.invoke_continuation();
+        ctx_.invoke_result_ready();
       }
 
       void on_cancel() noexcept
       {
         parent_stop_cb_.reset();
         ctx_.remove_timer_node(timer_node_);
-        ctx_.schedule_cancellation();
+        ctx_.schedule_stopped();
       }
     };
 

@@ -85,14 +85,14 @@ namespace coro_st
             return;
           }
 
-          ctx_.schedule_continuation();
+          ctx_.schedule_result_ready();
         }
 
         void on_cancel() noexcept
         {
           parent_stop_cb_.reset();
           evt_.wait_list_.remove(this);
-          ctx_.schedule_cancellation();
+          ctx_.schedule_stopped();
         }
       };
 

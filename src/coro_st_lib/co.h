@@ -56,7 +56,7 @@ namespace coro_st
           {
             if (ctx_.get_stop_token().stop_requested())
             {
-              ctx_.schedule_cancellation();
+              ctx_.schedule_stopped();
               return std::noop_coroutine();
             }
             return parent_coro;
@@ -72,10 +72,10 @@ namespace coro_st
           // Hence schedule rather than invoke
           if (ctx_.get_stop_token().stop_requested())
           {
-            ctx_.schedule_cancellation();
+            ctx_.schedule_stopped();
             return std::noop_coroutine();
           }
-          ctx_.schedule_continuation();
+          ctx_.schedule_result_ready();
           return std::noop_coroutine();
         }
 

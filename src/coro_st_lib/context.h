@@ -63,25 +63,25 @@ namespace coro_st
       return token_;
     }
 
-    void invoke_continuation() noexcept
+    void invoke_result_ready() noexcept
     {
       callback cb = completion_.get_result_ready_callback();
       cb.invoke();
     }
 
-    void schedule_continuation() noexcept
+    void schedule_result_ready() noexcept
     {
       node_.cb = completion_.get_result_ready_callback();
       event_loop_ctx_.push_ready_node(node_);
     }
 
-    void invoke_cancellation() noexcept
+    void invoke_stopped() noexcept
     {
       callback cb = completion_.get_stopped_callback();
       cb.invoke();
     }
 
-    void schedule_cancellation() noexcept
+    void schedule_stopped() noexcept
     {
       node_.cb = completion_.get_stopped_callback();
       event_loop_ctx_.push_ready_node(node_);

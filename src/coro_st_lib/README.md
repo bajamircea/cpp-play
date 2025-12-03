@@ -227,13 +227,13 @@ The basic rules are somehow complex:
   - if you want to choose to resume the parent coroutine: use the `bool` returning
     version of `await_suspend` and return `false` to resume the parent. See below
     for the `co::final_awaiter::await_suspend`.
-  - to cancel: `schedule_cancellation` (to avoid stack growth; we're already in a
+  - to cancel: `schedule_stopped` (to avoid stack growth; we're already in a
     `.resume()`) TODO: is that right?
 - To resume a coroutine outside `await_suspend` follow the rules of immediate vs.
   scheduled that apply there. The equivalent of immediate is to call `.resume()`
   on the coroutine handle. The equivalent of scheduled is `schedule_coroutine_resume`.
 - When in `start`:
-  - call `invoke_continuation` or `invoke_cancellation`, the parent does reference
+  - call `invoke_result_ready` or `invoke_stopped`, the parent does reference
     counting (usually some `pending_counter` named variable) to prevent uncontrolled
     stack growth.
 - When in the shared completion function e.g. wait_any `on_shared_continue()`
@@ -242,14 +242,14 @@ The basic rules are somehow complex:
     it. We schedule there because we're possible inside some `.resume()`.
     TODO: is that right? can't we do immediate? e.g. how about inside the `async_cast`?
 - When in the `on_cancel` of `stop_cb_.emplace(ctx_.get_stop_token(), ...on_cancel)`:
-  - call `schedule_cancellation` because `on_cancel` might be triggered at the point
+  - call `schedule_stopped` because `on_cancel` might be triggered at the point
     of `.emplace` e.g. in `await_suspend`
 - When in a function called from the run loop e.g. `on_timer` for the awaiter of
   `async_sleep_for`:
-  - call `invoke_continuation` or `invoke_cancellation`, because we're at the root
+  - call `invoke_result_ready` or `invoke_stopped`, because we're at the root
 - In `co::final_awaiter::await_suspend` we call `schedule_completion` and
-  `schedule_cancellation` because:
-  - we have to `schedule_cancellation` anyway for when we have a parent coroutine,
+  `schedule_stopped` because:
+  - we have to `schedule_stopped` anyway for when we have a parent coroutine,
     reason is: we're already in a `.resume()`
   - we need to work around a bug in Microsoft C++ compiler which impacts `await_suspend`
     which returns a `coroutine_handle` (the bug was fixed though in Visual Studio 2026)
@@ -258,7 +258,7 @@ The basic rules are somehow complex:
     style one) for when the parent was also a coroutine
   - but the bug causes the coroutine frame to be used instead of the stack (this does
     not seem to impact the versions of `await_suspend` that return `bool` or `void`)
-  - therefore we can't call `invoke_continuation` or `invoke_cancellation` because
+  - therefore we can't call `invoke_result_ready` or `invoke_stopped` because
     they might destroy the coroutine from (e.g. if this is a child of a nursery)
   - therefore we call the `schedule_...` variations
 

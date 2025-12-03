@@ -30,7 +30,7 @@ namespace coro_st
       {
         if (ctx_.get_stop_token().stop_requested())
         {
-          ctx_.schedule_cancellation();
+          ctx_.schedule_stopped();
           return;
         }
 
@@ -52,11 +52,11 @@ namespace coro_st
         // that's the nature of yield
         if (ctx_.get_stop_token().stop_requested())
         {
-          ctx_.schedule_cancellation();
+          ctx_.schedule_stopped();
           return;
         }
 
-        ctx_.schedule_continuation();
+        ctx_.schedule_result_ready();
       }
     };
 

@@ -107,7 +107,7 @@ namespace coro_st
 
         if (result_state::has_stopped1 == result_state_)
         {
-          parent_ctx_.schedule_cancellation();
+          parent_ctx_.schedule_stopped();
           return true;
         }
 
@@ -172,11 +172,11 @@ namespace coro_st
 
         if (result_state::has_stopped1 == result_state_)
         {
-          parent_ctx_.invoke_cancellation();
+          parent_ctx_.invoke_stopped();
           return;
         }
 
-        parent_ctx_.invoke_continuation();
+        parent_ctx_.invoke_result_ready();
       }
 
     private:
@@ -186,7 +186,7 @@ namespace coro_st
 
         if (result_state::has_stopped1 == result_state_)
         {
-          parent_ctx_.schedule_cancellation();
+          parent_ctx_.schedule_stopped();
           return;
         }
 
@@ -196,7 +196,7 @@ namespace coro_st
           return;
         }
 
-        parent_ctx_.schedule_continuation();
+        parent_ctx_.schedule_result_ready();
       }
 
       void on_task1_result_ready() noexcept
