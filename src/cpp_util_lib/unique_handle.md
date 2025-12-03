@@ -159,7 +159,7 @@ using posix_file_handle = cpp_util::unique_handle<posix_file_handle_traits>;
 In Windows, `HANDLE` is opaque (that is it can be one of many things and the definition of what it is may
 change over time), unlike the previous example where it's a `FILE *` (i.e. a pointer to a defined C `struct`).
 A system API, as is the case of the Windows APIs, that want to protect itself against application misuse
-taka a opaque handle that they first check against some hash map of opened handles before using, and it
+take an opaque handle that they first check against some hash map of opened handles before using, and it
 might get translated into a pointer internally after this check, but the user of the API operates in terms
 of this opaque handle which is not necessarily a pointer (though it might be a `void*`).
 
@@ -659,8 +659,8 @@ contributors, it's not just me, I've learned from others.
 
 Early 2000s I started switching from a C with classes coding style, with large and relatively monolithic
 functions, to a more standard C++ one that embraced RAII that is correct in face of exceptions,
-driven by the empyrical observation that using RAII to manage resources results in less code and code
-with less bugs (in particular memory/resource leaks virtuall extinct). After disapointment with the,
+driven by the empirical observation that using RAII to manage resources results in less code and code
+with less bugs (in particular memory/resource leaks virtually extinct). After disapointment with the,
 now defunct, `std::auto_ptr` corner cases we ended up with a proliferation of non-copyable, non-moveable
 classes, largely one for each resource.
 
@@ -681,21 +681,22 @@ There are cognitive advantages from not providing too many options to a library 
 that the standard provided two choices from the opposite ends of the possible choices.
 
 As a side thought, one can argue that even `std::shared_ptr` is a choice too many, allowing a naive
-user to shoot themselves in the foot. How many times I've heard "I'm using `std::shared_ptr`
+user to shoot themselves in the foot. How many times have I heard "I'm using `std::shared_ptr`
 becaue I've heard it's good to use it" and I had to explain "Yes, compared with a naked pointer, but
 it's better to use a `std::unique_ptr` instead if you can, and even better to not use a pointer
-(smart or not) in the first place". How many times I've heard "I'm using `std::shared_ptr` because
+(smart or not) in the first place". How many times have I heard "I'm using `std::shared_ptr` because
 it solves the lifetime issues", but it has viral effects on the codebase, only to then lead to
-the need to mitigate against circular references. I used `std::shared_ptr` under duress in
-conjunction with `boost::asio`. But I would argue that if you use `std::shared_ptr`, you probably
-did not do your problem analysis right.
+the need to mitigate against circular references (leading to exotic use of
+`std::atomic<std::weak_ptr<...>>`). I used `std::shared_ptr` under duress in conjunction with
+`boost::asio`. But I would argue that if you use `std::shared_ptr`, you probably did not do your
+problem analysis right.
 
-We thought that `std::unique_ptr` does not meet our needs for C API handles, in particular:
+We thought that `std::unique_ptr` does not meet our needs for C API handles, in particular because:
 - not all handles were pointers
 - the invalid value is not always `nullptr`
 - did not have pointer access to the pointer
 We could not figure out how to use `std::unique_ptr` to cover the first two issues, and the lack
-of direct access to the pointer meant using temporary raw handle variables which felt like an
+of direct access to the pointer meant using a temporary raw handle variables which felt like an
 unnecessary risk.
 
 For the last point instead of something like this (using a `file_handle` that gives pointer access
@@ -756,10 +757,10 @@ It turns out that we got the most mileage out of `raii_with_invalid_value`, that
 `unique_handle`, and it could handle with some minimal friction the other cases as well.
 
 **Reducing the cognitive overload** (the amount of things a developer needs to learn and remember) is
-a important idea of library design. There are advantages from having a relatively simple recipe
+an important idea of library design. There are advantages from having a relatively simple recipe
 that a developer can remember:
 
-> If you use a C API that require some sort of freeing resource, strongly consider
+> If you use a C API that requires some sort of freeing resource, strongly consider
 > using `unique_handle`.
 
 
@@ -820,7 +821,7 @@ auto err = fopen_s( std::out_ptr<FILE*>(my_unique_fd), "prod.csv", "rb" );;
 ```
 On one side this shows that people tried and can use `std::unique_ptr` for an `int` handle with
 a `-1` invalid value, but I would call it an unpleasant experience compared with `unique_handle`,
-at least a very differet experiece in writing a wrapper.
+at least a very different experiece in writing a wrapper.
 
 The key is that if the deleter for a `unique_ptr` has a `pointer` type, that really overrides
 what `unique_ptr` stores, in particular the `int` in `std::unique_ptr<int, ...` is meaningless
@@ -921,7 +922,7 @@ style C API is mittigated, if they just declare the smart pointer, default const
 before calling the `out_ptr` C API, i.e. if they don't reuse an existing smart pointer, but
 create one each time it's needed.
 
-In fact for years out `raii_with_invalid_value` only had a `.ptr()` member used as shown above:
+In fact for years our `raii_with_invalid_value` only had a `.ptr()` member used as shown above:
 ```cpp
   file_handle return_value;
   // reset would be redundat there
@@ -931,7 +932,7 @@ In fact for years out `raii_with_invalid_value` only had a `.ptr()` member used 
 To the designers of [P1132R8](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1132r8.html)
 it seems it was important to cover `std::shared_ptr` in addition to `std::unique_ptr`.
 Unfortunately this has some unpallatable consequences. I want to make clear that
-if I use hard words, they addressed to the technical outcome, not to people (I am
+if I use hard words, they are addressed to the technical outcome, not to people (I am
 actually thankful to the authors of P1132R8 providing insights into their design
 thoughts).
 
@@ -940,7 +941,7 @@ smart pointer and a temporary that is manipulated at construction and destructio
 the proxy type, both calling `.reset()` on the smart pointer in their destructor.
 
 The issue with the `std::shared_ptr` is that its `.reset()` can throw, because it might
-fail to allocate the state the stores the counters and the deleter that `.reset()` could
+fail to allocate the state that stores the counters and the deleter that `.reset()` could
 provide. Faced with a throwing destructor the designers of P1132R8 could have gone back
 to the design of the solution: if you need to create/allocate resources in the destructor
 it's a smell. Luckily at least someone stopped them from allowing exceptions from the
@@ -959,7 +960,7 @@ The authors P1132R8 considered that providing such metods directly would break e
 
 I disagree. The above sounds like OOP arguments for getting setters and getters for
 `std::vector` elements. That does not really hide access, it just raises performance
-questions, by not providing an afficient basis of operations for the type:
+questions, by not providing an efficient basis of operations for the type:
 
 > A basis is efficient if and only if any procedure implemented using it is
 > as efficient as an equivalent procedure written in terms of an alternative basis.
@@ -971,8 +972,8 @@ auto proxy_object = std::inout_ptr(smart_pointer);
 auto ptr = static_cast<Type**>(proxy_object);
 *ptr = /*...*/
 ```
-P1132R8 has tries to addres questions about performance via a whole section of the
-paper, which would either not be a problem or one easier to aswer if a proxy type is
+P1132R8 tries to address questions about performance via a whole section of the
+paper, which would either not be a problem or one easier to answer if a proxy type is
 not used.
 
 The proxy type also creates novel ways to shoot yourself in the foot compared
@@ -1024,9 +1025,9 @@ value.
 
 ## Why traits instead of taking template parameters
 
-1. allows the case where the invalid value is a `reinterpret_cast`
+1. Allows the case where the invalid value is a `reinterpret_cast`
 
-2. allows options for disambiguation, see choices for `SC_HANDLE` below
+2. Allows options for disambiguation, see choices for `SC_HANDLE` below
 
 - `SC_HANDLE` is one of the many examples of a ambiguous usage in a C API: it could be a service, or it
   could be a service manager (required to open a service)
@@ -1081,7 +1082,9 @@ service_handle open_service(
   service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
 ```
 
-3. Makes this disambiguation controlled by the C++ code as shown for `SC_HANDLE` when compared with an implementation where the three elements (handle type, invalid value and function to close handle) are taken as template arguments.
+3. Makes this disambiguation controlled by the C++ code as shown for `SC_HANDLE` when
+compared with an implementation where the three elements (handle type, invalid value
+and function to close handle) are taken as template arguments.
 
 Q: are type1 and type2 different types?
 ```cpp
@@ -1177,7 +1180,9 @@ file_handle open_file(const char* file_name, const char* mode)
 }
 ```
 and are concerned of a direct access via a `.ptr()`. Not sure if the concern
-is justified, but I see that it's real, people are concerned.
+is justified because to me it's clear that the default constructor just ahead
+of the C API call initializes the `unique_handle` to the `invalid_value()`,
+but I see that it's real, people are concerned.
 
 So I've added a mechanism to use the traits to selecting available pointer
 access in `unique_handle`.
@@ -1198,7 +1203,7 @@ and consists of:
 - handle can be provided in the constructor
 - `.get()` obtains a copy of the handle
 - handle can be changed via `.reset()` or move from another
-- ownershit is relinquished via `.release()`
+- ownership is relinquished via `.release()`
 
 The basic access is the recommended option for cleanup actions that store a
 `bool` (or similar) as a handle.
@@ -1214,7 +1219,7 @@ For this the traits class should be derived from `cpp_util::unique_handle_out_pt
 ```cpp
 struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
 ```
-And this should be the default option to use unless yoy have a better reason.
+And this should be the default option to use unless you have a better reason.
 
 If the traits class is derived from `cpp_util::unique_handle_inout_and_out_ptr_access`
 then `.inout_ptr()` and `.inout_ref()` are added on top of the basic access
@@ -1387,7 +1392,7 @@ struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
 ```
 I know it's unusual, but it's brief.
 
-We would have used a type definition:
+We could have used a type definition:
 ```cpp
 struct file_handle_traits
 {
@@ -1396,7 +1401,7 @@ struct file_handle_traits
 }
 ```
 
-We would have used a compile time constant (a `enum class` value):
+We could have used a compile time constant (a `enum class` value):
 ```cpp
 struct file_handle_traits
 {
