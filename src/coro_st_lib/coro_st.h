@@ -6,6 +6,7 @@
 #include "timer_heap.h"
 #include "event_loop_context.h"
 #include "chain_context.h"
+#include "completion.h"
 #include "context.h"
 #include "event_loop.h"
 #include "coro_type_traits.h"

@@ -359,18 +359,29 @@ associated test folder:
   - `chain_context`
     - holds data for a cancellable chain:
       - the cancellation token
-      - the continutation callback to run on completion of the chain
-      - the cancellation callback to run when the chain was cancelled
       - a node that can be used to schedule callbacks
-    - `run`, `async_wait_any` etc. use the `chain_context` to customize
-       what should happen on child completion:
+- `completion.h`
+  - `completion`
+    - holds the completion functions:
+      - kind of two `callback`s with the `x_` being the same for both
+      - one function is the "result ready" one
+        - this is somehow similar to `set_[value|error]` in the
+          sender/receiver framework
+      - the other is the "stopped" one
+        - this is somehow similar to `set_stopped` in the
+          sender/receiver framework
+    - `run`, `async_wait_any` etc. use the `completion` to customize
+       what should happen on child completion
       - `run` to decide to exit the running loop
       - `async_wait_any`
          - to cancel the other children when the first completes
          - to determine when the last child completed and it should continue
            the parent
-    - this is somehow similar to `set_[value|error|stopped]` in the
-      sender/receiver framework
+  - `make_function_completion`
+    - helper function make a `completion` out of two `void (*)(T&) noexcept`
+  - `make_member_completion`
+    - helper function make a `completion` out of two member functions for
+      some class (i.e. `void (T::*member_fn)() noexcept`)
 - `context.h`
   - `context`
     - holds references to:

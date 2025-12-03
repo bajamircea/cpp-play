@@ -40,10 +40,5 @@ namespace coro_st_test
         static_cast<void>(el.do_current_pending_work());
       }
     }
-
-    ~test_loop()
-    {
-      run_pending_work();
-    }
   };
 }
