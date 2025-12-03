@@ -39,7 +39,6 @@ namespace coro_st
 
       Fn fn_;
 
-      chain_context task_chain_ctx_;
       context task_ctx_;
       CoAwaiter co_awaiter_;
 
@@ -54,12 +53,14 @@ namespace coro_st
         pending_start_{ false },
         result_{},
         fn_{ std::move(fn) },
-        task_chain_ctx_{
+        task_ctx_{
+          parent_ctx_,
           parent_ctx_.get_stop_token(),
-          make_member_callback<&awaiter::on_task_continue>(this),
-          make_member_callback<&awaiter::on_task_cancel>(this),
-          },
-        task_ctx_{ parent_ctx_, task_chain_ctx_ },
+          make_member_completion<
+            &awaiter::on_task_result_ready,
+            &awaiter::on_task_stopped
+            >(this)
+        },
         co_awaiter_{ co_work.get_awaiter(task_ctx_) }
       {
       }
@@ -163,7 +164,7 @@ namespace coro_st
         parent_ctx_.schedule_continuation();
       }
 
-      void on_task_continue() noexcept
+      void on_task_result_ready() noexcept
       {
         if (g_none_result_type == result_.index())
         {
@@ -202,7 +203,7 @@ namespace coro_st
         on_shared_continue();
       }
 
-      void on_task_cancel() noexcept
+      void on_task_stopped() noexcept
       {
         result_.template emplace<g_stopped_result_type>();
         on_shared_continue();

@@ -38,7 +38,6 @@ namespace coro_st
       size_t pending_count_{ 0 };
       result_state result_state_{ result_state::none };
 
-      chain_context task_chain_ctx_;
       context task_ctx_;
       CoAwaiter co_awaiter_;
 
@@ -57,12 +56,14 @@ namespace coro_st
         children_stop_source_{},
         pending_count_{ 0 },
         result_state_{ result_state::none },
-        task_chain_ctx_{
+        task_ctx_{
+          parent_ctx_,
           children_stop_source_.get_token(),
-          make_member_callback<&awaiter::on_task_chain_continue>(this),
-          make_member_callback<&awaiter::on_task_chain_cancel>(this),
-          },
-        task_ctx_{ parent_ctx_, task_chain_ctx_ },
+          make_member_completion<
+            &awaiter::on_task_result_ready,
+            &awaiter::on_task_stopped
+            >(this)
+        },
         co_awaiter_{ co_work.get_awaiter(task_ctx_) },
         timer_node_{ deadline },
         timer_stop_cb_{ std::nullopt }
@@ -185,7 +186,7 @@ namespace coro_st
         parent_ctx_.schedule_continuation();
       }
 
-      void on_task_chain_continue() noexcept
+      void on_task_result_ready() noexcept
       {
         if ((result_state::none == result_state_) ||
             (result_state::has_timeout == result_state_))
@@ -202,7 +203,7 @@ namespace coro_st
         on_shared_continue();
       }
 
-      void on_task_chain_cancel() noexcept
+      void on_task_stopped() noexcept
       {
         if (!children_stop_source_.stop_requested())
         {

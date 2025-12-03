@@ -2,7 +2,6 @@
 
 #include "event_loop.h"
 #include "event_loop_context.h"
-#include "chain_context.h"
 #include "context.h"
 #include "coro_type_traits.h"
 #include "value_type_traits.h"
@@ -27,17 +26,19 @@ namespace coro_st
     event_loop el;
 
     event_loop_context el_ctx{ el.ready_queue_, el.timers_heap_ };
-    chain_context chain_ctx{
+    context ctx{
+      el_ctx,
       main_stop_source.get_token(),
-      callback{ make_function_callback<+[](completion_flags& x) noexcept {
-        x.done = true;
-      }>(cf) },
-      callback{ make_function_callback<+[](completion_flags& x) noexcept {
-        x.done = true;
-        x.stopped = true;
-      }>(cf) }
+      make_function_completion<
+        +[](completion_flags& x) noexcept {
+          x.done = true;
+        },
+        +[](completion_flags& x) noexcept {
+          x.done = true;
+          x.stopped = true;
+        }
+        >(cf)
     };
-    context ctx{ el_ctx, chain_ctx };
 
     auto co_awaiter = co_task.get_work().get_awaiter(ctx);
 

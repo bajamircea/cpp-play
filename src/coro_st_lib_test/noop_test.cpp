@@ -42,8 +42,8 @@ namespace
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
 
-    ASSERT_TRUE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_TRUE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
   }
 
   TEST(noop_chain_root_cancellation)
@@ -58,15 +58,15 @@ namespace
     // it's too late for async_noop
     tl.stop_source.request_stop();
 
-    ASSERT_FALSE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
 
     awaiter.start();
 
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
-    ASSERT_FALSE(tl.completed);
-    ASSERT_TRUE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_TRUE(tl.stopped);
   }
 
   TEST(noop_inside_co)
@@ -94,8 +94,8 @@ namespace
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
 
-    ASSERT_TRUE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_TRUE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
   }
 
   TEST(noop_inside_co_cancellation)
@@ -124,11 +124,11 @@ namespace
     ASSERT_FALSE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
 
-    ASSERT_FALSE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
     tl.run_pending_work();
-    ASSERT_FALSE(tl.completed);
-    ASSERT_TRUE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_TRUE(tl.stopped);
   }
 
   // coro_st::co<void> async_noop_does_not_compile()

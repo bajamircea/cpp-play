@@ -28,11 +28,11 @@ namespace
 
     ASSERT_FALSE(tl.el.ready_queue_.empty());
 
-    ASSERT_FALSE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
     tl.run_pending_work();
-    ASSERT_FALSE(tl.completed);
-    ASSERT_TRUE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_TRUE(tl.stopped);
   }
 
   TEST(suspend_forever_inside_co)
@@ -56,11 +56,11 @@ namespace
 
     ASSERT_FALSE(tl.el.ready_queue_.empty());
 
-    ASSERT_FALSE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
     tl.run_pending_work();
-    ASSERT_FALSE(tl.completed);
-    ASSERT_TRUE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_TRUE(tl.stopped);
   }
 
   // coro_st::co<void> async_suspend_forever_does_not_compile()

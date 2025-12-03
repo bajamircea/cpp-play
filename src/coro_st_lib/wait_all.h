@@ -82,7 +82,6 @@ namespace coro_st
     struct wait_all_awaiter_chain_data
     {
       wait_all_awaiter_shared_data& shared_data_;
-      chain_context chain_ctx_;
       context ctx_;
       co_work_awaiter_t<CoWork> co_awaiter_;
 
@@ -91,12 +90,14 @@ namespace coro_st
         CoWork& co_work
       ) :
         shared_data_{ shared_data },
-        chain_ctx_{
+        ctx_{
+          shared_data_.parent_ctx_,
           shared_data_.children_stop_source_.get_token(),
-          make_member_callback<&wait_all_awaiter_chain_data::on_continue>(this),
-          make_member_callback<&wait_all_awaiter_chain_data::on_cancel>(this),
-          },
-        ctx_{ shared_data_.parent_ctx_, chain_ctx_ },
+          make_member_completion<
+            &wait_all_awaiter_chain_data::on_result_ready,
+            &wait_all_awaiter_chain_data::on_stopped
+            >(this)
+        },
         co_awaiter_{ co_work.get_awaiter(ctx_) }
       {
       }
@@ -104,7 +105,7 @@ namespace coro_st
       wait_all_awaiter_chain_data(const wait_all_awaiter_chain_data&) = delete;
       wait_all_awaiter_chain_data& operator=(const wait_all_awaiter_chain_data&) = delete;
 
-      void on_continue() noexcept
+      void on_result_ready() noexcept
       {
         if (wait_all_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {
@@ -127,7 +128,7 @@ namespace coro_st
         shared_data_.on_shared_continue();
       }
 
-      void on_cancel() noexcept
+      void on_stopped() noexcept
       {
         if (wait_all_awaiter_shared_data::result_state::completion == shared_data_.result_state_)
         {

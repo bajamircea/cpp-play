@@ -1,7 +1,8 @@
 #pragma once
 
 #include "event_loop_context.h"
-#include "chain_context.h"
+#include "completion.h"
+#include "stop_util.h"
 
 #include <coroutine>
 
@@ -10,16 +11,32 @@ namespace coro_st
   class context
   {
     event_loop_context& event_loop_ctx_;
-    chain_context& chain_ctx_;
+    stop_token token_;
+    completion completion_;
+    ready_node node_;
 
   public:
-    context(event_loop_context& event_loop_ctx, chain_context& chain_ctx) noexcept :
-      event_loop_ctx_{ event_loop_ctx }, chain_ctx_{ chain_ctx }
+    context(
+      event_loop_context& event_loop_ctx,
+      stop_token token,
+      completion completion
+    ) noexcept :
+      event_loop_ctx_{ event_loop_ctx },
+      token_{ token },
+      completion_{ completion },
+      node_{}
     {
     }
 
-    context(context& parent_context, chain_context& new_chain_ctx) noexcept :
-      event_loop_ctx_{ parent_context.event_loop_ctx_ }, chain_ctx_{ new_chain_ctx }
+    context(
+      context& parent_context,
+      stop_token token,
+      completion completion
+    ) noexcept :
+      event_loop_ctx_{ parent_context.event_loop_ctx_ },
+      token_{ token },
+      completion_{ completion },
+      node_{}
     {
     }
 
@@ -43,45 +60,42 @@ namespace coro_st
 
     stop_token get_stop_token() noexcept
     {
-      return chain_ctx_.get_stop_token();
+      return token_;
     }
 
     void invoke_continuation() noexcept
     {
-      callback cb = chain_ctx_.get_continuation_callback();
+      callback cb = completion_.get_result_ready_callback();
       cb.invoke();
     }
 
     void schedule_continuation() noexcept
     {
-      ready_node& node = chain_ctx_.get_chain_node();
-      node.cb = chain_ctx_.get_continuation_callback();
-      event_loop_ctx_.push_ready_node(node);
+      node_.cb = completion_.get_result_ready_callback();
+      event_loop_ctx_.push_ready_node(node_);
     }
 
     void invoke_cancellation() noexcept
     {
-      callback cb = chain_ctx_.get_cancellation_callback();
+      callback cb = completion_.get_stopped_callback();
       cb.invoke();
     }
 
     void schedule_cancellation() noexcept
     {
-      ready_node& node = chain_ctx_.get_chain_node();
-      node.cb = chain_ctx_.get_cancellation_callback();
-      event_loop_ctx_.push_ready_node(node);
+      node_.cb = completion_.get_stopped_callback();
+      event_loop_ctx_.push_ready_node(node_);
     }
 
     void schedule_coroutine_resume(std::coroutine_handle<void> handle) noexcept
     {
-      ready_node& node = chain_ctx_.get_chain_node();
-      node.cb = make_resume_coroutine_callback(handle);
-      event_loop_ctx_.push_ready_node(node);
+      node_.cb = make_resume_coroutine_callback(handle);
+      event_loop_ctx_.push_ready_node(node_);
     }
 
     ready_node& get_chain_node() noexcept
     {
-      return chain_ctx_.get_chain_node();
+      return node_;
     }
   };
 }

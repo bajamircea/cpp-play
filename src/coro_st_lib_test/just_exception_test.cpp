@@ -21,15 +21,15 @@ namespace
 
     auto awaiter = task.get_work().get_awaiter(tl.ctx);
 
-    ASSERT_FALSE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
 
     awaiter.start();
 
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
-    ASSERT_TRUE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_TRUE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
 
     ASSERT_TRUE(awaiter.get_result_exception());
     ASSERT_THROW_WHAT(awaiter.await_resume(),std::runtime_error, "42");
@@ -48,16 +48,16 @@ namespace
 
     auto awaiter = task.get_work().get_awaiter(tl.ctx);
 
-    ASSERT_FALSE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
     awaiter.start();
     ASSERT_FALSE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
     tl.run_pending_work();
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
-    ASSERT_TRUE(tl.completed);
-    ASSERT_FALSE(tl.cancelled);
+    ASSERT_TRUE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
     ASSERT_TRUE(awaiter.get_result_exception());
     ASSERT_THROW_WHAT(awaiter.await_resume(),std::runtime_error, "42");
   }

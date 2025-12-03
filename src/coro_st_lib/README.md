@@ -355,11 +355,6 @@ associated test folder:
     - removing node from timer heap (e.g. when timer cancelled)
   - this is somehow similar to a scheduler in the sender/receiver
     framework
-- `chain_context.h`
-  - `chain_context`
-    - holds data for a cancellable chain:
-      - the cancellation token
-      - a node that can be used to schedule callbacks
 - `completion.h`
   - `completion`
     - holds the completion functions:
@@ -386,7 +381,9 @@ associated test folder:
   - `context`
     - holds references to:
       - an `event_loop_context`
-      - a `chain_context`
+      - the cancellation token
+      - a `completion` (the function for result ready and stopped)
+      - a node that can be used to schedule callbacks
     - except for the root context e.g. in `run`, the rest are created per chain
       by using the `event_loop_context` reference from the parent
       and a new `chain_context` (via a constructor)

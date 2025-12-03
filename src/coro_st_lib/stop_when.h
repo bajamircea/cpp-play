@@ -40,11 +40,9 @@ namespace coro_st
       size_t pending_count_{ 0 };
       result_state result_state_{ result_state::none };
 
-      chain_context task_chain_ctx1_;
       context task_ctx1_;
       CoAwaiter1 co_awaiter1_;
 
-      chain_context task_chain_ctx2_;
       context task_ctx2_;
       CoAwaiter2 co_awaiter2_;
 
@@ -60,19 +58,24 @@ namespace coro_st
         children_stop_source_{},
         pending_count_{ 0 },
         result_state_{ result_state::none },
-        task_chain_ctx1_{
+        task_ctx1_{
+          parent_ctx_,
           children_stop_source_.get_token(),
-          make_member_callback<&awaiter::on_task1_chain_continue>(this),
-          make_member_callback<&awaiter::on_task1_chain_cancel>(this),
-          },
-        task_ctx1_{ parent_ctx_, task_chain_ctx1_ },
+          make_member_completion<
+            &awaiter::on_task1_result_ready,
+            &awaiter::on_task1_stopped
+            >(this)
+        },
         co_awaiter1_{ co_work1.get_awaiter(task_ctx1_) },
-        task_chain_ctx2_{
+        task_ctx2_{
+          parent_ctx_,
           children_stop_source_.get_token(),
-          make_member_callback<&awaiter::on_task2_chain_continue>(this),
-          make_member_callback<&awaiter::on_task2_chain_cancel>(this),
-          },
-        task_ctx2_{ parent_ctx_, task_chain_ctx2_ },
+          make_member_completion<
+            &awaiter::on_task2_result_ready,
+            &awaiter::on_task2_stopped
+            >(this)
+
+        },
         co_awaiter2_{ co_work2.get_awaiter(task_ctx2_) }
       {
       }
@@ -196,7 +199,7 @@ namespace coro_st
         parent_ctx_.schedule_continuation();
       }
 
-      void on_task1_chain_continue() noexcept
+      void on_task1_result_ready() noexcept
       {
         if ((result_state::none == result_state_) ||
             (result_state::has_stopped2 == result_state_))
@@ -213,7 +216,7 @@ namespace coro_st
         on_shared_continue();
       }
 
-      void on_task1_chain_cancel() noexcept
+      void on_task1_stopped() noexcept
       {
         if (!children_stop_source_.stop_requested())
         {
@@ -231,7 +234,7 @@ namespace coro_st
         on_shared_continue();
       }
 
-      void on_task2_chain_continue() noexcept
+      void on_task2_result_ready() noexcept
       {
         if (result_state::none == result_state_)
         {
@@ -254,7 +257,7 @@ namespace coro_st
         on_shared_continue();
       }
 
-      void on_task2_chain_cancel() noexcept
+      void on_task2_stopped() noexcept
       {
         if (!children_stop_source_.stop_requested())
         {
