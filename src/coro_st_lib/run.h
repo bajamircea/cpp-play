@@ -41,7 +41,7 @@ namespace coro_st
 
     auto co_awaiter = co_task.get_work().get_awaiter(ctx);
 
-    co_awaiter.start_as_chain_root();
+    co_awaiter.start();
 
     while (!cf.done)
     {

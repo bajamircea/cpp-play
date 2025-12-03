@@ -77,7 +77,7 @@ namespace coro_st
         parent_handle_ = handle;
 
         pending_start_ = true;
-        co_awaiter_.start_as_chain_root();
+        co_awaiter_.start();
         pending_start_ = false;
 
         if (g_none_result_type == result_.index())
@@ -120,10 +120,10 @@ namespace coro_st
         return {};
       }
 
-      void start_as_chain_root() noexcept
+      void start() noexcept
       {
         pending_start_ = true;
-        co_awaiter_.start_as_chain_root();
+        co_awaiter_.start();
         pending_start_ = false;
 
         if (g_none_result_type == result_.index())

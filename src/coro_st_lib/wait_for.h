@@ -141,7 +141,7 @@ namespace coro_st
         }
       }
 
-      void start_as_chain_root() noexcept
+      void start() noexcept
       {
         pending_count_ = 1;
         init_parent_cancellation_callback();
@@ -238,7 +238,7 @@ namespace coro_st
       {
         assert(1 == pending_count_);
         pending_count_ = 2;
-        co_awaiter_.start_as_chain_root();
+        co_awaiter_.start();
 
         if (1 == pending_count_)
         {

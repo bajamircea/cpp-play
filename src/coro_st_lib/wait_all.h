@@ -272,7 +272,7 @@ namespace coro_st
         return shared_data_.exception_;
       }
 
-      void start_as_chain_root() noexcept
+      void start() noexcept
       {
         shared_data_.pending_count_ = N + 1;
         shared_data_.init_parent_cancellation_callback();
@@ -301,7 +301,7 @@ namespace coro_st
       {
         std::apply (
           [](auto &... chain) {
-            (chain.co_awaiter_.start_as_chain_root(),...);
+            (chain.co_awaiter_.start(),...);
           },
           chain_data_
         );

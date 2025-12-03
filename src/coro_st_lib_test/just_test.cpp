@@ -22,7 +22,7 @@ namespace
     ASSERT_FALSE(tl.completed);
     ASSERT_FALSE(tl.cancelled);
 
-    awaiter.start_as_chain_root();
+    awaiter.start();
 
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
@@ -47,7 +47,7 @@ namespace
 
     ASSERT_FALSE(tl.completed);
     ASSERT_FALSE(tl.cancelled);
-    awaiter.start_as_chain_root();
+    awaiter.start();
     ASSERT_FALSE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
     tl.run_pending_work();

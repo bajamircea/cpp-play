@@ -40,7 +40,7 @@ namespace coro_st
         return {};
       }
 
-      void start_as_chain_root() noexcept
+      void start() noexcept
       {
         if (ctx_.get_stop_token().stop_requested())
         {

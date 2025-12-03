@@ -142,7 +142,7 @@ namespace coro_st
       void start() noexcept
       {
         ++shared_data_.pending_count_;
-        co_awaiter_.start_as_chain_root();
+        co_awaiter_.start();
       }
 
       void complete_and_self_destroy() noexcept
@@ -234,7 +234,7 @@ namespace coro_st
       void start() noexcept
       {
         ++shared_data_.pending_count_;
-        co_awaiter_.start_as_chain_root();
+        co_awaiter_.start();
       }
 
       void complete_and_self_destroy() noexcept
@@ -342,7 +342,7 @@ namespace coro_st
           return shared_data_.exception_;
         }
 
-        void start_as_chain_root() noexcept
+        void start() noexcept
         {
           shared_data_.pending_count_ = 1;
           shared_data_.init_parent_cancellation_callback();

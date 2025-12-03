@@ -63,7 +63,7 @@ namespace coro_st
           }
 
           // We're the first one in a chain in a .resume
-          // from either start_as_chain_root or from the run loop,
+          // from either start or from the run loop,
           // so we could invoke instead of schedule.
           // But MSVC 2022 still uses the coroutine frame for
           // `return std::noop_coroutine();` (bug fixed in MSVC 2026)
@@ -141,7 +141,7 @@ namespace coro_st
         return unique_child_coro_.get().promise().get_result_exception();
       }
 
-      void start_as_chain_root() noexcept
+      void start() noexcept
       {
         unique_child_coro_.get().resume();
       }

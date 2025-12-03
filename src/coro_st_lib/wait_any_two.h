@@ -141,7 +141,7 @@ namespace coro_st
         }
       }
 
-      void start_as_chain_root() noexcept
+      void start() noexcept
       {
         // two children will be running in addition to this function
         pending_count_ = 2 + 1;
@@ -249,8 +249,8 @@ namespace coro_st
 
       void start_chains() noexcept
       {
-        co_awaiter1_.start_as_chain_root();
-        co_awaiter2_.start_as_chain_root();
+        co_awaiter1_.start();
+        co_awaiter2_.start();
       }
     };
 

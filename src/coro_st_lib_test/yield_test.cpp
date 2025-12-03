@@ -37,7 +37,7 @@ namespace
 
     auto awaiter = task.get_work().get_awaiter(tl.ctx);
 
-    awaiter.start_as_chain_root();
+    awaiter.start();
 
     ASSERT_FALSE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
@@ -61,7 +61,7 @@ namespace
     // it's too late for async_yield
     tl.stop_source.request_stop();
 
-    awaiter.start_as_chain_root();
+    awaiter.start();
 
     ASSERT_FALSE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
@@ -88,7 +88,7 @@ namespace
 
     auto awaiter = task.get_work().get_awaiter(tl.ctx);
 
-    awaiter.start_as_chain_root();
+    awaiter.start();
 
     ASSERT_TRUE(reached_yield);
 
@@ -121,7 +121,7 @@ namespace
     // it's too late for async_yield
     tl.stop_source.request_stop();
 
-    awaiter.start_as_chain_root();
+    awaiter.start();
 
     ASSERT_TRUE(reached_yield);
 

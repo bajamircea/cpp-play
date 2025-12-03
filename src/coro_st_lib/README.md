@@ -147,7 +147,7 @@ Many of the methods in the implementation are `noexcept`.
   - has `await_ready`, `await_suspend`, `await_resume`
     for when `co_await`ed in a coroutine
   - and the additional
-    - `start_as_chain_root() noexcept` for when trampolined from outside a coroutine
+    - `start() noexcept` for when trampolined from outside a coroutine
     - `get_result_exception() noexcept` to check e.g. in `async_wait_all` if a child
       had an error (exception means error)
 
@@ -182,7 +182,7 @@ When run from parent that is not a coroutine e.g. `run`:
   `auto awaiter = task.get_work().get_awaiter(context);`
   - the context is the usually created by the parent (which is not a coroutine
     here).
-- `awaiter.start_as_chain_root()` is called to start it (a parent coroutine is
+- `awaiter.start()` is called to start it (a parent coroutine is
   not supplied)
 - eventually it needs call the completion callback (for success i.e.
   value or error) or the cancellation callback from the `context`,
@@ -200,7 +200,7 @@ Long topic, short answer: it's a combination of the C++ coroutine model (`await_
 `await_suspend` and `await_resume` where the result is pulled) and the sender/receiver
 model (where the completion/cancellation methods are provided by the parent, the receiver).
 
-The continuation (e.g. context) is provided before `start_as_chain_root` to avoid races
+The continuation (e.g. context) is provided before `start` to avoid races
 between attaching the continuation and the concurrent activity. That's similar to
 `connect` followed by `start` in the sender/receiver model.
 
@@ -232,12 +232,12 @@ The basic rules are somehow complex:
 - To resume a coroutine outside `await_suspend` follow the rules of immediate vs.
   scheduled that apply there. The equivalent of immediate is to call `.resume()`
   on the coroutine handle. The equivalent of scheduled is `schedule_coroutine_resume`.
-- When in `start_as_chain_root`:
+- When in `start`:
   - call `invoke_continuation` or `invoke_cancellation`, the parent does reference
     counting (usually some `pending_counter` named variable) to prevent uncontrolled
     stack growth.
 - When in the shared completion function e.g. wait_any `on_shared_continue()`
-  - This is not called if we have the wait_any `start_as_chain_root()` or
+  - This is not called if we have the wait_any `start()` or
     wait_any `await_suspend()` on the stack because the pending reference count prevents
     it. We schedule there because we're possible inside some `.resume()`.
     TODO: is that right? can't we do immediate? e.g. how about inside the `async_cast`?
@@ -608,7 +608,7 @@ associated test folder:
         packet and then a subsequent invocation might immediately produce
         a value from the unconsumed data in the previous packet, so many
         primitives have to deal with immediately produced values (e.g. in
-        `start_as_chain_root`)
+        `start`)
 - `just_exception.h`
   - `auto result = co_await async_just_exception(std::runtime_error("Ups!"))`
     - throws the exception
