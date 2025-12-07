@@ -205,62 +205,127 @@ between attaching the continuation and the concurrent activity. That's similar t
 `connect` followed by `start` in the sender/receiver model.
 
 
-## Schedule vs immediate invocation of the completion
+## Schedule vs immediate invocation of the completion: description of the problem
 
-To call the completion callback (for success i.e. value or error) or the cancellation
-callback the `context` provides the options to do that immediately or to schedule them
-soon on the `ready_queue`.
+A child can indicate completion to the parent in severaly ways. Via returns from
+`await_ready` and `await_suspend`, or via calling the completion callbacks provided
+in the `context`. The `context` provides the options to call the completion
+callbacks immediately or to schedule them soon on the `ready_queue`.
 
-Ideally we want them immediately, but we want to avoid stack overflows and need to work
-around Microsoft C++ bug(s).
-- [Incorrect use of coroutine frame instead of the stack in std::coroutine_handle<>
-  await_suspend](https://developercommunity.visualstudio.com/t/Incorrect-use-of-coroutine-frame-instead/10999039)
-  - this was fixed in Visual Studio 2026
+One possible strategy in a single threaded environment is to always schedule. This
+is the simplest strategy, but scheduling has additional overheads and delays of
+adding and removing from the ready queue. In a multithreaded environment it still
+means that we need to consider the case where the scheduled work is picked by another
+thread and now runs concurently with the child function that scheduled it.
 
-The stack overflows can be caused by being in a `.resume()` and calling eventually another
-`.resume()` without using a technique like symmetric transfer or scheduling work for later.
+In this library we selectively use the immediate completion call option, so that we
+don't leave performance on the table and explore consequences for multithreaded cases.
 
-TODO: revist the rules below, because it might be simpler: maybe all we need is to not call
-`.resume()` when we might already be in `.resume()` AND work around the Visual Studio bug.
-The basic rules are somehow complex:
+If we invoke the completion immediately, this can lead to issues of re-entrancy
+and stack size. For example consider the case of a chain `a, b, c` where
+the parent's result ready might be invoked from within the start of a child and a parent
+might destroy recursively its children. The stack might look like:
+
+```text
+a::start
+  b::start
+    c::start
+      b::result_ready
+        a::result_ready
+          ~b
+            ~c
+```
+
+In the diagram above, the stack would have a upper limit of approx. three times the
+chain length.
+
+A child that invokes the parent's completion function might find that inside that
+completion the parent calls child methods e.g. to get the result, but also the
+destructor of the child. The child must not access members, variables or functions
+after they invoke a parent's completion.
+
+A parent that starts a child, might find that, inside the `start()` of the child, the
+child invokes the completion provided by the parent. The parent needs to handle
+this re-entrancy. In particular if this parent invokes the completion of its parent
+it might find itself destroyed.
+
+We also want to avoid stack overflows. One potential cause for stack overflows is being
+in a `.resume()` and calling eventually another `.resume()` without using a technique
+like symmetric transfer or scheduling work for later.
+
+We also need to work around Microsoft C++ bug(s) like [Incorrect use of coroutine frame
+instead of the stack in std::coroutine_handle<>
+await_suspend](https://developercommunity.visualstudio.com/t/Incorrect-use-of-coroutine-frame-instead/10999039)
+(though this was fixed in Visual Studio 2026)
+
+It's hard to reason about what would happen, by only looing at a whole chain,
+but it's easier to focus one element of the chain at a time, understand that and then
+apply that to compose to what would happen if we have a chain.
+
+IMPORTANT NOTE: Each component would have to justify what it does in textual form
+in it's associated test file.
+
+
+## Schedule vs immediate invocation of the completion: rules of this library
+
+The rules are somehow complex, here is a summary:
+
+- In general we invoke completions immediately, unless specified otherwise
+  - Reason: library decision related to performance, delays (and secondary
+    to learn to code correctly for re-entrancy in mulithreaded cases)
+- Once the completion is invoked:
+  - Return immediately, don't access member variables of functions
+    - Reason: protect against re-entrancy where the parent would destroy child
+    - In some cases you might want to take copies on the stack of the member
+      variables (to avoid accessing the members)
+  - In multithreaded cases (not this library) you might use carefully orchestrated
+    atomics to handle races between child and parent
+- From `await_ready` don't invoke completion (reason: the coroutine is not suspended),
+  you can return `true` to go back to the parent coroutine without even suspending/resuming
+  it (though most `await_ready`s return false, which causes the coroutine to suspend
+  and `await_suspend` to be called)
 - When in `await_suspend`:
-  - if you want to choose to resume the parent coroutine: use the `bool` returning
+  - If you choose to resume the parent coroutine: use the `bool` returning
     version of `await_suspend` and return `false` to resume the parent. See below
     for the `co::final_awaiter::await_suspend`.
-  - to cancel: `schedule_stopped` (to avoid stack growth; we're already in a
-    `.resume()`) TODO: is that right?
 - To resume a coroutine outside `await_suspend` follow the rules of immediate vs.
   scheduled that apply there. The equivalent of immediate is to call `.resume()`
   on the coroutine handle. The equivalent of scheduled is `schedule_coroutine_resume`.
-- When in `start`:
-  - call `invoke_result_ready` or `invoke_stopped`, the parent does reference
-    counting (usually some `pending_counter` named variable) to prevent uncontrolled
-    stack growth.
-- When in the shared completion function e.g. wait_any `on_shared_continue()`
-  - This is not called if we have the wait_any `start()` or
-    wait_any `await_suspend()` on the stack because the pending reference count prevents
-    it. We schedule there because we're possible inside some `.resume()`.
-    TODO: is that right? can't we do immediate? e.g. how about inside the `async_cast`?
-- When in the `on_cancel` of `stop_cb_.emplace(ctx_.get_stop_token(), ...on_cancel)`:
-  - call `schedule_stopped` because `on_cancel` might be triggered at the point
-    of `.emplace` e.g. in `await_suspend`
+- From a stop callback function: schedule, usually `schedule_stopped`
+  - This is when in the `on_cancel` of `stop_cb_.emplace(ctx_.get_stop_token(), ...on_cancel)`;
+    Note that `on_cancel` might be triggered at the point of `.emplace` e.g. in
+    `await_suspend` or `start`
+  - Reason: to avoid stack growth. The callback could be invoked immediately when
+    created, we could already in a `.resume()`
+- When in `start` in a leaf component
+  - Call `invoke_result_ready` or `invoke_stopped`, the parent will handle as described
+    below
+- When in `start` or `await_suspedn` in a component that itself calls `start` on children
+  - In `start`
+    - Have some reference counting around calling `start` on children
+      (usually some `pending_counter` named variable or at least a `bool`)
+    - If at the end of `start` all the children completed (e.g. pending counter reaches
+      zeor) then it can invoke on its own parent
+  - In the completions that it provides e.g. wait_any `on_shared_continue()`
+    - This is not called if we have the wait_any `start()` or wait_any `await_suspend()`
+      on the stack, use the pending reference count to prevent it.
+    - If this is the last child (and not in `start()` or `await_suspend`) then
+      invoke
 - When in a function called from the run loop e.g. `on_timer` for the awaiter of
   `async_sleep_for`:
   - call `invoke_result_ready` or `invoke_stopped`, because we're at the root
-- In `co::final_awaiter::await_suspend` we call `schedule_completion` and
-  `schedule_stopped` because:
-  - we have to `schedule_stopped` anyway for when we have a parent coroutine,
-    reason is: we're already in a `.resume()`
+- In `co::final_awaiter::await_suspend`
+  - to resume the parent return the parent via a symmetric transfer `await_suspend`
+    (this is to avoid stack overflow of looping immediately completing coroutines)
   - we need to work around a bug in Microsoft C++ compiler which impacts `await_suspend`
     which returns a `coroutine_handle` (the bug was fixed though in Visual Studio 2026)
-    TODO: revisit this if support for older versions is not required
-  - the `final_awaiter` has to return a `coroutine_handle` (i.e. the symmetric transfer
-    style one) for when the parent was also a coroutine
-  - but the bug causes the coroutine frame to be used instead of the stack (this does
-    not seem to impact the versions of `await_suspend` that return `bool` or `void`)
-  - therefore we can't call `invoke_result_ready` or `invoke_stopped` because
-    they might destroy the coroutine from (e.g. if this is a child of a nursery)
-  - therefore we call the `schedule_...` variations
+    - the `final_awaiter` has to return a `coroutine_handle` 
+    - but the bug causes the coroutine frame to be used instead of the stack (this does
+      not seem to impact the versions of `await_suspend` that return `bool` or `void`)
+    - therefore we can't call `invoke_result_ready` or `invoke_stopped` because
+      they might destroy the coroutine from (e.g. if this is a child of a nursery)
+    - therefore we call the `schedule_...` variations
+  - but if the bug is fixed (or not applicable) we could invoke
 
 
 # Code description
@@ -452,7 +517,8 @@ associated test folder:
       - the cost for this is an extra pointer to the context per coroutine frame
     - continuation, cancellation, resumption of parent are carefully orchestrated:
       either invoked immediately or scheduled for later or via `await_suspend` return
-      values. The goal is to avoiding stack overflow of he sort that asymmetric transfer was meant to avoid. This is also done for the other `async_...` primitives.
+      values. The goal is to avoiding stack overflow of he sort that asymmetric transfer
+      was meant to avoid. This is also done for the other `async_...` primitives.
 - `yield.h`
   - `co_await async_yield();`
     - like std::this_thread::yield() than co_yield
