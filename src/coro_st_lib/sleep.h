@@ -76,7 +76,6 @@ namespace coro_st
           return;
         }
 
-        // it's fine to invoke since on_timer is called from the runner loop
         ctx_.invoke_result_ready();
       }
 

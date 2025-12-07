@@ -30,10 +30,11 @@ namespace coro_st
       {
         if (ctx_.get_stop_token().stop_requested())
         {
-          ctx_.schedule_stopped();
+          ctx_.invoke_stopped();
           return;
         }
 
+        // we schedule here: that's the nature of yield
         ctx_.schedule_coroutine_resume(handle);
       }
 
@@ -48,14 +49,13 @@ namespace coro_st
 
       void start() noexcept
       {
-        // unusually we don't invoke, we schedule instead
-        // that's the nature of yield
         if (ctx_.get_stop_token().stop_requested())
         {
-          ctx_.schedule_stopped();
+          ctx_.invoke_stopped();
           return;
         }
 
+        // we schedule here: that's the nature of yield
         ctx_.schedule_result_ready();
       }
     };

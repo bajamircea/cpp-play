@@ -205,7 +205,9 @@ between attaching the continuation and the concurrent activity. That's similar t
 `connect` followed by `start` in the sender/receiver model.
 
 
-## Schedule vs immediate invocation of the completion: description of the problem
+## Schedule vs immediate invocation of the completion
+
+### Description of the problem
 
 A child can indicate completion to the parent in severaly ways. Via returns from
 `await_ready` and `await_suspend`, or via calling the completion callbacks provided
@@ -258,15 +260,8 @@ instead of the stack in std::coroutine_handle<>
 await_suspend](https://developercommunity.visualstudio.com/t/Incorrect-use-of-coroutine-frame-instead/10999039)
 (though this was fixed in Visual Studio 2026)
 
-It's hard to reason about what would happen, by only looing at a whole chain,
-but it's easier to focus one element of the chain at a time, understand that and then
-apply that to compose to what would happen if we have a chain.
 
-IMPORTANT NOTE: Each component would have to justify what it does in textual form
-in it's associated test file.
-
-
-## Schedule vs immediate invocation of the completion: rules of this library
+### Rules of this library
 
 The rules are somehow complex, here is a summary:
 
@@ -326,6 +321,22 @@ The rules are somehow complex, here is a summary:
       they might destroy the coroutine from (e.g. if this is a child of a nursery)
     - therefore we call the `schedule_...` variations
   - but if the bug is fixed (or not applicable) we could invoke
+
+### Outcome
+
+It's hard to reason about such rules/claims, by only looing at a whole chain,
+but it's easier to focus one element of the chain at a time, understand that and then
+apply that to compose to what would happen if we have a chain.
+
+So for example I think that the rules above result of a stack usage bounded by a factor
+of 3 of the longest chain (i.e. `start`, completion + either of(stop callback in peer
+chain, destructor)). That results from a nursery that starts a chain, the chain
+propagates the completion downwards and the nursery destroys the chain it started.
+You can reason about the behaviour by looking at each component one at a time (the
+nursery in this example).
+
+IMPORTANT NOTE: Each component would have to justify what it does in textual form
+in it's associated test file.
 
 
 # Code description

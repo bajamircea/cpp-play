@@ -28,7 +28,7 @@ namespace coro_st
 
       void await_suspend(std::coroutine_handle<>) noexcept
       {
-        ctx_.schedule_stopped();
+        ctx_.invoke_stopped();
       }
 
       constexpr void await_resume() const noexcept

@@ -49,19 +49,6 @@ namespace coro_st
 
         std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> child_coro) noexcept
         {
-          auto parent_coro = child_coro.promise().parent_coro_;
-
-          // if we have a parent coroutine
-          if (parent_coro)
-          {
-            if (ctx_.get_stop_token().stop_requested())
-            {
-              ctx_.schedule_stopped();
-              return std::noop_coroutine();
-            }
-            return parent_coro;
-          }
-
           // We're the first one in a chain in a .resume
           // from either start or from the run loop,
           // so we could invoke instead of schedule.
@@ -75,6 +62,13 @@ namespace coro_st
             ctx_.schedule_stopped();
             return std::noop_coroutine();
           }
+
+          auto parent_coro = child_coro.promise().parent_coro_;
+          if (parent_coro)
+          {
+            return parent_coro;
+          }
+
           ctx_.schedule_result_ready();
           return std::noop_coroutine();
         }

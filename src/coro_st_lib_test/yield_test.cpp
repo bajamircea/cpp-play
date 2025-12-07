@@ -63,12 +63,9 @@ namespace
 
     awaiter.start();
 
-    ASSERT_FALSE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
 
-    ASSERT_FALSE(tl.result_ready);
-    ASSERT_FALSE(tl.stopped);
-    tl.run_pending_work();
     ASSERT_FALSE(tl.result_ready);
     ASSERT_TRUE(tl.stopped);
   }
@@ -125,12 +122,9 @@ namespace
 
     ASSERT_TRUE(reached_yield);
 
-    ASSERT_FALSE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
 
-    ASSERT_FALSE(tl.result_ready);
-    ASSERT_FALSE(tl.stopped);
-    tl.run_pending_work();
     ASSERT_FALSE(tl.result_ready);
     ASSERT_TRUE(tl.stopped);
   }

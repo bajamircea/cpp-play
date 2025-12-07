@@ -81,7 +81,7 @@ namespace coro_st
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
-          parent_ctx_.schedule_stopped();
+          parent_ctx_.invoke_stopped();
           return true;
         }
 
@@ -146,17 +146,17 @@ namespace coro_st
 
         if (parent_ctx_.get_stop_token().stop_requested())
         {
-          parent_ctx_.schedule_stopped();
+          parent_ctx_.invoke_stopped();
           return;
         }
 
         if (parent_handle_)
         {
-          parent_ctx_.schedule_coroutine_resume(parent_handle_);
+          parent_handle_.resume();
           return;
         }
 
-        parent_ctx_.schedule_result_ready();
+        parent_ctx_.invoke_result_ready();
       }
 
       void on_task_result_ready() noexcept
