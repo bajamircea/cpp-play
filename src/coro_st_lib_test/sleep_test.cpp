@@ -44,7 +44,7 @@ namespace
 
     ASSERT_FALSE(tl.result_ready);
     ASSERT_FALSE(tl.stopped);
-    tl.run_pending_work();
+    tl.run_one_timer();
     ASSERT_TRUE(tl.result_ready);
     ASSERT_FALSE(tl.stopped);
   }
@@ -69,7 +69,7 @@ namespace
 
     ASSERT_FALSE(tl.result_ready);
     ASSERT_FALSE(tl.stopped);
-    tl.run_pending_work();
+    tl.run_one_ready();
     ASSERT_FALSE(tl.result_ready);
     ASSERT_TRUE(tl.stopped);
   }
@@ -93,7 +93,14 @@ namespace
 
     ASSERT_FALSE(tl.result_ready);
     ASSERT_FALSE(tl.stopped);
-    tl.run_pending_work();
+    tl.run_one_timer();
+
+    ASSERT_FALSE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.timers_heap_.empty());
+
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
+    tl.run_one_ready();
     ASSERT_TRUE(tl.result_ready);
     ASSERT_FALSE(tl.stopped);
   }
@@ -122,7 +129,7 @@ namespace
 
     ASSERT_FALSE(tl.result_ready);
     ASSERT_FALSE(tl.stopped);
-    tl.run_pending_work();
+    tl.run_one_ready();
     ASSERT_FALSE(tl.result_ready);
     ASSERT_TRUE(tl.stopped);
   }

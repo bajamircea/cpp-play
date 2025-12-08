@@ -4,6 +4,7 @@
 #include "../coro_st_lib/context.h"
 #include "../coro_st_lib/event_loop.h"
 #include "../coro_st_lib/stop_util.h"
+#include "../test_lib/test.h"
 
 namespace coro_st_test
 {
@@ -30,12 +31,37 @@ namespace coro_st_test
     test_loop(const test_loop&) = delete;
     test_loop& operator=(const test_loop&) = delete;
 
-    void run_pending_work() noexcept
+    // Not needed for the time being
+    // void run_pending_work() noexcept
+    // {
+    //   while (!(el.ready_queue_.empty() && el.timers_heap_.empty()))
+    //   {
+    //     static_cast<void>(el.do_current_pending_work());
+    //   }
+    // }
+
+    void run_one_ready(int count=1) noexcept
     {
-      while (!(el.ready_queue_.empty() && el.timers_heap_.empty()))
+      for (int i = 0; i < count; ++i)
       {
-        static_cast<void>(el.do_current_pending_work());
+        auto* ready_node = el.ready_queue_.pop();
+        ASSERT_NE(nullptr, ready_node);
+
+        coro_st::callback cb = ready_node->cb;
+        ASSERT_TRUE(cb.is_callable());
+        cb.invoke();
       }
+    }
+
+    void run_one_timer() noexcept
+    {
+      auto* timer_node = el.timers_heap_.min_node();
+      ASSERT_NE(nullptr, timer_node);
+      el.timers_heap_.pop_min();
+
+      coro_st::callback cb = timer_node->cb;
+      ASSERT_TRUE(cb.is_callable());
+      cb.invoke();
     }
 
     void on_result_ready() noexcept

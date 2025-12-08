@@ -53,7 +53,7 @@ namespace
     awaiter.start();
     ASSERT_FALSE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
-    tl.run_pending_work();
+    tl.run_one_ready();
     ASSERT_TRUE(tl.el.ready_queue_.empty());
     ASSERT_TRUE(tl.el.timers_heap_.empty());
     ASSERT_TRUE(tl.result_ready);
