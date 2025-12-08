@@ -20,7 +20,7 @@ namespace coro_st
       enum class result_state
       {
         none,
-        has_value_or_error,
+        has_result,
         has_stopped,
       };
 
@@ -148,7 +148,7 @@ namespace coro_st
       {
         if (result_state::none == result_state_)
         {
-          result_state_ = result_state::has_value_or_error;
+          result_state_ = result_state::has_result;
         }
         on_shared_continue();
       }

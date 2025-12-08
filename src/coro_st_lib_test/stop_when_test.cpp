@@ -20,7 +20,6 @@ namespace
   TEST(stop_when_construction)
   {
     using namespace coro_st;
-    using namespace coro_st::impl;
 
     coro_st_test::test_loop tl;
 

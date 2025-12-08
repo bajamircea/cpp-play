@@ -26,7 +26,7 @@ namespace coro_st
       enum class result_state
       {
         none,
-        has_value_or_error,
+        has_result,
         has_stopped,
         has_timeout,
       };
@@ -111,7 +111,7 @@ namespace coro_st
           case result_state::none:
           case result_state::has_stopped:
             std::terminate();
-          case result_state::has_value_or_error:
+          case result_state::has_result:
             break;
           case result_state::has_timeout:
             return std::nullopt;
@@ -135,7 +135,7 @@ namespace coro_st
           case result_state::none:
           case result_state::has_stopped:
             std::terminate();
-          case result_state::has_value_or_error:
+          case result_state::has_result:
             return co_awaiter_.get_result_exception();
           case result_state::has_timeout:
             return {};
@@ -191,7 +191,7 @@ namespace coro_st
         if ((result_state::none == result_state_) ||
             (result_state::has_timeout == result_state_))
         {
-          result_state_ = result_state::has_value_or_error;
+          result_state_ = result_state::has_result;
           children_stop_source_.request_stop();
         }
 
