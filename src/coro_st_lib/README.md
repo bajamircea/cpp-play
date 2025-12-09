@@ -89,7 +89,8 @@ inspiration from a Google talk on coroutine adoption, will call it `co`, for
 brevity. `co` is templatized on the return value type e.g. `co<std::string>`.
 
 Structured concurrencly means e.g. that when we reach a `co_await` in our library
-the code will suspend and continue only when the work of what's in the right of `co_await` completed, either with a result value or with an exception or
+the code will suspend and continue only when the work of what's in the right of
+`co_await` completed, either with a result value or with an exception or
 cancelled. This creates a chain of parent/child relationships, where the parent
 is the continuation of the child. This is the most basic of the concurrency
 primitives.
@@ -295,12 +296,12 @@ The rules are somehow complex, here is a summary:
 - When in `start` in a leaf component
   - Call `invoke_result_ready` or `invoke_stopped`, the parent will handle as described
     below
-- When in `start` or `await_suspedn` in a component that itself calls `start` on children
-  - In `start`
+- When in `start` or `await_suspend` in a component that itself calls `start` on children
+  - In `start`/`await_suspend`
     - Have some reference counting around calling `start` on children
       (usually some `pending_counter` named variable or at least a `bool`)
-    - If at the end of `start` all the children completed (e.g. pending counter reaches
-      zeor) then it can invoke on its own parent
+    - If at the end of `start`/`await_suspend` all the children completed (e.g.
+      pending counter reaches zero) then it can invoke on its own parent
   - In the completions that it provides e.g. wait_any `on_shared_continue()`
     - This is not called if we have the wait_any `start()` or wait_any `await_suspend()`
       on the stack, use the pending reference count to prevent it.
