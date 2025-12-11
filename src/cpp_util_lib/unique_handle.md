@@ -1142,6 +1142,61 @@ are similarities:
 </table>
 
 
+## Yes, but still traits look unusual
+
+See for example Kenny Kerr's article in the MSDN magazine Volume 26 Number 07 from July 2011
+[Windows with C++ - C++ and the Windows API](https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/july/msdn-magazine-windows-with-c-c-and-the-windows-api)
+
+Notice the similarities of Kenny Kerr's `unique_handle` in naming and implementation.
+```cpp
+template <typename Type, typename Traits>
+class unique_handle
+{
+  unique_handle(unique_handle const &);
+  unique_handle & operator=(unique_handle const &);
+  void close() throw()
+  {
+    if (*this)
+    {
+      Traits::close(m_value);
+    }
+  }
+  Type m_value;
+public:
+  explicit unique_handle(Type value = Traits::invalid()) throw() :
+    m_value(value)
+  {
+  }
+  ~unique_handle() throw()
+  {
+    close();
+  }
+```
+
+Sample proposed usage of Kenny Kerr's class.
+```cpp
+struct handle_traits
+{
+  static HANDLE invalid() throw()
+  {
+    return nullptr;
+  }
+  static void close(HANDLE value) throw()
+  {
+    CloseHandle(value);
+  }
+};
+
+typedef unique_handle<HANDLE, handle_traits> handle;
+
+handle h(CreateEvent( ... ));
+```
+
+There are some differences, but I think they are historical and surface only.
+My point is that this design and naming (including "traits") makes sense if multiple
+designs independently come to so many similarities.
+
+
 ## `.ref()`, `.ptr()`, `.out_ptr()` etc.
 
 The predecesor of `unique_handle`, `raii_with_invalid_value` provided
