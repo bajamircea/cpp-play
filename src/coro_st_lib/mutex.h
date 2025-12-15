@@ -4,33 +4,54 @@
 
 #include "../cpp_util_lib/intrusive_list.h"
 
+#include <cassert>
 #include <coroutine>
 
 namespace coro_st
 {
-  class event
+  class mutex
   {
   public:
-    class [[nodiscard]] event_wait_task
+    class [[nodiscard]] mutex_lock_task
     {
-      friend class event;
+      friend class mutex;
 
       class [[nodiscard]] awaiter
       {
-        friend class event;
+        friend class mutex;
+
+        class [[nodiscard]] scoped_lock
+        {
+          friend class awaiter;
+
+          mutex& mtx_;
+          explicit scoped_lock(mutex& mtx) noexcept : mtx_{ mtx }
+          {
+            assert(mtx_.locked_);
+          }
+
+        public:
+          scoped_lock(const scoped_lock&) = delete;
+          scoped_lock& operator=(const scoped_lock&) = delete;
+
+          ~scoped_lock()
+          {
+            mtx_.unlock();
+          }
+        };
 
         context& ctx_;
         std::coroutine_handle<> parent_handle_;
-        event& evt_;
+        mutex& mtx_;
         awaiter* next_waiting_{ nullptr };
         awaiter* prev_waiting_{ nullptr };
         std::optional<stop_callback<callback>> parent_stop_cb_;
 
       public:
-        awaiter(context& ctx, event& evt) noexcept :
+        awaiter(context& ctx, mutex& mtx) noexcept :
           ctx_{ ctx },
           parent_handle_{},
-          evt_{ evt },
+          mtx_{ mtx },
           next_waiting_{ nullptr },
           prev_waiting_{ nullptr },
           parent_stop_cb_{ std::nullopt }
@@ -45,14 +66,26 @@ namespace coro_st
           return false;
         }
 
-        void await_suspend(std::coroutine_handle<> handle) noexcept
+        bool await_suspend(std::coroutine_handle<> handle) noexcept
         {
           parent_handle_ = handle;
+          if (!mtx_.locked_)
+          {
+            if (ctx_.get_stop_token().stop_requested())
+            {
+              ctx_.invoke_stopped();
+              return true;
+            }
+            mtx_.locked_ = true;
+            return false;
+          }
           enqueue_wait_node();
+          return true;
         }
 
-        constexpr void await_resume() const noexcept
+        [[nodiscard]] scoped_lock await_resume() noexcept
         {
+          return scoped_lock{ mtx_ };
         }
 
         std::exception_ptr get_result_exception() const noexcept
@@ -62,13 +95,24 @@ namespace coro_st
 
         void start() noexcept
         {
+          if (!mtx_.locked_)
+          {
+            if (ctx_.get_stop_token().stop_requested())
+            {
+              ctx_.invoke_stopped();
+              return;
+            }
+            mtx_.locked_ = true;
+            ctx_.invoke_result_ready();
+            return;
+          }
           enqueue_wait_node();
         }
 
       private:
         void enqueue_wait_node() noexcept
         {
-          evt_.wait_list_.push_back(this);
+          mtx_.wait_list_.push_back(this);
           parent_stop_cb_.emplace(
             ctx_.get_stop_token(),
             make_member_callback<&awaiter::on_cancel>(this));
@@ -77,7 +121,7 @@ namespace coro_st
         void on_event() noexcept
         {
           parent_stop_cb_.reset();
-          evt_.wait_list_.remove(this);
+          mtx_.wait_list_.remove(this);
 
           if (parent_handle_)
           {
@@ -91,17 +135,17 @@ namespace coro_st
         void on_cancel() noexcept
         {
           parent_stop_cb_.reset();
-          evt_.wait_list_.remove(this);
+          mtx_.wait_list_.remove(this);
           ctx_.schedule_stopped();
         }
       };
 
       struct [[nodiscard]] work
       {
-        event* evt_;
+        mutex* mtx_;
 
-        work(event& evt) noexcept :
-          evt_{ &evt }
+        work(mutex& mtx) noexcept :
+          mtx_{ &mtx }
         {
         }
 
@@ -112,7 +156,7 @@ namespace coro_st
 
         [[nodiscard]] awaiter get_awaiter(context& ctx) noexcept
         {
-          return {ctx, *evt_};
+          return {ctx, *mtx_};
         }
       };
 
@@ -120,13 +164,13 @@ namespace coro_st
       work work_;
 
     public:
-      event_wait_task(event& evt) noexcept :
-        work_{ evt }
+      mutex_lock_task(mutex& mtx) noexcept :
+        work_{ mtx }
       {
       }
 
-      event_wait_task(const event_wait_task&) = delete;
-      event_wait_task& operator=(const event_wait_task&) = delete;
+      mutex_lock_task(const mutex_lock_task&) = delete;
+      mutex_lock_task& operator=(const mutex_lock_task&) = delete;
 
       [[nodiscard]] work get_work() noexcept
       {
@@ -136,39 +180,33 @@ namespace coro_st
 
   private:
     using wait_list = cpp_util::intrusive_list<
-      event_wait_task::awaiter,
-      &event_wait_task::awaiter::next_waiting_,
-      &event_wait_task::awaiter::prev_waiting_>;
+      mutex_lock_task::awaiter,
+      &mutex_lock_task::awaiter::next_waiting_,
+      &mutex_lock_task::awaiter::prev_waiting_>;
 
     wait_list wait_list_;
+    bool locked_{false};
 
-  public:
-    bool notify_one() noexcept
+    void unlock() noexcept
     {
+      assert(locked_);
       if (wait_list_.empty())
       {
-        return false;
+        locked_ = false;
+        return;
       }
       wait_list_.front()->on_event();
-      return true;
     }
 
-    size_t notify_all() noexcept
+public:
+    [[nodiscard]] mutex_lock_task async_lock() noexcept
     {
-      size_t count = 0;
-      // in a multithreaded solution where a lock is required
-      // on the wait_list_, it might be more efficient to bulk
-      // schedule them rather than notify one by one in a loop
-      while (notify_one())
-      {
-        ++count;
-      }
-      return count;
+      return mutex_lock_task{*this};
     }
 
-    [[nodiscard]] event_wait_task async_wait() noexcept
+    bool is_locked() const noexcept
     {
-      return event_wait_task{*this};
+      return locked_;
     }
   };
 }

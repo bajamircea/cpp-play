@@ -666,11 +666,22 @@ associated test folder:
 - `event.h`
   - `event`
     - create one, pass it to several chains
-    - some chains `co_await e.async_wait()`
+    - some chains `co_await evt.async_wait();`
     - some (usually one) calls:
-      - `e.notify_one()` to schedule one to resume
+      - `evt.notify_one()` to schedule one to resume
         - returns `true` if one was scheduled, `false` if none was
-      - `e.notify_all()` to schedule all waiting to resume
+      - `evt.notify_all()` to schedule all waiting to resume
+- `mutex.h`
+  - `mutex`
+    - create one, pass it to several chains
+    - to use `auto lock = co_await mtx.async_lock();`
+      - if not locked then it takes the lock
+      - if locked then it's added to a queue and gets the lock (in order)
+        when the holder unlocks it (the `lock` variable goes out of scope)
+    - can check state with `mtx.is_locked()` method
+    - IMPORTANT: beware of the mistake of not assigning to a variable
+      i.e. this is wrong: `co_await mtx.async_lock();` (reason: the
+      mutex is immediately unlocked)
 - `just_stopped.h`
   - `co_await async_just_stopped()`
     - when you have a tree of fanned out chains you can trigger cancellation

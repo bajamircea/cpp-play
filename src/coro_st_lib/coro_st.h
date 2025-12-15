@@ -27,6 +27,7 @@
 #include "call_capture.h"
 #include "nursery.h"
 #include "event.h"
+#include "mutex.h"
 #include "just_stopped.h"
 #include "stopped_as_optional.h"
 #include "just.h"
