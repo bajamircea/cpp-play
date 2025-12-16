@@ -83,7 +83,7 @@ namespace coro_st
           return true;
         }
 
-        [[nodiscard]] scoped_lock await_resume() noexcept
+        scoped_lock await_resume() noexcept
         {
           return scoped_lock{ mtx_ };
         }

@@ -4,7 +4,9 @@
 
 #include "../coro_st_lib/coro_type_traits.h"
 #include "../coro_st_lib/run.h"
+#include "../coro_st_lib/yield.h"
 
+#include "deleter.h"
 #include "test_loop.h"
 
 #include <string>
@@ -75,6 +77,33 @@ namespace
     ASSERT_FALSE(tl.result_ready);
     ASSERT_FALSE(tl.stopped);
     tl.run_one_ready();
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_TRUE(tl.stopped);
+  }
+
+  coro_st::co<void> async_stopped()
+  {
+    co_await coro_st::async_yield();
+  }
+
+  TEST(co_chain_root_cancellation_and_delete)
+  {
+    coro_st_test::test_loop tl;
+
+    auto task = coro_st_test::async_deleter(async_stopped());
+
+    auto awaiter = task.get_work().get_awaiter(tl.ctx);
+
+    awaiter.start();
+
+    ASSERT_FALSE(tl.el.ready_queue_.empty());
+    ASSERT_TRUE(tl.el.timers_heap_.empty());
+
+    tl.stop_source.request_stop();
+
+    ASSERT_FALSE(tl.result_ready);
+    ASSERT_FALSE(tl.stopped);
+    tl.run_one_ready(2);
     ASSERT_FALSE(tl.result_ready);
     ASSERT_TRUE(tl.stopped);
   }
