@@ -673,15 +673,25 @@ associated test folder:
       - `evt.notify_all()` to schedule all waiting to resume
 - `mutex.h`
   - `mutex`
+    - motivation: using a locked `std::mutex` across a `co_await` is a
+      problem if another coroutine in the same appartment thread tries
+      to also lock it, it willl block that thread until the initial
+      coroutine resumes and unlocks it; in a single threaded case there
+      is no other thread to reasume the initial coroutine leading to
+      deadlock, but even if using a thread pool of N available threads,
+      a blocking thread reduces the available threads to N - 1.
     - create one, pass it to several chains
     - to use `auto lock = co_await mtx.async_lock();`
       - if not locked then it takes the lock
       - if locked then it's added to a queue and gets the lock (in order)
         when the holder unlocks it (the `lock` variable goes out of scope)
     - can check state with `mtx.is_locked()` method
-    - IMPORTANT: beware of the mistake of not assigning to a variable
-      i.e. this is wrong: `co_await mtx.async_lock();` (reason: the
-      mutex is immediately unlocked)
+    - IMPORTANT:
+      - beware of the mistake of not assigning to a variable i.e. this is wrong:
+        `co_await mtx.async_lock();` (reason: the mutex is immediately unlocked)
+      - can still deadlock by `auto lock = co_await mtx.async_lock();` again
+        in the same in a child coroutine (or even the same coroutine) while the
+        lock is held
 - `just_stopped.h`
   - `co_await async_just_stopped()`
     - when you have a tree of fanned out chains you can trigger cancellation

@@ -821,7 +821,7 @@ auto err = fopen_s( std::out_ptr<FILE*>(my_unique_fd), "prod.csv", "rb" );;
 ```
 On one side this shows that people tried and can use `std::unique_ptr` for an `int` handle with
 a `-1` invalid value, but I would call it an unpleasant experience compared with `unique_handle`,
-at least a very different experiece in writing a wrapper.
+at least a very different experience in writing a wrapper.
 
 The key is that if the deleter for a `unique_ptr` has a `pointer` type, that really overrides
 what `unique_ptr` stores, in particular the `int` in `std::unique_ptr<int, ...` is meaningless
@@ -994,6 +994,18 @@ else {
   std::cout << "oh no" << std::endl;
 }
 ```
+
+My observation is that people code that way e.g. I've seen repeatedly the pattern:
+```cpp
+some_smart_handle h;
+if (::some_c_api_call(h.out_ptr()) || !(h.is_valid())) {
+  // log the error
+  // then some early exit (exception or return)
+}
+```
+presumably out of concern that the C API might succeed, but still not populate the
+handle with a valid value, i.e. some defensive coding intent from the user of the
+C API.
 
 Also `out_ptr` and `inout_ptr` have some pointer conversions that are fine if they
 work, but also introduce novel ways to get it wrong.
