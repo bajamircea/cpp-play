@@ -586,7 +586,6 @@ struct co_uninitialize_handle_traits : cpp_util::unique_handle_basic_access
 };
 using co_uninitialize_handle = cpp_util::unique_handle<co_uninitialize_handle_traits>;
 
-[[nodiscard]]
 co_uninitialize_handle initialize_ex_multi_threaded()
 {
   HRESULT hr = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -597,7 +596,6 @@ co_uninitialize_handle initialize_ex_multi_threaded()
   return co_uninitialize_handle(true);
 }
 
-[[nodiscard]]
 co_uninitialize_handle initialize_ui_appartment()
 {
   HRESULT hr = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
@@ -1527,6 +1525,64 @@ concern of additional branching, the code as it is handles the assignment to sel
 because if `other` is this very object, then the value is saved to `tmp` and
 assigning the `invalid_value` to `other.h_` will make this very handle invalid,
 with nothing to close before restoring `h_` from `tmp`.
+
+
+### `std::ignore` required sometimes due to `[[nodiscard]]`
+
+Let's say that you have a wrapper for a Windows registry handle:
+
+```cpp
+struct registry_handle_traits : cpp_util::unique_handle_out_ptr_access
+{
+  using handle_type = HKEY;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::RegCloseKey(h));
+  }
+};
+using registry_handle = cpp_util::unique_handle<registry_handle_traits>;
+
+// Construction API wrapper
+registry_handle create_registry_key(...)
+{
+  registry_handle return_value;
+  auto result = ::RegCreateKeyExW(..., return_value.out_ptr(), ...);
+  if (ERROR_SUCCESS != result)
+  {
+    throw std::runtime_error("RegCreateKeyExW failed");
+  }
+  return return_value;
+}
+```
+
+Then if you just want to create a registry key,
+but not use it, you (might) need to use `std::ignore`
+```cpp
+void usage()
+{
+  // just create a registry key
+  // don't use the returned handle
+  std::ignore = create_registry_key(...);
+}
+```
+
+The cause is that `create_registry_key` returns a `unique_handle` which
+is marked `[[nodiscard]]`, requiring the user to use the return value.
+But in this case we just want to create a registry key (e.g. maybe part
+of a product installer). So you need to asign it to `std::ignore`. Another
+case in the same situation would creating an empty file in the style of
+shell command `touch`: you get a file handle that you discard without using
+it to read or write from the file.
+
+We could have not marked the `unique_handle` as `[[nodiscard]]`, but then
+we would have to mark `[[nodiscard]]` functions like
+`co_uninitialize_handle initialize_ex_multi_threaded()`,
+`co_uninitialize_handle initialize_ui_appartment()`, `impersonate_anonymous()`
+where the scope has to be maintained for longer.
+
+We made the choice that adding `std::ignore` has has a simple, obvious solution
+to the user, albeit visible anoying, vs. the more subtle need to mark selective
+function as `[[nodiscard]]` on an ongoing basis.
 
 
 # Even more usage scenarios

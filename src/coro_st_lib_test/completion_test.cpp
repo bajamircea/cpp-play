@@ -56,7 +56,7 @@ namespace
     ASSERT_TRUE(cf.stopped);
   }
 
-  TEST(callback_member_result_ready)
+  TEST(completion_member_result_ready)
   {
     coro_st::completion c;
 
@@ -94,7 +94,7 @@ namespace
     ASSERT_FALSE(stopped);
   }
 
-  TEST(callback_member_stopped)
+  TEST(completion_member_stopped)
   {
     coro_st::completion c;
 
