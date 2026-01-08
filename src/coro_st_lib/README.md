@@ -88,10 +88,10 @@ There is a coroutine type. Often this is called `task`, but taking
 inspiration from a Google talk on coroutine adoption, will call it `co`, for
 brevity. `co` is templatized on the return value type e.g. `co<std::string>`.
 
-Structured concurrencly means e.g. that when we reach a `co_await` in our library
+Structured concurrency means e.g. that when we reach a `co_await` in our library
 the code will suspend and continue only when the work of what's in the right of
-`co_await` completed, either with a result value or with an exception or
-cancelled. This creates a chain of parent/child relationships, where the parent
+`co_await` completed, either with a value or with an exception or cancelled.
+This creates a chain of parent/child relationships, where the parent
 is the continuation of the child. This is the most basic of the concurrency
 primitives.
 
