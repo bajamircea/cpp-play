@@ -27,7 +27,7 @@ namespace coro_st
     size_t index{};
   };
 
-  namespace impl
+  namespace impl::wait_any
   {
     static constexpr size_t g_none_result_type = 0;
     static constexpr size_t g_value_result_type = 1;
@@ -35,7 +35,7 @@ namespace coro_st
     static constexpr size_t g_stopped_result_type = 3;
 
     template<typename T>
-    struct wait_any_awaiter_shared_data
+    struct awaiter_shared_data
     {
       using ResultType = wait_any_result<T>;
 
@@ -47,7 +47,7 @@ namespace coro_st
       // see g_..._result_type above
       std::variant<std::monostate, ResultType, std::exception_ptr, std::monostate> result_;
 
-      wait_any_awaiter_shared_data(context& parent_ctx) noexcept :
+      awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
         parent_handle_{},
         parent_stop_cb_{},
@@ -57,14 +57,14 @@ namespace coro_st
       {
       }
 
-      wait_any_awaiter_shared_data(const wait_any_awaiter_shared_data&) = delete;
-      wait_any_awaiter_shared_data& operator=(const wait_any_awaiter_shared_data&) = delete;
+      awaiter_shared_data(const awaiter_shared_data&) = delete;
+      awaiter_shared_data& operator=(const awaiter_shared_data&) = delete;
 
       void init_parent_cancellation_callback() noexcept
       {
         parent_stop_cb_.emplace(
           parent_ctx_.get_stop_token(),
-          make_member_callback<&wait_any_awaiter_shared_data::on_parent_cancel>(this));
+          make_member_callback<&awaiter_shared_data::on_parent_cancel>(this));
       }
 
       void on_shared_continue() noexcept
@@ -95,14 +95,14 @@ namespace coro_st
     };
 
     template<typename SharedData, is_co_work CoWork>
-    struct wait_any_awaiter_chain_data
+    struct awaiter_chain_data
     {
       SharedData& shared_data_;
       size_t index_;
       context ctx_;
       co_work_awaiter_t<CoWork> co_awaiter_;
 
-      wait_any_awaiter_chain_data(
+      awaiter_chain_data(
         SharedData& shared_data,
         size_t index,
         CoWork& co_work
@@ -113,16 +113,16 @@ namespace coro_st
           shared_data_.parent_ctx_,
           shared_data_.children_stop_source_.get_token(),
           make_member_completion<
-            &wait_any_awaiter_chain_data::on_result_ready,
-            &wait_any_awaiter_chain_data::on_stopped
+            &awaiter_chain_data::on_result_ready,
+            &awaiter_chain_data::on_stopped
             >(this)
         },
         co_awaiter_{ co_work.get_awaiter(ctx_) }
       {
       }
 
-      wait_any_awaiter_chain_data(const wait_any_awaiter_chain_data&) = delete;
-      wait_any_awaiter_chain_data& operator=(const wait_any_awaiter_chain_data&) = delete;
+      awaiter_chain_data(const awaiter_chain_data&) = delete;
+      awaiter_chain_data& operator=(const awaiter_chain_data&) = delete;
 
       void on_result_ready() noexcept
       {
@@ -182,14 +182,14 @@ namespace coro_st
     };
 
     template<typename SharedData, is_co_work CoWork>
-    class wait_any_awaiter_chain_data_tuple_builder
+    class awaiter_chain_data_tuple_builder
     {
       SharedData* shared_data_;
       size_t index_;
       CoWork* co_work_;
 
       public:
-      wait_any_awaiter_chain_data_tuple_builder(
+      awaiter_chain_data_tuple_builder(
         SharedData& shared_data,
         size_t index,
         CoWork& co_work
@@ -200,10 +200,10 @@ namespace coro_st
       {
       }
 
-      wait_any_awaiter_chain_data_tuple_builder(const wait_any_awaiter_chain_data_tuple_builder&) = delete;
-      wait_any_awaiter_chain_data_tuple_builder& operator=(const wait_any_awaiter_chain_data_tuple_builder&) = delete;
+      awaiter_chain_data_tuple_builder(const awaiter_chain_data_tuple_builder&) = delete;
+      awaiter_chain_data_tuple_builder& operator=(const awaiter_chain_data_tuple_builder&) = delete;
 
-      operator wait_any_awaiter_chain_data<SharedData, CoWork>() const
+      operator awaiter_chain_data<SharedData, CoWork>() const
       {
         return {*shared_data_, index_, *co_work_};
       }
@@ -222,10 +222,10 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
-      using SharedData = impl::wait_any_awaiter_shared_data<T>;
+      using SharedData = impl::wait_any::awaiter_shared_data<T>;
       using ChainDataTuple =
         std::tuple<
-          impl::wait_any_awaiter_chain_data<SharedData, co_task_work_t<CoTasks>>...>;
+          impl::wait_any::awaiter_chain_data<SharedData, co_task_work_t<CoTasks>>...>;
 
       SharedData shared_data_;
       ChainDataTuple chain_data_;
@@ -239,7 +239,7 @@ namespace coro_st
       ) :
         shared_data_{ parent_ctx },
         chain_data_{(
-            impl::wait_any_awaiter_chain_data_tuple_builder{shared_data_, I, std::get<I>(co_works_tuple)})... }
+            impl::wait_any::awaiter_chain_data_tuple_builder{shared_data_, I, std::get<I>(co_works_tuple)})... }
       {
       }
 
@@ -268,7 +268,7 @@ namespace coro_st
 
         shared_data_.parent_stop_cb_.reset();
 
-        if (impl::g_stopped_result_type == shared_data_.result_.index())
+        if (impl::wait_any::g_stopped_result_type == shared_data_.result_.index())
         {
           shared_data_.parent_ctx_.invoke_stopped();
           return true;
@@ -281,10 +281,10 @@ namespace coro_st
       {
         switch(shared_data_.result_.index())
         {
-          case impl::g_value_result_type:
-            return std::move(std::get<impl::g_value_result_type>(shared_data_.result_));
-          case impl::g_error_result_type:
-            std::rethrow_exception(std::get<impl::g_error_result_type>(shared_data_.result_));
+          case impl::wait_any::g_value_result_type:
+            return std::move(std::get<impl::wait_any::g_value_result_type>(shared_data_.result_));
+          case impl::wait_any::g_error_result_type:
+            std::rethrow_exception(std::get<impl::wait_any::g_error_result_type>(shared_data_.result_));
           default:
             std::terminate();
         }
@@ -292,11 +292,11 @@ namespace coro_st
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        if (impl::g_error_result_type != shared_data_.result_.index())
+        if (impl::wait_any::g_error_result_type != shared_data_.result_.index())
         {
           return {};
         }
-        return std::get<impl::g_error_result_type>(shared_data_.result_);
+        return std::get<impl::wait_any::g_error_result_type>(shared_data_.result_);
       }
 
       void start() noexcept
@@ -314,7 +314,7 @@ namespace coro_st
 
         shared_data_.parent_stop_cb_.reset();
 
-        if (impl::g_stopped_result_type == shared_data_.result_.index())
+        if (impl::wait_any::g_stopped_result_type == shared_data_.result_.index())
         {
           shared_data_.parent_ctx_.invoke_stopped();
           return;

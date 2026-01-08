@@ -17,7 +17,7 @@ namespace
   TEST(wait_any_impl_construction)
   {
     using namespace coro_st;
-    using namespace coro_st::impl;
+    using namespace coro_st::impl::wait_any;
 
     coro_st_test::test_loop tl;
 
@@ -25,17 +25,16 @@ namespace
 
     auto work = task.get_work();
 
-    wait_any_awaiter_shared_data<void> shared_data(tl.ctx);
+    awaiter_shared_data<void> shared_data(tl.ctx);
 
-    std::tuple<wait_any_awaiter_chain_data<decltype(shared_data), decltype(work)>>
+    std::tuple<awaiter_chain_data<decltype(shared_data), decltype(work)>>
       chain_datas{
-        wait_any_awaiter_chain_data_tuple_builder{shared_data, 0, work} };
+        awaiter_chain_data_tuple_builder{shared_data, 0, work} };
   }
 
   TEST(wait_any_construction)
   {
     using namespace coro_st;
-    using namespace coro_st::impl;
 
     coro_st_test::test_loop tl;
 
