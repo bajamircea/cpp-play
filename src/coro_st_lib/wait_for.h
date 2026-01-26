@@ -23,7 +23,7 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
-      enum class result_state
+      enum class outcome_state
       {
         none,
         has_result,
@@ -36,7 +36,7 @@ namespace coro_st
       std::optional<stop_callback<callback>> parent_stop_cb_;
       stop_source children_stop_source_;
       size_t pending_count_{ 0 };
-      result_state result_state_{ result_state::none };
+      outcome_state outcome_state_{ outcome_state::none };
 
       context task_ctx_;
       CoAwaiter co_awaiter_;
@@ -55,7 +55,7 @@ namespace coro_st
         parent_stop_cb_{},
         children_stop_source_{},
         pending_count_{ 0 },
-        result_state_{ result_state::none },
+        outcome_state_{ outcome_state::none },
         task_ctx_{
           parent_ctx_,
           children_stop_source_.get_token(),
@@ -95,7 +95,7 @@ namespace coro_st
 
         parent_stop_cb_.reset();
 
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return true;
@@ -106,14 +106,14 @@ namespace coro_st
 
       ResultType await_resume()
       {
-        switch (result_state_)
+        switch (outcome_state_)
         {
-          case result_state::none:
-          case result_state::has_stopped:
+          case outcome_state::none:
+          case outcome_state::has_stopped:
             std::terminate();
-          case result_state::has_result:
+          case outcome_state::has_result:
             break;
-          case result_state::has_timeout:
+          case outcome_state::has_timeout:
             return std::nullopt;
         }
 
@@ -130,14 +130,14 @@ namespace coro_st
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        switch (result_state_)
+        switch (outcome_state_)
         {
-          case result_state::none:
-          case result_state::has_stopped:
+          case outcome_state::none:
+          case outcome_state::has_stopped:
             std::terminate();
-          case result_state::has_result:
+          case outcome_state::has_result:
             return co_awaiter_.get_result_exception();
-          case result_state::has_timeout:
+          case outcome_state::has_timeout:
             return {};
         }
       }
@@ -157,7 +157,7 @@ namespace coro_st
 
         parent_stop_cb_.reset();
 
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return;
@@ -171,7 +171,7 @@ namespace coro_st
       {
         parent_stop_cb_.reset();
 
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return;
@@ -188,10 +188,10 @@ namespace coro_st
 
       void on_task_result_ready() noexcept
       {
-        if ((result_state::none == result_state_) ||
-            (result_state::has_timeout == result_state_))
+        if ((outcome_state::none == outcome_state_) ||
+            (outcome_state::has_timeout == outcome_state_))
         {
-          result_state_ = result_state::has_result;
+          outcome_state_ = outcome_state::has_result;
           children_stop_source_.request_stop();
         }
 
@@ -207,7 +207,7 @@ namespace coro_st
       {
         if (!children_stop_source_.stop_requested())
         {
-          result_state_ = result_state::has_stopped;
+          outcome_state_ = outcome_state::has_stopped;
           // stop the timer this indirect way
           // to handle the case where the timer was not started
           children_stop_source_.request_stop();
@@ -231,7 +231,7 @@ namespace coro_st
       void on_parent_cancel() noexcept
       {
         parent_stop_cb_.reset();
-        result_state_ = result_state::has_stopped;
+        outcome_state_ = outcome_state::has_stopped;
         children_stop_source_.request_stop();
       }
 
@@ -264,9 +264,9 @@ namespace coro_st
       {
         timer_stop_cb_.reset();
 
-        if (result_state::none == result_state_)
+        if (outcome_state::none == outcome_state_)
         {
-          result_state_ = result_state::has_timeout;
+          outcome_state_ = outcome_state::has_timeout;
           children_stop_source_.request_stop();
         }
 
@@ -280,7 +280,7 @@ namespace coro_st
 
         // this is called from the run loop
         // invoke rather than schedule
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return;

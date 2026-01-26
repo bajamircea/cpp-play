@@ -24,7 +24,7 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
-      enum class result_state
+      enum class outcome_state
       {
         none,
         has_result1,
@@ -37,7 +37,7 @@ namespace coro_st
       std::optional<stop_callback<callback>> parent_stop_cb_;
       stop_source children_stop_source_;
       size_t pending_count_{ 0 };
-      result_state result_state_{ result_state::none };
+      outcome_state outcome_state_{ outcome_state::none };
       std::exception_ptr exception_{};
 
       context task_ctx1_;
@@ -57,7 +57,7 @@ namespace coro_st
         parent_stop_cb_{},
         children_stop_source_{},
         pending_count_{ 0 },
-        result_state_{ result_state::none },
+        outcome_state_{ outcome_state::none },
         exception_{},
         task_ctx1_{
           parent_ctx_,
@@ -105,7 +105,7 @@ namespace coro_st
 
         parent_stop_cb_.reset();
 
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return true;
@@ -116,29 +116,29 @@ namespace coro_st
 
       ResultType await_resume()
       {
-        switch (result_state_)
+        switch (outcome_state_)
         {
           default:
-          case result_state::none:
-          case result_state::has_stopped:
+          case outcome_state::none:
+          case outcome_state::has_stopped:
             std::terminate();
-          case result_state::has_result1:
+          case outcome_state::has_result1:
             return co_awaiter1_.await_resume();
-          case result_state::has_result2:
+          case outcome_state::has_result2:
             return co_awaiter2_.await_resume();
         }
       }
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        switch (result_state_)
+        switch (outcome_state_)
         {
-          case result_state::none:
-          case result_state::has_stopped:
+          case outcome_state::none:
+          case outcome_state::has_stopped:
             std::terminate();
-          case result_state::has_result1:
+          case outcome_state::has_result1:
             return co_awaiter1_.get_result_exception();
-          case result_state::has_result2:
+          case outcome_state::has_result2:
             return co_awaiter2_.get_result_exception();
         }
       }
@@ -158,7 +158,7 @@ namespace coro_st
 
         parent_stop_cb_.reset();
 
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return;
@@ -172,7 +172,7 @@ namespace coro_st
       {
         parent_stop_cb_.reset();
 
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return;
@@ -189,9 +189,9 @@ namespace coro_st
 
       void on_task1_result_ready() noexcept
       {
-        if (result_state::none == result_state_)
+        if (outcome_state::none == outcome_state_)
         {
-          result_state_ = result_state::has_result1;
+          outcome_state_ = outcome_state::has_result1;
           children_stop_source_.request_stop();
         }
 
@@ -205,9 +205,9 @@ namespace coro_st
 
       void on_task2_result_ready() noexcept
       {
-        if (result_state::none == result_state_)
+        if (outcome_state::none == outcome_state_)
         {
-          result_state_ = result_state::has_result2;
+          outcome_state_ = outcome_state::has_result2;
           children_stop_source_.request_stop();
         }
 
@@ -223,7 +223,7 @@ namespace coro_st
       {
         if (!children_stop_source_.stop_requested())
         {
-          result_state_ = result_state::has_stopped;
+          outcome_state_ = outcome_state::has_stopped;
           children_stop_source_.request_stop();
         }
 
@@ -245,7 +245,7 @@ namespace coro_st
       void on_parent_cancel() noexcept
       {
         parent_stop_cb_.reset();
-        result_state_ = result_state::has_stopped;
+        outcome_state_ = outcome_state::has_stopped;
         children_stop_source_.request_stop();
       }
 

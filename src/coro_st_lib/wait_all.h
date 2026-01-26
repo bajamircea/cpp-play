@@ -16,10 +16,10 @@ namespace coro_st
   {
     struct wait_all_awaiter_shared_data
     {
-      enum class result_state
+      enum class outcome_state
       {
-        result,
-        stop,
+        has_result,
+        has_stop,
       };
 
       context& parent_ctx_;
@@ -28,7 +28,7 @@ namespace coro_st
       stop_source children_stop_source_;
       size_t pending_count_;
       std::exception_ptr exception_;
-      result_state result_state_{ result_state::result };
+      outcome_state outcome_state_{ outcome_state::has_result };
 
       wait_all_awaiter_shared_data(context& parent_ctx) noexcept :
         parent_ctx_{ parent_ctx },
@@ -37,7 +37,7 @@ namespace coro_st
         children_stop_source_{},
         pending_count_{ 0 },
         exception_{},
-        result_state_{ result_state::result }
+        outcome_state_{ outcome_state::has_result }
       {
       }
 
@@ -55,7 +55,7 @@ namespace coro_st
       {
         parent_stop_cb_.reset();
 
-        if (result_state::stop == result_state_)
+        if (outcome_state::has_stop == outcome_state_)
         {
           parent_ctx_.invoke_stopped();
           return;
@@ -73,7 +73,7 @@ namespace coro_st
       void on_parent_cancel() noexcept
       {
         parent_stop_cb_.reset();
-        result_state_ = result_state::stop;
+        outcome_state_ = outcome_state::has_stop;
         children_stop_source_.request_stop();
       }
     };
@@ -107,7 +107,7 @@ namespace coro_st
 
       void on_result_ready() noexcept
       {
-        if (wait_all_awaiter_shared_data::result_state::result == shared_data_.result_state_)
+        if (wait_all_awaiter_shared_data::outcome_state::has_result == shared_data_.outcome_state_)
         {
           if (!shared_data_.exception_)
           {
@@ -130,11 +130,11 @@ namespace coro_st
 
       void on_stopped() noexcept
       {
-        if (wait_all_awaiter_shared_data::result_state::result == shared_data_.result_state_)
+        if (wait_all_awaiter_shared_data::outcome_state::has_result == shared_data_.outcome_state_)
         {
           if (!shared_data_.children_stop_source_.stop_requested())
           {
-            shared_data_.result_state_ = wait_all_awaiter_shared_data::result_state::stop;
+            shared_data_.outcome_state_ = wait_all_awaiter_shared_data::outcome_state::has_stop;
             shared_data_.children_stop_source_.request_stop();
           }
         }
@@ -244,7 +244,7 @@ namespace coro_st
 
         shared_data_.parent_stop_cb_.reset();
 
-        if (impl::wait_all_awaiter_shared_data::result_state::stop == shared_data_.result_state_)
+        if (impl::wait_all_awaiter_shared_data::outcome_state::has_stop == shared_data_.outcome_state_)
         {
           shared_data_.parent_ctx_.invoke_stopped();
           return true;
@@ -288,7 +288,7 @@ namespace coro_st
 
         shared_data_.parent_stop_cb_.reset();
 
-        if (impl::wait_all_awaiter_shared_data::result_state::stop == shared_data_.result_state_)
+        if (impl::wait_all_awaiter_shared_data::outcome_state::has_stop == shared_data_.outcome_state_)
         {
           shared_data_.parent_ctx_.invoke_stopped();
           return;

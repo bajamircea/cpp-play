@@ -22,7 +22,7 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
-      enum class result_state
+      enum class outcome_state
       {
         none,
         has_result,
@@ -32,7 +32,7 @@ namespace coro_st
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
       bool pending_start_{ false };
-      result_state result_state_{ result_state::none };
+      outcome_state outcome_state_{ outcome_state::none };
 
       context task_ctx_;
       CoAwaiter co_awaiter_;
@@ -45,7 +45,7 @@ namespace coro_st
         parent_ctx_{ parent_ctx },
         parent_handle_{},
         pending_start_{ false },
-        result_state_{ result_state::none },
+        outcome_state_{ outcome_state::none },
         task_ctx_{
           parent_ctx_,
           parent_ctx_.get_stop_token(),
@@ -74,7 +74,7 @@ namespace coro_st
         co_awaiter_.start();
         pending_start_ = false;
 
-        if (result_state::none == result_state_)
+        if (outcome_state::none == outcome_state_)
         {
           return true;
         }
@@ -90,11 +90,11 @@ namespace coro_st
 
       ResultType await_resume()
       {
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           return std::nullopt;
         }
-        assert(result_state::has_result == result_state_);
+        assert(outcome_state::has_result == outcome_state_);
 
         if constexpr (std::is_same_v<void, T>)
         {
@@ -109,7 +109,7 @@ namespace coro_st
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        if (result_state::has_stopped == result_state_)
+        if (outcome_state::has_stopped == outcome_state_)
         {
           return {};
         }
@@ -122,7 +122,7 @@ namespace coro_st
         co_awaiter_.start();
         pending_start_ = false;
 
-        if (result_state::none == result_state_)
+        if (outcome_state::none == outcome_state_)
         {
           return;
         }
@@ -161,9 +161,9 @@ namespace coro_st
 
       void on_task_result_ready() noexcept
       {
-        if (result_state::none == result_state_)
+        if (outcome_state::none == outcome_state_)
         {
-          result_state_ = result_state::has_result;
+          outcome_state_ = outcome_state::has_result;
         }
         on_shared_continue();
       }
@@ -172,7 +172,7 @@ namespace coro_st
       {
         if (!parent_ctx_.get_stop_token().stop_requested())
         {
-          result_state_ = result_state::has_stopped;
+          outcome_state_ = outcome_state::has_stopped;
         }
 
         on_shared_continue();

@@ -27,15 +27,15 @@ namespace coro_st
 
     class [[nodiscard]] awaiter
     {
-      static constexpr size_t g_none_result_type = 0;
-      static constexpr size_t g_value_result_type = 1;
-      static constexpr size_t g_error_result_type = 2;
-      static constexpr size_t g_stopped_result_type = 3;
+      static constexpr size_t g_none_outcome = 0;
+      static constexpr size_t g_value_outcome = 1;
+      static constexpr size_t g_error_outcome = 2;
+      static constexpr size_t g_stopped_outcome = 3;
 
       context& parent_ctx_;
       std::coroutine_handle<> parent_handle_;
       bool pending_start_{ false };
-      std::variant<std::monostate, T, std::exception_ptr, std::monostate> result_;
+      std::variant<std::monostate, T, std::exception_ptr, std::monostate> outcome_;
 
       Fn fn_;
 
@@ -51,7 +51,7 @@ namespace coro_st
         parent_ctx_{ parent_ctx },
         parent_handle_{},
         pending_start_{ false },
-        result_{},
+        outcome_{},
         fn_{ std::move(fn) },
         task_ctx_{
           parent_ctx_,
@@ -81,12 +81,12 @@ namespace coro_st
         co_awaiter_.start();
         pending_start_ = false;
 
-        if (g_none_result_type == result_.index())
+        if (g_none_outcome == outcome_.index())
         {
           return true;
         }
 
-        if (g_stopped_result_type == result_.index())
+        if (g_stopped_outcome == outcome_.index())
         {
           parent_ctx_.invoke_stopped();
           return true;
@@ -97,9 +97,9 @@ namespace coro_st
 
       T await_resume()
       {
-        if (g_error_result_type == result_.index())
+        if (g_error_outcome == outcome_.index())
         {
-          std::rethrow_exception(std::get<g_error_result_type>(result_));
+          std::rethrow_exception(std::get<g_error_outcome>(outcome_));
         }
 
         if constexpr (std::is_same_v<void, T>)
@@ -108,15 +108,15 @@ namespace coro_st
         }
         else
         {
-          return std::move(std::get<g_value_result_type>(result_));
+          return std::move(std::get<g_value_outcome>(outcome_));
         }
       }
 
       std::exception_ptr get_result_exception() const noexcept
       {
-        if (g_error_result_type == result_.index())
+        if (g_error_outcome == outcome_.index())
         {
-          return std::get<g_error_result_type>(result_);
+          return std::get<g_error_outcome>(outcome_);
         }
         return {};
       }
@@ -127,12 +127,12 @@ namespace coro_st
         co_awaiter_.start();
         pending_start_ = false;
 
-        if (g_none_result_type == result_.index())
+        if (g_none_outcome == outcome_.index())
         {
           return;
         }
 
-        if (g_stopped_result_type == result_.index())
+        if (g_stopped_outcome == outcome_.index())
         {
           parent_ctx_.invoke_stopped();
           return;
@@ -149,7 +149,7 @@ namespace coro_st
           return;
         }
 
-        if (g_stopped_result_type == result_.index())
+        if (g_stopped_outcome == outcome_.index())
         {
           parent_ctx_.invoke_stopped();
           return;
@@ -166,7 +166,7 @@ namespace coro_st
 
       void on_task_result_ready() noexcept
       {
-        if (g_none_result_type == result_.index())
+        if (g_none_outcome == outcome_.index())
         {
           try
           {
@@ -175,11 +175,11 @@ namespace coro_st
               if constexpr (std::is_same_v<void, FnResultType>)
               {
                 fn_();
-                result_.template emplace<g_value_result_type>(coro_st::void_result{});
+                outcome_.template emplace<g_value_outcome>(coro_st::void_result{});
               }
               else
               {
-                result_.template emplace<g_value_result_type>(fn_());
+                outcome_.template emplace<g_value_outcome>(fn_());
               }
             }
             else
@@ -187,17 +187,17 @@ namespace coro_st
               if constexpr (std::is_same_v<coro_st::void_result, T>)
               {
                 fn_(co_awaiter_.await_resume());
-                result_.template emplace<g_value_result_type>(coro_st::void_result{});
+                outcome_.template emplace<g_value_outcome>(coro_st::void_result{});
               }
               else
               {
-                result_.template emplace<g_value_result_type>(fn_(co_awaiter_.await_resume()));
+                outcome_.template emplace<g_value_outcome>(fn_(co_awaiter_.await_resume()));
               }
             }
           }
           catch(...)
           {
-            result_.template emplace<g_error_result_type>(std::current_exception());
+            outcome_.template emplace<g_error_outcome>(std::current_exception());
           }
         }
         on_shared_continue();
@@ -205,7 +205,7 @@ namespace coro_st
 
       void on_task_stopped() noexcept
       {
-        result_.template emplace<g_stopped_result_type>();
+        outcome_.template emplace<g_stopped_outcome>();
         on_shared_continue();
       }
     };
