@@ -48,7 +48,7 @@ namespace coro_st
     static void invoke(void* x_void) noexcept
     {
       assert(x_void != nullptr);
-      T* x = reinterpret_cast<T*>(x_void);
+      T* x = static_cast<T*>(x_void);
       return std::invoke(fn, *x);
     }
   };
@@ -65,7 +65,7 @@ namespace coro_st
     static void invoke(void* x_void) noexcept
     {
       assert(x_void != nullptr);
-      T* x = reinterpret_cast<T*>(x_void);
+      T* x = static_cast<T*>(x_void);
       return std::invoke(member_fn, x);
     }
   };

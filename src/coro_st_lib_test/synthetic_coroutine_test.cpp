@@ -87,7 +87,7 @@ namespace
     bool done{ false };
     coro_st::synthetic_resume_fn_ptr done_when_resumed =
       +[](void* x) noexcept {
-        bool* p_done = reinterpret_cast<bool*>(x);
+        bool* p_done = static_cast<bool*>(x);
         *p_done = true;
       };
     coro_st::synthetic_resumable_coroutine_frame root_frame{

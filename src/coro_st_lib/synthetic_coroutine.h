@@ -40,7 +40,7 @@ namespace coro_st
     {
       assert(frame_ptr != nullptr);
       synthetic_resumable_coroutine_frame* self =
-        reinterpret_cast<synthetic_resumable_coroutine_frame*>(frame_ptr);
+        static_cast<synthetic_resumable_coroutine_frame*>(frame_ptr);
       self->resume_fn_(self->x_);
     }
 
