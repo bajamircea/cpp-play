@@ -36,10 +36,13 @@ namespace cpp_util
 
     intrusive_queue& operator=(intrusive_queue && other) noexcept
     {
-      head_ = other.head_;
-      tail_ = other.tail_;
-      other.head_ = nullptr;
-      other.tail_ = nullptr;
+      if (this != &other)
+      {
+        head_ = other.head_;
+        tail_ = other.tail_;
+        other.head_ = nullptr;
+        other.tail_ = nullptr;
+      }
       return *this;
     }
 

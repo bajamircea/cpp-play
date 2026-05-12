@@ -49,10 +49,13 @@ namespace cpp_util
 
     intrusive_heap& operator=(intrusive_heap&& other) noexcept
     {
-      min_node_ = other.min_node_;
-      size_ = other.size_;
-      other.min_node_ = nullptr;
-      other.size_ = 0;
+      if (this != &other)
+      {
+        min_node_ = other.min_node_;
+        size_ = other.size_;
+        other.min_node_ = nullptr;
+        other.size_ = 0;
+      }
       return *this;
     }
 
