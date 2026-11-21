@@ -7,7 +7,7 @@
 /*
 Basic usage (for more info see unique_handle.md):
 
-struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct file_handle_traits
 {
   using handle_type = FILE*;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -20,10 +20,6 @@ using file_handle = cpp_util::unique_handle<file_handle_traits>;
 
 namespace cpp_util
 {
-  struct unique_handle_basic_access {};
-  struct unique_handle_out_ptr_access : unique_handle_basic_access {};
-  struct unique_handle_inout_and_out_ptr_access : unique_handle_out_ptr_access {};
-
   template<typename Traits>
   concept unique_handle_custom_is_valid_traits =
       requires(const typename Traits::handle_type const_h)
@@ -33,7 +29,6 @@ namespace cpp_util
 
   template<typename Traits>
   concept unique_handle_traits =
-    std::derived_from<Traits, unique_handle_basic_access> &&
     requires(
       typename Traits::handle_type h, const typename Traits::handle_type const_h)
     {
@@ -112,21 +107,12 @@ namespace cpp_util
       return h_;
     }
 
-    handle_type* out_ptr() noexcept
-      requires std::derived_from<Traits, unique_handle_out_ptr_access>
-    {
-      reset();
-      return &h_;
-    }
-
-    handle_type* inout_ptr() noexcept
-      requires std::derived_from<Traits, unique_handle_inout_and_out_ptr_access>
+    handle_type* ptr() noexcept
     {
       return &h_;
     }
 
-    handle_type& inout_ref() noexcept
-      requires std::derived_from<Traits, unique_handle_inout_and_out_ptr_access>
+    handle_type& ref() noexcept
     {
       return h_;
     }

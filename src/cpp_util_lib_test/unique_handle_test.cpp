@@ -24,7 +24,7 @@ namespace
       g_actions.push_back({ "close", h });
   }
 
-  bool c_api_out_ptr(int in_expected, int out_value, int* out)
+  bool c_api_ptr_arg(int in_expected, int out_value, int* out)
   {
     if (nullptr == out)
     {
@@ -42,31 +42,7 @@ namespace
     return true;
   }
 
-  bool c_api_inout_ptr(int in_expected, int out_value, int* out)
-  {
-    if (nullptr == out)
-    {
-      return false;
-    }
-    ASSERT_EQ(in_expected, *out);
-
-    if (out_value == 100)
-    {
-      // simulate error
-      return false;
-    }
-    if (*out != out_value)
-    {
-      // if `*out` is invalid (-1) a C API would not close
-      // we add it to g_actions for tracking/testing purposes
-      g_actions.push_back({ "inout(in)", *out });
-      g_actions.push_back({ "inout(out)", out_value });
-      *out = out_value;
-    }
-    return true;
-  }
-
-  struct simple_test_handle_traits : cpp_util::unique_handle_inout_and_out_ptr_access
+  struct simple_test_handle_traits
   {
     using handle_type = int;
     static constexpr auto invalid_value() noexcept { return -1; }
@@ -176,13 +152,13 @@ namespace
     ASSERT_TRUE(g_actions.empty());
   }
 
-  TEST(unique_handle_out_ptr_trivial)
+  TEST(unique_handle_ptr_trivial)
   {
     g_actions.clear();
 
     {
       simple_test_handle x;
-      ASSERT_TRUE(c_api_out_ptr(-1, 42, x.out_ptr()));
+      ASSERT_TRUE(c_api_ptr_arg(-1, 42, x.ptr()));
 
       std::vector<action> before_scope_exit = {{"out", 42},};
       ASSERT_EQ(before_scope_exit, g_actions);
@@ -193,13 +169,15 @@ namespace
     ASSERT_EQ(expected, g_actions);
   }
 
-  TEST(unique_handle_out_ptr_already_has_value)
+  TEST(unique_handle_ptr_already_has_value)
   {
     g_actions.clear();
 
     {
       simple_test_handle x(43);
-      ASSERT_TRUE(c_api_out_ptr(-1, 42, x.out_ptr()));
+      // example: you have to reset if you already have a value
+      x.reset();
+      ASSERT_TRUE(c_api_ptr_arg(-1, 42, x.ptr()));
 
       std::vector<action> before_scope_exit = {{"close", 43}, {"out", 42},};
       ASSERT_EQ(before_scope_exit, g_actions);
@@ -210,34 +188,33 @@ namespace
     ASSERT_EQ(expected, g_actions);
   }
 
-  TEST(unique_handle_out_ptr_already_has_value_and_fail)
-  {
-    g_actions.clear();
-
-    {
-      simple_test_handle x(43);
-      ASSERT_FALSE(c_api_out_ptr(-1, 100, x.out_ptr()));
-
-      std::vector<action> before_scope_exit = {{"close", 43},};
-      ASSERT_EQ(before_scope_exit, g_actions);
-      ASSERT_EQ(-1, x.get());
-      ASSERT_FALSE(x.is_valid());
-    }
-
-    std::vector<action> expected = {{"close", 43},};
-    ASSERT_EQ(expected, g_actions);
-  }
-
-  TEST(unique_handle_out_ptr_no_proxy)
+  TEST(unique_handle_ptr_api_fails)
   {
     g_actions.clear();
 
     {
       simple_test_handle x;
-      // tests that out_ptr does not return a temporary
-      // proxy object like std::out_ptr, which would
-      // live too long and go throgh the `else` branch
-      if(c_api_out_ptr(-1, 42, x.out_ptr()) && x.is_valid())
+      ASSERT_FALSE(c_api_ptr_arg(-1, 100, x.ptr()));
+
+      ASSERT_EQ(-1, x.get());
+      ASSERT_FALSE(x.is_valid());
+    }
+
+    std::vector<action> expected = {};
+    ASSERT_EQ(expected, g_actions);
+  }
+
+  TEST(unique_handle_ptr_no_proxy)
+  {
+    g_actions.clear();
+
+    {
+      simple_test_handle x;
+      // tests that ptr does not return a temporary
+      // proxy object like std::inout_ptr or std::out_ptr,
+      // which would live too long
+      // and go through the `else` branch
+      if(c_api_ptr_arg(-1, 42, x.ptr()) && x.is_valid())
       {
         std::vector<action> before_scope_exit = {{"out", 42},};
         ASSERT_EQ(before_scope_exit, g_actions);
@@ -253,91 +230,15 @@ namespace
     ASSERT_EQ(expected, g_actions);
   }
 
-  TEST(unique_handle_inout_ptr_trivial)
-  {
-    g_actions.clear();
-
-    {
-      simple_test_handle x;
-      ASSERT_TRUE(c_api_inout_ptr(-1, 42, x.inout_ptr()));
-
-      std::vector<action> before_scope_exit = {{"inout(in)", -1}, {"inout(out)", 42},};
-      ASSERT_EQ(before_scope_exit, g_actions);
-      ASSERT_EQ(42, x.get());
-    }
-
-    std::vector<action> expected = {{"inout(in)", -1}, {"inout(out)", 42}, {"close", 42},};
-    ASSERT_EQ(expected, g_actions);
-  }
-
-  TEST(unique_handle_inout_ptr_already_has_value)
-  {
-    g_actions.clear();
-
-    {
-      simple_test_handle x(43);
-      ASSERT_TRUE(c_api_inout_ptr(43, 42, x.inout_ptr()));
-
-      std::vector<action> before_scope_exit = {{"inout(in)", 43}, {"inout(out)", 42},};
-      ASSERT_EQ(before_scope_exit, g_actions);
-      ASSERT_EQ(42, x.get());
-    }
-
-    std::vector<action> expected = {{"inout(in)", 43}, {"inout(out)", 42}, {"close", 42},};
-    ASSERT_EQ(expected, g_actions);
-  }
-
-  TEST(unique_handle_inout_ptr_already_has_value_and_fail)
-  {
-    g_actions.clear();
-
-    {
-      simple_test_handle x(43);
-      ASSERT_FALSE(c_api_inout_ptr(43, 100, x.inout_ptr()));
-
-      std::vector<action> before_scope_exit = {};
-      ASSERT_EQ(before_scope_exit, g_actions);
-      ASSERT_EQ(43, x.get());
-    }
-
-    std::vector<action> expected = {{"close", 43},};
-    ASSERT_EQ(expected, g_actions);
-  }
-
-  TEST(unique_handle_inout_ptr_no_proxy)
-  {
-    g_actions.clear();
-
-    {
-      simple_test_handle x;
-      // tests that inout_ptr does not return a temporary
-      // proxy object like std::inout_ptr, which would
-      // live too long and go throgh the `else` branch
-      if(c_api_inout_ptr(-1, 42, x.inout_ptr()) && x.is_valid())
-      {
-        std::vector<action> before_scope_exit = {{"inout(in)", -1}, {"inout(out)", 42},};
-        ASSERT_EQ(before_scope_exit, g_actions);
-        ASSERT_EQ(42, x.get());
-      }
-      else
-      {
-        FAIL_TEST("should not reach");
-      }
-    }
-
-    std::vector<action> expected = {{"inout(in)", -1}, {"inout(out)", 42}, {"close", 42},};
-    ASSERT_EQ(expected, g_actions);
-  }
-
-  TEST(unique_handle_inout_ref_trivial)
+  TEST(unique_handle_ref_trivial)
   {
     g_actions.clear();
 
     simple_test_handle x;
-    ASSERT_EQ(x.inout_ptr(), &x.inout_ref());
+    ASSERT_EQ(x.ptr(), &x.ref());
   }
 
-  struct test_reinterpret_handle_traits :  cpp_util::unique_handle_out_ptr_access
+  struct test_reinterpret_handle_traits
   {
     using handle_type = void *;
     // not using constexpr for invalid_value()
@@ -367,7 +268,7 @@ namespace
     ASSERT_EQ(expected, g_actions);
   }
 
-  struct test_reinterpret_handle_is_valid_traits : cpp_util::unique_handle_out_ptr_access
+  struct test_reinterpret_handle_is_valid_traits
   {
     using handle_type = void *;
     // not using constexpr for invalid_value() or is_valid()
@@ -404,7 +305,7 @@ namespace
     ASSERT_EQ(expected, g_actions);
   }
 
-  struct test_bool_handle_traits : cpp_util::unique_handle_basic_access
+  struct test_bool_handle_traits
   {
     using handle_type = bool;
     static constexpr auto invalid_value() noexcept { return false; }
@@ -431,7 +332,7 @@ namespace
     off,
     on
   };
-  struct test_enum_handle_traits : cpp_util::unique_handle_basic_access
+  struct test_enum_handle_traits
   {
     using handle_type = test_cleanup_action;
     static constexpr auto invalid_value() noexcept { return test_cleanup_action::off; }
@@ -454,7 +355,7 @@ namespace
     ASSERT_EQ(expected, g_actions);
   }
 
-  struct test_bool_data_handle_traits : cpp_util::unique_handle_basic_access
+  struct test_bool_data_handle_traits
   {
     struct handle_type {
       int data;
@@ -493,7 +394,7 @@ namespace
     int data;
   };
 
-  bool c_api_some_c_struct_out_ptr(
+  bool c_api_some_c_struct_ptr(
     int in_lots_expected, int out_lots_value,
     int in_of_expected, int out_of_value,
     int in_data_expected, int out_data_value,
@@ -520,7 +421,7 @@ namespace
     return true;
   }
 
-  struct test_c_struct_data_handle_traits :  cpp_util::unique_handle_out_ptr_access
+  struct test_c_struct_data_handle_traits
   {
     using handle_type = some_c_struct;
     static constexpr auto invalid_value() noexcept
@@ -547,51 +448,13 @@ namespace
     {
       test_c_struct_data_handle x;
 
-      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 40, 0, 2, 0, 1, x.out_ptr()));
+      ASSERT_TRUE(c_api_some_c_struct_ptr(0, 40, 0, 2, 0, 1, x.ptr()));
+
+      // common pattern of access the struct (avoid .get() copy)
+      ASSERT_EQ(1, x.ref().data);
     }
 
     std::vector<action> expected = {{"out c_struct", 43}, {"close c_struct", 42},};
-    ASSERT_EQ(expected, g_actions);
-  }
-
-  TEST(unique_handle_c_struct_data_already_has_value)
-  {
-    g_actions.clear();
-
-    {
-      test_c_struct_data_handle x;
-
-      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 40, 0, 2, 0, 1, x.out_ptr()));
-      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 30, 0, 2, 0, 1, x.out_ptr()));
-    }
-
-    std::vector<action> expected = {
-      {"out c_struct", 43}, {"close c_struct", 42},
-      {"out c_struct", 33}, {"close c_struct", 32},
-    };
-    ASSERT_EQ(expected, g_actions);
-  }
-
-
-  TEST(unique_handle_c_struct_data_already_has_value_and_fail)
-  {
-    g_actions.clear();
-
-    {
-      test_c_struct_data_handle x;
-
-      ASSERT_TRUE(c_api_some_c_struct_out_ptr(0, 40, 0, 2, 0, 1, x.out_ptr()));
-      ASSERT_FALSE(c_api_some_c_struct_out_ptr(0, 100, 0, 0, 0, 0, x.out_ptr()));
-
-      std::vector<action> before_scope_exit = {
-        {"out c_struct", 43}, {"close c_struct", 42},
-      };
-      ASSERT_EQ(before_scope_exit, g_actions);
-    }
-
-    std::vector<action> expected = {
-      {"out c_struct", 43}, {"close c_struct", 42},
-    };
     ASSERT_EQ(expected, g_actions);
   }
 } // anonymous namespace

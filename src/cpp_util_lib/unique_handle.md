@@ -3,7 +3,7 @@
 It's a RAII minimalist wrapper for C API handles (resource cleanup of resources coming from C
 APIs). Think: like `std::unique_ptr`, but for C API handles.
 
-`std::unique_handle` is really simple, minimalistic code; I recommend you have a look and read
+`std::unique_handle` is really simple, minimalistic code. I recommend you have a look and read
 it (ignore the concept definitions at the top on a first read, they are meant to help ensure
 it's used correctly).
 
@@ -22,7 +22,7 @@ int fclose(FILE*);
 
 Here is a simple/typical usage pattern for `unique_handle` and `handle_arg`
 ```cpp
-struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct file_handle_traits
 {
   using handle_type = FILE*;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -36,6 +36,8 @@ using file_arg = cpp_util::handle_arg<file_handle_traits>;
 // Construction API wrappers return a unique_handle to take care
 // of the resource. Shown with fopen here, but often there are
 // multiple such functions (e.g. wrapper for freopen)
+// See further down for handling C APIs like fopen_s that
+// initialize a handle via a pointer to the handle (output) argument
 file_handle open_file(const char* file_name, const char* mode)
 {
   file_handle result{ std::fopen(file_name, mode) };
@@ -91,14 +93,14 @@ be exceptional for your application. Other options include using `std::error_cod
 includes the numerical error value. Using `std::runtime_error` in these examples for brevity, not
 as a recommandation.
 
-Many C APIs that initialize a handle do so by taking as an argument a pointer to the handle,
+Many C APIs that initialize a handle do so by taking a pointer to the handle as an argument,
 shown here reimplementing `open_file` to use `fopen_s`
 
 ```cpp
 file_handle open_file(const char* file_name, const char* mode)
 {
   file_handle return_value;
-  auto result = std::fopen_s(return_value.out_ptr(), file_name, mode);
+  auto result = std::fopen_s(return_value.ptr(), file_name, mode);
   if (0 != result)
   {
     throw std::runtime_error("fopen_s failed");
@@ -118,17 +120,12 @@ The steps to use it for a C API that uses handles are:
   - `handle_type`: the type of the handle
   - `invalid_value`: the value that does not need to be closed
   - `close_handle`: how to close the handle/free resources
-- inherit the traits struct from:
-  - `unique_handle_out_ptr_access` if the C API that creates a handle takes a pointer
-    to the handle as an out parameter (see `std::fopen_s` above)
-  - `unique_handle_basic_access` if `.out_ptr()` is not needed (see `std::fopen` above)
-  - `unique_handle_inout_and_out_ptr_access` to get `.out_ptr()`, `inout_ptr()` and
-    `inout_ref()`
 - alias a named type to `unique_handle` of the traits above
 - optionally for custom checks for the valid value:
   - inside the traits declare `is_valid`
   - `static_assert` your traits against `unique_handle_custom_is_valid_traits` to ensure
     it's used (e.g. rather than mispelled)
+
 
 # Usage samples
 
@@ -138,12 +135,10 @@ The steps to use it for a C API that uses handles are:
 - invalid value is not always `0` or `nullptr`
 - shows why choice of `close_handle` as a name: there are all sort of `close` functions already,
   less tricks required to ensure we call the right one
-- inherits from `unique_handle_basic_access` as POSIX `open` returns the handle (rather than
-  taking a pointer to the handle as a parameter)
 
 ```cpp
 // e.g. in a posixlib namespace:
-struct posix_file_handle_traits : cpp_util::unique_handle_basic_access
+struct posix_file_handle_traits
 {
   using handle_type = int;
   static constexpr auto invalid_value() noexcept { return -1; }
@@ -158,14 +153,14 @@ using posix_file_handle = cpp_util::unique_handle<posix_file_handle_traits>;
 
 In Windows, `HANDLE` is opaque (that is it can be one of many things and the definition of what it is may
 change over time), unlike the previous example where it's a `FILE *` (i.e. a pointer to a defined C `struct`).
-A system API, as is the case of the Windows APIs, that want to protect itself against application misuse
-take an opaque handle that they first check against some hash map of opened handles before using, and it
+A system API, as is the case of the Windows APIs, that wants to protect itself against application misuse,
+takes an opaque handle that it first checks against some hash map of opened handles before using, and it
 might get translated into a pointer internally after this check, but the user of the API operates in terms
-of this opaque handle which is not necessarily a pointer (though it might be a `void*`).
+of this opaque handle, which is not necessarily a pointer (though it might be a `void*`).
 
 ```cpp
 // e.g. in a winlib namespace:
-struct basic_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct basic_handle_traits
 {
   using handle_type = HANDLE;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -182,12 +177,13 @@ using basic_handle = cpp_util::unique_handle<basic_handle_traits>;
 - A file handle in Windows is also a `HANDLE`, but it's invalid value is `INVALID_HANDLE_VALUE`
 - `INVALID_HANDLE_VALUE` uses `reinterpret_cast`, so `invalid_handle` is not `constexpr`.
 - Often the underlying `handle_type` is reused by the underlying C API with different meanings.
-  The traits approach creates different types to disambiguate betweeen those meanings when
-  desired compared with configuring the RAII wrapper using multiple template parameters.
+  The traits approach can be used to create different types to disambiguate betweeen those
+  meanings when desired compared with the approach of configuring the RAII wrapper using multiple
+  template parameters.
 
 ```cpp
 // e.g. also in a winlib namespace:
-struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct file_handle_traits
 {
   using handle_type = HANDLE;
   // notice lack of constexpr
@@ -208,14 +204,14 @@ using file_handle = cpp_util::unique_handle<file_handle_traits>;
   (this is a compromise to avoid creating variations of `unique_handle` for when
   `is_valid` needs to be customized) and we did not mispelled it, or forgot
   the `noexcept` spec for the custom `is_valid`
-- The approach of accepting multiple "invalid" values works only if we're convinced
+- The approach of accepting multiple "invalid" values works only if we are convinced
   that truly there are multiple "invalid" values (e.g. that a C API that returns
   `NULL` will not return `INVALID_HANDLE_VALUE` as a valid handle and viceversa).
   E.g. useful to have a vector/array of `HANDLE`s that are passed to
   `::WaitForMultipleObjects`, agnostic of the precise invalid value.
 
 ```cpp
-struct windows_any_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct windows_any_handle_traits
 {
   using handle_type = HANDLE;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -245,7 +241,7 @@ using windows_any_handle = cpp_util::unique_handle<windows_any_handle_traits>;
   useful in this scenario.
 
 ```cpp
-struct window_dc_handle_traits : cpp_util::unique_handle_inout_and_out_ptr_access
+struct window_dc_handle_traits
 {
   struct handle_type
   {
@@ -279,7 +275,7 @@ window_dc_handle get_dc(HWND hwnd)
 Note that the there are more than one way of cleaning up a `HDC`, this one
 does not need the `struct` for `handle_type`:
 ```cpp
-struct dc_handle_traits : cpp_util::unique_handle_basic_access
+struct dc_handle_traits
 {
   using handle_type = HDC hdc;
 
@@ -301,16 +297,15 @@ dc_handle create_compatible_dc(HDC dc)
 }
 ```
 
-`.inout_ref()` might be useful to get a reference to these bigger `handle_type` structs,
-instead of `.get()` which copies to struct in `window_dc_handle`,
-which is why we derived `window_dc_handle_traits` from `unique_handle_inout_and_out_ptr_access`
+`.ref()` might be useful to get a reference to these bigger `handle_type` structs,
+instead of `.get()` which copies to struct in `window_dc_handle`
 
 ```cpp
 void foo()
 {
   //...
   window_dc_handle wnd_dc = get_window_dc(::GetDesktopWindow());
-  dc_handle memory_dc = create_compatible_dc(wnd_dc.inout_ref().hdc);
+  dc_handle memory_dc = create_compatible_dc(wnd_dc.ref().hdc);
   //...
 }
 ```
@@ -320,11 +315,9 @@ void foo()
 
 - sometimes the `unique_handle` just ensures some cleanup gets done
 - shown here with a `bool` as the `handle_type`
-- cleanup actions typically don't need pointer access to the `bool`, hence
-  using `unique_handle_basic_access`
 
 ```cpp
-struct revert_to_self_handle_traits : cpp_util::unique_handle_basic_access
+struct revert_to_self_handle_traits
 {
   using handle_type = bool;
   static constexpr auto invalid_value() noexcept { return false; }
@@ -350,7 +343,7 @@ a `revert_to_self_handle` (not that the exception is thrown for the failure case
 
 - therefore maybe use `BOOL` as the `handle_type`
 ```cpp
-struct revert_to_self_handle_traits : cpp_util::unique_handle_basic_access
+struct revert_to_self_handle_traits
 {
   using handle_type = BOOL;
   static constexpr auto invalid_value() noexcept { return FALSE; }
@@ -378,7 +371,7 @@ enum class cleanup_action
   off,
   on
 };
-struct revert_to_self_handle_traits : cpp_util::unique_handle_basic_access
+struct revert_to_self_handle_traits
 {
   using handle_type = cleanup_action;
   static constexpr auto invalid_value() noexcept { return cleanup_action::off; }
@@ -410,7 +403,7 @@ The cleanup action can be cancelled early using `reset()`.
   useful in this scenario
 
 ```cpp
-struct http_terminate_handle_traits : cpp_util::unique_handle_basic_access
+struct http_terminate_handle_traits
 {
   struct handle_type
   {
@@ -423,6 +416,7 @@ struct http_terminate_handle_traits : cpp_util::unique_handle_basic_access
     static_cast<void>(::HttpTerminate(h.flags, nullptr));
   }
 };
+static_assert(cpp_util::unique_handle_custom_is_valid_traits<http_terminate_handle_traits>);
 using http_terminate_handle = cpp_util::unique_handle<http_terminate_handle_traits>;
 
 // this design assumes there are several functions that return a `http_terminate_handle`
@@ -439,21 +433,27 @@ http_terminate_handle initialize_v2_server()
 }
 ```
 
+NOTE: for this case you can alternatively make the traits a template parametrised
+on the `ULONG` value of the flags.
+
 
 ## Wrap `std::coroutine_handle`
 
 - e.g. for use in a `task` that owns (and destroys) it
-- we don't need a pointer access the the `coroutine_handle`, therefore
-  using `unique_handle_basic_access`
+- shows how the `unique_handle_custom_is_valid_traits` can be
+used via a `static_assert` inside the traits `struct`, so that it
+applies to all templates of that traits `struct`
 
 ```cpp
 template<typename Promise>
-struct unique_coroutine_handle_traits : cpp_util::unique_handle_basic_access
+struct unique_coroutine_handle_traits
 {
   using handle_type = std::coroutine_handle<Promise>;
   static constexpr auto invalid_value() noexcept { return nullptr; }
   static constexpr auto is_valid(handle_type h) noexcept { return h.operator bool(); }
   static void close_handle(handle_type h) noexcept { h.destroy(); }
+
+  static_assert(cpp_util::unique_handle_custom_is_valid_traits<unique_coroutine_handle_traits>);
 };
 template<typename Promise>
 using unique_coroutine_handle = cpp_util::unique_handle<unique_coroutine_handle_traits<Promise>>;
@@ -501,7 +501,7 @@ public:
   Similar cases exist for `WTSFreeMemory`, `CoTaskMemFree` (also shown below) etc.
 ```cpp
 template<typename T>
-struct local_ptr_traits : cpp_util::unique_handle_out_ptr_access
+struct local_ptr_traits
 {
   using handle_type = T;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -515,7 +515,7 @@ using local_ptr = cpp_util::unique_handle<local_ptr_traits<T>>;
 ## C-API uses struct with members that need cleaning
 
 Shown below for `WINHTTP_INFO`, but similar for `STARTUPINFOW` and `PROCESS_INFORMATION`.
-Also shows the usage of `.inout_ref()` to avoid copying the struct (this is a small struct, but
+Also shows the usage of `.ref()` to avoid copying the struct (this is a small struct, but
 `STARTUPINFOW` and `PROCESS_INFORMATION` are larger, see futher example for that later).
 
 e.g. given in `winhttp.h`, a Windows header that has this C struct
@@ -530,7 +530,7 @@ typedef struct WINHTTP_INFO
 
 Can be wrapped like this:
 ```cpp
-struct http_proxy_info_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct http_proxy_info_handle_traits
 {
   using handle_type = WINHTTP_PROXY_INFO;
   static auto invalid_value() noexcept {
@@ -559,11 +559,11 @@ void foo()
 {
   // get system proxies
   http_proxy_info_handle system_proxies_info;
-  if (!::WinHttpGetDefaultProxyConfiguration(system_proxies_info.out_ptr()))
+  if (!::WinHttpGetDefaultProxyConfiguration(system_proxies_info.ptr()))
   {
     // deal with, or ignore
   }
-  WINHTTP_PROXY_INFO& raw = system_proxies_info.inout_ref();
+  WINHTTP_PROXY_INFO& raw = system_proxies_info.ref();
   // use raw.lpszProxy and raw.lpszProxyBypass (if they are not nullptr)
 }
 ```
@@ -578,7 +578,7 @@ We used this for some cases such as:
 
 - COM appartment initialization scope
 ```cpp
-struct co_uninitialize_handle_traits : cpp_util::unique_handle_basic_access
+struct co_uninitialize_handle_traits
 {
   using handle_type = bool;
   static constexpr auto invalid_value() noexcept { return false; }
@@ -616,7 +616,7 @@ void foo()
 - or a wrapper for `::CoTaskMemFree`
 ```cpp
 template<typename T>
-struct co_task_mem_free_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct co_task_mem_free_handle_traits
 {
   using handle_type = T;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -628,7 +628,7 @@ using co_task_mem_free_handle = cpp_util::unique_handle<co_task_mem_free_handle_
 std::wstring guid_to_wstring(const GUID& input)
 {
   co_task_mem_free_handle<wchar_t*> str;
-  HRESULT hr = ::StringFromCLSID(input, str.out_ptr());
+  HRESULT hr = ::StringFromCLSID(input, str.ptr());
   if (FAILED(hr))
   {
     throw std::runtime_error("StringFromCLSID failed");
@@ -647,10 +647,699 @@ a custom class:
 - Can have custom comparisons that do a deep compare of the strings pointed by BSTR
 
 
-# Historical notes / why use `unique_handle` instead of `std::unique_ptr`
+# Design decisions
+
+## Why not use `std::unique_ptr` for handles?
+
+Because handles stretch `std::unique_ptr` outside it's primary usage scenario,
+which is pointers with `nullptr` as the invalid value. See more on the historical notes
+section.
+
+
+## Why traits instead of taking template parameters
+
+1. Allows the case where the invalid value is a `reinterpret_cast`
+
+2. Allows options for disambiguation, see choices for `SC_HANDLE` below
+
+- `SC_HANDLE` is one of the many examples of a ambiguous usage in a C API: it could be a service, or it
+  could be a service manager (required to open a service)
+
+- one can design an API wrapper that accepts this ambiguity:
+```cpp
+struct service_handle_traits
+{
+  using handle_type = SC_HANDLE;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::CloseServiceHandle(h));
+  }
+};
+using service_handle = cpp_util::unique_handle<service_handle_traits>;
+using service_arg = cpp_util::handle_arg<service_handle_traits>;
+
+service_handle open_service_manager(DWORD dwDesiredAccess);
+
+service_handle open_service(
+  service_arg smgr, const std::wstring & service_name, DWORD desired_access);
+```
+
+- or one can design an API wrapper that disambigutes between the usages.
+  NOTE: the traits approach creates different types for `service_manager_handle`
+  and `service_handle` even if the traits body is the same.
+```cpp
+struct service_manager_handle_traits
+{
+  using handle_type = SC_HANDLE;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::CloseServiceHandle(h));
+  }
+};
+using service_manager_handle = cpp_util::unique_handle<service_manager_handle_traits>;
+using service_manager_arg = cpp_util::handle_arg<service_manager_handle_traits>;
+
+service_manager_handle open_service_manager(DWORD dwDesiredAccess);
+
+struct service_handle_traits
+{
+  using handle_type = SC_HANDLE;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::CloseServiceHandle(h));
+  }
+};
+using service_handle = cpp_util::unique_handle<service_handle_raii_traits>;
+
+service_handle open_service(
+  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
+```
+
+3. Makes this disambiguation controlled by the C++ code as shown for `SC_HANDLE` when
+compared with an implementation where the three elements (handle type, invalid value
+and function to close handle) are taken as template arguments.
+
+Q: are type1 and type2 different types?
+```cpp
+using type1 = some_other_raii_handle<void*, nullptr, LocalMemFree>;
+using type2 = some_other_raii_handle<PSECURITY_DESCRIPTOR, NULL, LocalMemFree>;
+```
+
+A: Don't know, it depends on what `PSECURITY_DESCRIPTOR` and `NULL` are.
+
+C handles are opaque. `PSECURITY_DESCRIPTOR` could be:
+- a pointer to a `struct` called `SECURITY_DESCRIPTOR`
+
+- a `void*`
+- an integer
+- a pointer sized integral type
+- a struct containing a pointer sized member
+- something else, none of the above
+
+
+## Traits still look unusual
+
+Well, maybe as a name, but if you compare with the of `std::unique_ptr` there
+are similarities:
+
+<table border="1">
+  <thead>
+    <tr>
+      <td>unique_ptr deleter</td>
+      <td>unique_handle traits</td>
+      <td>Notes:</td>
+   </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>pointer</td>
+      <td>handle_type</td>
+      <td>Configure the type of the pointer/handle</td>
+    </tr>
+    <tr>
+      <td>pointer type constructor from `nullptr`</td>
+      <td>invalid_value()</td>
+      <td>Configure the invalid value</td>
+    </tr>
+    <tr>
+      <td>pointer type operator `bool`</td>
+      <td>is_valid()</td>
+      <td>Test for the invalid value</td>
+    </tr>
+    <tr>
+      <td>operator()</td>
+      <td>close_handle()</td>
+      <td>Configure how to free the resource</td>
+    </tr>
+  </tbody>
+</table>
+
+
+## Yes, but still traits look unusual
+
+See for example Kenny Kerr's article in the MSDN magazine Volume 26 Number 07 from July 2011
+[Windows with C++ - C++ and the Windows API](https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/july/msdn-magazine-windows-with-c-c-and-the-windows-api)
+
+Notice the similarities of Kenny Kerr's `unique_handle` in naming and implementation.
+```cpp
+template <typename Type, typename Traits>
+class unique_handle
+{
+  unique_handle(unique_handle const &);
+  unique_handle & operator=(unique_handle const &);
+  void close() throw()
+  {
+    if (*this)
+    {
+      Traits::close(m_value);
+    }
+  }
+  Type m_value;
+public:
+  explicit unique_handle(Type value = Traits::invalid()) throw() :
+    m_value(value)
+  {
+  }
+  ~unique_handle() throw()
+  {
+    close();
+  }
+```
+
+Sample proposed usage of Kenny Kerr's class.
+```cpp
+struct handle_traits
+{
+  static HANDLE invalid() throw()
+  {
+    return nullptr;
+  }
+  static void close(HANDLE value) throw()
+  {
+    CloseHandle(value);
+  }
+};
+
+typedef unique_handle<HANDLE, handle_traits> handle;
+
+handle h(CreateEvent( ... ));
+```
+
+There are some differences, but I think they are historical and surface only.
+My point is that this design and naming (including "traits") makes sense if multiple
+designs independently come to so many similarities.
+
+
+## Performance of `unique_handle` vs C
+
+How does it compare with the C alternative:
+```c
+bool foo(const char* file_name, const char* mode)
+{
+  FILE* file;
+  errno_t result;
+  result = fopen_s(&file, file_name, mode);
+  if (0 != result)
+  {
+    return false;
+  }
+
+  fclose(file);
+  return true;
+}
+```
+
+The particular C version above avoids initializing `file` and also avoid testing
+`file` before closing, it only tested the `result` and assumes that the `file` is
+not `nullptr`. It might gain something out of that, though it's playing with fire.
+NOTE: this is a trick similar to the one used in linear find value with sentinel
+equal to the value where the loop only has to test for the value, not for the end,
+compared with the `std::find` that needs to test for end and value in the loop.
+
+NOTE: the code above, relies on the contract that the C API (`fopen_s` in this
+case) only sets the handle if it succeeds. We make all sort of assumptions about
+C API, for example we assume in the `unique_handle` usage that on failure the handle
+is not garbage and that it can be closed if not valid.
+
+Performance-wise the `unique_handle` C++ version initializes the handle member to the
+invalid value, tests the `FILE*` in addition to the `result` and requires the
+compiler to optmise out the move operations.
+
+The advantages of the `unique_handle` C++ version are that it:
+- allows reuse: you only need to wrap `fopen_s` once in your application
+- prevents coding errors where the file is not closed on some return branch
+
+You could maybe claw back the initialization by using a uninitialized raw pointer
+when calling the C API, and declaring and initializing a `unique_handle` after the
+C API in the success case, but you go back to error prone code that's not as reusable.
+
+
+## Why use handle_arg, why not use raw handles?
+
+In the example above we had
+```cpp
+service_handle open_service(
+  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
+```
+
+It creates a barrier when we want to distinguish between the `SC_HANDLE`
+returned from `OpenSCManagerW` and the one returned by `OpenServiceW`.
+The barrier is permeable as the `service_manager_arg` can also be constructed
+with a raw `SC_HANDLE` that we can obtain by calling `get()` on a `service_handle`,
+but it is still a barrier.
+
+
+## Comparison (equality in particular) and std::hash
+
+`std::unique_ptr` implements equality, but it does not make sense. The
+only instances that are equal have a `nullptr` value. The values that are
+not `nullptr` better be unique. Another smell is that a equality is
+linked to copy (a copy should be equal to the original), but `std::unique_ptr`
+is not copyable.
+
+`unique_handle` is in a similar situation. I did not implement equality,
+comparison or `std::hash`.
+
+There is potentially the case where one would want to implement a C API
+in C++ and provide handles via that C API, and needs order or hash to
+efficiently search for opened handles in some data structure. Well,
+`unique_handle` was not designed for that, it was designed for using
+C APIs that deal with handles rather than implementing them.
+
+
+## swap not implemented
+
+Did not yet have to implement, could be, if needed.
+
+
+## Design of constraints in unique_handle_traits
+
+```cpp
+  template<unique_handle_traits Traits>
+  class [[nodiscard]] unique_handle
+```
+
+`unique_handle_traits` is a concept that tries to enforce requirements on
+`unique_handle` trait types e.g. to ensure that `close_handle` is a `noexcept`
+function (because it's called from the destructor of `unique_handle`) or
+that the `handle_type` is constructible without exceptions (this is
+what `get` does)
+
+There is an additional `unique_handle_custom_is_valid_traits` that can be
+used via a `static_assert` to check that `is_valid` is provided correctly
+by the traits class: this was a compromise to avoid duplicating `unique_handle`
+for that scenario.
+
+
+## Micro design decisions
+
+### Move constructor
+Move constructor is implented as:
+```cpp
+unique_handle(unique_handle&& other) noexcept :
+  h_{ std::move(other.h_) }
+{
+  other.h_ = Traits::invalid_value();
+}
+```
+It could be re-written as
+```cpp
+unique_handle(unique_handle&& other) noexcept :
+  h_{ std::exchange(other.h_, Traits::invalid_value()) }
+{
+}
+```
+But in the first case it's clear that exactly two assignments take place, whereas
+in the `exchange` case we rely on the compiler to optimise out, and did not want to
+risk it especially for the case where the `handle_type` is a large C struct.
+
+
+### Move assignment
+Similarly
+```cpp
+unique_handle& operator=(unique_handle&& other) noexcept
+{
+  handle_type tmp = std::move(other.h_);
+  other.h_ = Traits::invalid_value();
+  close_if_valid();
+  h_ = std::move(tmp);
+  return *this;
+}
+```
+vs. the more compact
+```cpp
+unique_handle& operator=(unique_handle&& other) noexcept
+{
+  reset(other.h_.release());
+  return *this;
+}
+```
+It's harder to count the assignments in the `reset`+`release` version.
+
+Also note that we avoided a version that checks `if (&other == this)` out of
+concern of additional branching, the code as it is handles the assignment to self
+because if `other` is this very object, then the value is saved to `tmp` and
+assigning the `invalid_value` to `other.h_` will make this very handle invalid,
+with nothing to close before restoring `h_` from `tmp`.
+
+
+### `std::ignore` required sometimes due to `[[nodiscard]]`
+
+Let's say that you have a wrapper for a Windows registry handle:
+
+```cpp
+struct registry_handle_traits
+{
+  using handle_type = HKEY;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::RegCloseKey(h));
+  }
+};
+using registry_handle = cpp_util::unique_handle<registry_handle_traits>;
+
+// Construction API wrapper
+registry_handle create_registry_key(...)
+{
+  registry_handle return_value;
+  auto result = ::RegCreateKeyExW(..., return_value.ptr(), ...);
+  if (ERROR_SUCCESS != result)
+  {
+    throw std::runtime_error("RegCreateKeyExW failed");
+  }
+  return return_value;
+}
+```
+
+Then if you just want to create a registry key,
+but not use it, you (might) need to use `std::ignore`
+```cpp
+void usage()
+{
+  // just create a registry key
+  // don't use the returned handle
+  std::ignore = create_registry_key(...);
+}
+```
+
+The cause is that `create_registry_key` returns a `unique_handle` which
+is marked `[[nodiscard]]`, requiring the user to use the return value.
+But in this case we just want to create a registry key (e.g. maybe part
+of a product installer). So you need to asign it to `std::ignore`. Another
+case in the same situation would creating an empty file in the style of
+shell command `touch`: you get a file handle that you discard without using
+it to read or write from the file.
+
+We could have not marked the `unique_handle` as `[[nodiscard]]`, but then
+we would have to mark `[[nodiscard]]` functions like
+`co_uninitialize_handle initialize_ex_multi_threaded()`,
+`co_uninitialize_handle initialize_ui_appartment()`, `impersonate_anonymous()`
+where the scope has to be maintained for longer.
+
+We made the choice that adding `std::ignore` has has a simple, obvious solution
+to the user, albeit visible anoying, vs. the more subtle need to mark selective
+function as `[[nodiscard]]` on an ongoing basis.
+
+
+# Even more usage scenarios
+
+## WTSFreeMemory wrapper templated example
+- Shows usage where a templated version is used for `::WTSFreeMemory`.
+- It also shows a case where the `ptr()` method is used
+  for an API where a `reinterpret_cast` is needed.
+
+```cpp
+template<typename T>
+struct wts_free_memory_raii_traits
+{
+  using handle_type = T;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept { ::WTSFreeMemory(h); }
+};
+template<typename T>
+using wts_free_memory_raii = cpp_util::unique_handle<wts_free_memory_raii_traits<T>>;
+
+template<typename T>
+wts_free_memory_raii<T> query_session_information(DWORD sessionId, WTS_INFO_CLASS wtsInfoClass)
+{
+  wts_free_memory_raii<T> return_value;
+
+  DWORD bytesReturned = 0;
+  BOOL result = ::WTSQuerySessionInformationW(
+    WTS_CURRENT_SERVER_HANDLE, sessionId, wtsInfoClass,
+    reinterpret_cast<LPWSTR>(return_value.ptr()),
+    &bytesReturned);
+  if (FALSE == result)
+  {
+    throw std::runtime_error("WTSQuerySessionInformation failed");
+  }
+
+  return return_value;
+}
+
+void usage()
+{
+  // ...
+  std::wstring wts_user_name = query_session_information<WCHAR*>(session_id, WTSUserName).get();
+
+  connect_state state = to_connect_state(
+    *query_session_information<WTS_CONNECTSTATE_CLASS*>(session_id, WTSConnectState).get());
+  // ...
+}
+```
+
+
+## Dealing with CreateProcessW structures
+
+This shows:
+- How to wrap a C API struct that has multiple resources inside
+- How to compose such unique handles:
+  - Have a unique handle for each C API struct
+  - Then have a struct that has those unique handle as members
+- How to use `.ref()` to avoid further copies compared with `.get()`
+  - Though the compiler should probably optise those copies out
+
+```cpp
+struct startup_info_handle_traits
+{
+  using handle_type = STARTUPINFOW;
+
+  static constexpr auto invalid_value() noexcept {
+    return handle_type{ .cb = sizeof(STARTUPINFOW) };
+  }
+  static constexpr bool is_valid(const handle_type& h) noexcept {
+    return (nullptr != h.hStdInput) ||
+      (nullptr != h.hStdOutput) ||
+      (nullptr != h.hStdError);
+  }
+  static void close_handle(const handle_type& h) noexcept {
+    close_handle_helper(h.hStdInput);
+    close_handle_helper(h.hStdOutput);
+    close_handle_helper(h.hStdError);
+  }
+private:
+  static void close_handle_helper(HANDLE h) noexcept {
+    if (nullptr != h) {
+      static_cast<void>(::CloseHandle(h));
+    }
+  }
+};
+static_assert(cpp_util::unique_handle_custom_is_valid_traits<startup_info_handle_traits>);
+using startup_info_handle = cpp_util::unique_handle<startup_info_handle_traits>;
+
+struct process_information_handle_traits
+{
+  using handle_type = PROCESS_INFORMATION;
+
+  static constexpr auto invalid_value() noexcept {
+    return handle_type{};
+  }
+  static constexpr bool is_valid(const handle_type& h) noexcept {
+    return (nullptr != h.hProcess) ||
+      (nullptr != h.hThread);
+  }
+  static void close_handle(const handle_type& h) noexcept {
+    close_handle_helper(h.hProcess);
+    close_handle_helper(h.hThread);
+  }
+private:
+  static void close_handle_helper(HANDLE h) noexcept {
+    if (nullptr != h) {
+      static_cast<void>(::CloseHandle(h));
+    }
+  }
+};
+static_assert(cpp_util::unique_handle_custom_is_valid_traits<process_information_handle_traits>);
+using process_information_handle = cpp_util::unique_handle<process_information_handle_traits>;
+
+struct created_process
+{
+  startup_info_handle startup_info;
+  process_information_handle process_information;
+};
+
+created_process create_process(/*...*/)
+{
+  created_process return_value;
+
+  BOOL result = ::CreateProcessW(
+    //...
+    return_value.startup_info.ptr(),
+    return_value.process_information.ptr()
+  );
+  if (FALSE == result)
+  {
+    throw std::runtime_error("CreateProcessW failed");
+  }
+
+  return return_value;
+}
+
+int run_and_wait(/*...*/)
+{
+  created_process proc = create_process(/*...*/);
+  return wait_for_process_exit(proc.process_information.ref().hProcess);
+}
+```
+
+## Compounding cleanup for the same handle
+
+- This is a rarer case where multiple cleanups are required for the same handle, one can store two instances of the `unique_handle`, or can compond both into one that can be passed arround withouth having to store the handle twice.
+
+```cpp
+struct win_http_handle_traits
+{
+  using handle_type = HINTERNET;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    static_cast<void>(::WinHttpCloseHandle(h));
+  }
+};
+using win_http_handle = cpp_util::unique_handle<win_http_handle_traits>;
+
+struct unregister_callback_handle_traits
+{
+  using handle_type = HINTERNET;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    WINHTTP_STATUS_CALLBACK callback_result{ ::WinHttpSetStatusCallback(h, NULL, /*...*/) };
+    if (WINHTTP_INVALID_STATUS_CALLBACK == callback_result)
+    {
+      // this is a fatal error (there is bug somewhere)
+      // throw will terminate, because we're inside noexcept function
+      throw std::runtime_error("WinHttpSetStatusCallback fatal error");
+    }
+  }
+};
+using unregister_callback_handle = cpp_util::unique_handle<unregister_callback_handle_traits>;
+
+// compond handle cleans up both of the above
+struct win_http_session_handle_traits
+{
+  using handle_type = HINTERNET;
+  static constexpr auto invalid_value() noexcept { return nullptr; }
+  static void close_handle(handle_type h) noexcept {
+    // the destructors (in reverse order) will do the cleanup
+    win_http_handle a(h);
+    unregister_callback_handle b(h);
+  }
+};
+using win_http_session_handle = cpp_util::unique_handle<win_http_session_handle_traits>;
+
+win_http_session_handle transfer_to_win_http_session_handle(
+  win_http_handle && http_handle,
+  unregister_callback_handle && unregister_callback) noexcept
+{
+  // throw will terminate (there is bug somewhere)
+  if((unregister_callback.get() != http_handle.get()) || !(http_handle.is_valid()))
+  {
+    throw std::runtime_error("transfer_to_win_http_session_handle fatal error");
+  }
+  static_cast<void>(unregister_callback.release());
+  return win_http_session_handle(http_handle.release());
+}
+
+// Users only care about win_http_session which stores a single HINTERNET
+win_http_session_handle open_session()
+{
+  win_http_handle handle{ ::WinHttpOpen(/*...*/) }
+  if (!handle.is_valid())
+  {
+    throw std::runtime_error("WinHttpOpen failed");
+  }
+
+  // ...
+
+  WINHTTP_STATUS_CALLBACK callback_result{
+    ::WinHttpSetStatusCallback(handle.get(), winhttp_status_callback, /*...*/) };
+  if (WINHTTP_INVALID_STATUS_CALLBACK == callback_result)
+  {
+    throw std::runtime_error("WinHttpSetStatusCallback failed");
+  }
+  unregister_callback_handle unregister_callback(handle.get());
+
+  // ...
+
+  return transfer_to_win_http_session_handle(
+    std::move(handle), std::move(unregister_callback));
+}
+```
+
+## The case of multiple cleanup functions
+
+This is a very rare case e.g. `PSID` in Windows:
+
+When obtained from `AllocateAndInitializeSid` must be freed by using `FreeSid`.
+```cpp
+BOOL AllocateAndInitializeSid(
+  // ...
+  [out] PSID *pSid
+);
+```
+
+When obtained from `ConvertStringSidToSidW` must be freed by using `LocalFree`.
+```cpp
+BOOL ConvertStringSidToSidW(
+  // ...
+  [out] PSID *Sid
+);
+```
+
+When obtained from `CreateWellKnownSid` can use our own method of allocating and
+freeing (including space on the stack). E.g. can call once with a `NULL`, then use
+`cbSid` as the number of bytes that need to be allocated.
+```cpp
+BOOL CreateWellKnownSid(
+  // ...
+  [out, optional] PSID pSid,
+  [in, out] DWORD *cbSid
+);
+```
+
+In other cases the `PSID` is allocated as part of a larger structure.
+E.g. for `GetTokenInformation` the user has to allocate a buffer. When
+called with `TokenUser`, the content of the buffer is nominally a struct
+```cpp
+struct TOKEN_USER
+{
+  SID_AND_ATTRIBUTES User;
+};
+```
+where
+```cpp
+struct SID_AND_ATTRIBUTES
+{
+  PSID  Sid;
+  DWORD Attributes;
+};
+```
+But the buffer needs to be larger to accomodate the `SID` pointed by `Sid`,
+following the `TOKEN_USER`.
+
+I speculate that the reason for the `PSID` multiple cleanup functions is that
+it is not a true resource (e.g. like a file), but instead it is a pointer to
+[a C data structure](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understand-security-identifiers)
+(despite the `PSID` being declared as a `void*`).
+
+The options are to either:
+- use a single RAII class based on `local_ptr<PSID>`, never use `AllocateAndInitializeSid`
+- use multiple RAII classes
+  - e.g. one based on `local_ptr<PSID>`, another one that calls `FreeSid` and maybe yet
+    another one storing a `unique_ptr<unsigned char[]>`
+- use a special RAII that captures the cleanup/deleter as a pointer
+
+The last two options require a custom `sid_arg` type rather than one based on `handle_arg`
+which was designed to work in conjunction with a single `unique_handle`
+
+
+# Historical notes
 
 Here are some selective historical notes, that sadly does not explicitly acknowledge all the
 contributors, it's not just me, I've learned from others.
+
+It expands in particular the issues:
+- why use `unique_handle` instead of `std::unique_ptr`
+- why there is a pointer access to the handle via `.ptr()` and why not distinct `.out_ptr()`/`.inout_ptr()` 
 
 
 ## Pre C++23
@@ -659,8 +1348,8 @@ Early 2000s I started switching from a C with classes coding style, with large a
 functions, to a more standard C++ one that embraced RAII that is correct in face of exceptions,
 driven by the empirical observation that using RAII to manage resources results in less code and code
 with less bugs (in particular memory/resource leaks virtually extinct). After disapointment with the,
-now defunct, `std::auto_ptr` corner cases we ended up with a proliferation of non-copyable, non-moveable
-classes, largely one for each resource.
+now defunct, `std::auto_ptr` corner cases (it's copy operation mutated the source) we ended up with a
+proliferation of non-copyable, non-moveable classes, largely one for each resource.
 
 When C++ 11 came along it introduced smart pointers like `std::unique_ptr` and `std::shared_ptr`.
 
@@ -712,8 +1401,9 @@ file_handle open_file(const char* file_name, const char* mode)
   return return_value;
 }
 ```
+
 If `file_handle` would have been `std::unique_ptr` based we would have to do something like
-this is, which is more error prone.
+this is, which is more error prone:
 ```cpp
 file_handle open_file(const char* file_name, const char* mode)
 {
@@ -780,11 +1470,13 @@ struct file_ptr_deleter
 };
 using file_ptr = std::unique_ptr<FILE*, file_ptr_deleter>;
 ```
+
 If you fear: "what if `file_ptr` is created via `std::make_unique` and then freed using `delete`?",
 fear not because`std::make_unique` cannot create a `std::unique_ptr` with a custom deleter,
-it cannot create a `file_ptr` as above.
+it cannot create a `file_ptr` as above. But that creates cognitive load because in general for
+`unique_ptr` you are supposed to use `std::make_unique`.
 
-But if you want to have a handle `int` with a `-1` invalid value then
+If you want to have a handle `int` with a `-1` invalid value then
 [P1132R8](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1132r8.html)
 provides the following example:
 ```cpp
@@ -817,6 +1509,7 @@ struct fd_deleter {
 std::unique_ptr<int, fd_deleter> my_unique_fd;
 auto err = fopen_s( std::out_ptr<FILE*>(my_unique_fd), "prod.csv", "rb" );;
 ```
+
 On one side this shows that people tried and can use `std::unique_ptr` for an `int` handle with
 a `-1` invalid value, but I would call it an unpleasant experience compared with `unique_handle`,
 at least a very different experience in writing a wrapper.
@@ -837,7 +1530,7 @@ functions are declared, but not implemented in the example.
 
 What we would have done using `unique_handle` is have two handle classes:
 ```cpp
-struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
+struct file_handle_traits
 {
   using handle_type = FILE*;
   static constexpr auto invalid_value() noexcept { return nullptr; }
@@ -847,7 +1540,7 @@ struct file_handle_traits : cpp_util::unique_handle_out_ptr_access
 };
 using file_handle = cpp_util::unique_handle<file_handle_traits>;
 
-struct file_descriptor_traits : cpp_util::unique_handle_basic_access
+struct file_descriptor_traits
 {
   using handle_type = int;
   static constexpr auto invalid_value() noexcept { return -1; }
@@ -1024,197 +1717,14 @@ Having said all that, I'm likely to use `unique_handle` to deal with C API handl
 for the forseeable future instead of using `std::unique_ptr`/`std::out_ptr`/`std::inout_ptr`.
 
 
-# Design decisions
-
-## Why not use `std::unique_ptr` for handles?
-
-As a summary of the historical notes: because handles stretch `std::unique_ptr`
-outside it's primary usage scenario, which is pointers with `nullptr` as the invalid
-value.
-
-
-## Why traits instead of taking template parameters
-
-1. Allows the case where the invalid value is a `reinterpret_cast`
-
-2. Allows options for disambiguation, see choices for `SC_HANDLE` below
-
-- `SC_HANDLE` is one of the many examples of a ambiguous usage in a C API: it could be a service, or it
-  could be a service manager (required to open a service)
-
-- one can design an API wrapper that accepts this ambiguity:
-```cpp
-struct service_handle_traits : cpp_util::unique_handle_basic_access
-{
-  using handle_type = SC_HANDLE;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept {
-    static_cast<void>(::CloseServiceHandle(h));
-  }
-};
-using service_handle = cpp_util::unique_handle<service_handle_traits>;
-using service_arg = cpp_util::handle_arg<service_handle_traits>;
-
-service_handle open_service_manager(DWORD dwDesiredAccess);
-
-service_handle open_service(
-  service_arg smgr, const std::wstring & service_name, DWORD desired_access);
-```
-
-- or one can design an API wrapper that disambigutes between the usages.
-  NOTE: the traits approach creates different types for `service_manager_handle`
-  and `service_handle` even if the traits body is the same.
-```cpp
-struct service_manager_handle_traits : cpp_util::unique_handle_basic_access
-{
-  using handle_type = SC_HANDLE;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept {
-    static_cast<void>(::CloseServiceHandle(h));
-  }
-};
-using service_manager_handle = cpp_util::unique_handle<service_manager_handle_traits>;
-using service_manager_arg = cpp_util::handle_arg<service_manager_handle_traits>;
-
-service_manager_handle open_service_manager(DWORD dwDesiredAccess);
-
-struct service_handle_traits : cpp_util::unique_handle_basic_access
-{
-  using handle_type = SC_HANDLE;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept {
-    static_cast<void>(::CloseServiceHandle(h));
-  }
-};
-using service_handle = cpp_util::unique_handle<service_handle_raii_traits>;
-
-service_handle open_service(
-  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
-```
-
-3. Makes this disambiguation controlled by the C++ code as shown for `SC_HANDLE` when
-compared with an implementation where the three elements (handle type, invalid value
-and function to close handle) are taken as template arguments.
-
-Q: are type1 and type2 different types?
-```cpp
-using type1 = some_other_raii_handle<void*, nullptr, LocalMemFree>;
-using type2 = some_other_raii_handle<PSECURITY_DESCRIPTOR, NULL, LocalMemFree>;
-```
-
-A: Don't know, it depends on what `PSECURITY_DESCRIPTOR` and `NULL` are.
-
-C handles are opaque. `PSECURITY_DESCRIPTOR` could be:
-- a pointer to a `struct` called `SECURITY_DESCRIPTOR`
-
-- a `void*`
-- an integer
-- a pointer sized integral type
-- a struct containing a pointer sized member
-- something else, none of the above
-
-
-## Traits still look unusual
-
-Well, maybe as a name, but if you compare with the of `std::unique_ptr` there
-are similarities:
-
-<table border="1">
-  <thead>
-    <tr>
-      <td>unique_ptr deleter</td>
-      <td>unique_handle traits</td>
-      <td>Notes:</td>
-   </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>pointer</td>
-      <td>handle_type</td>
-      <td>Configure the type of the pointer/handle</td>
-    </tr>
-    <tr>
-      <td>pointer type constructor from `nullptr`</td>
-      <td>invalid_value()</td>
-      <td>Configure the invalid value</td>
-    </tr>
-    <tr>
-      <td>pointer type operator `bool`</td>
-      <td>is_valid()</td>
-      <td>Test for the invalid value</td>
-    </tr>
-    <tr>
-      <td>operator()</td>
-      <td>close_handle()</td>
-      <td>Configure how to free the resource</td>
-    </tr>
-  </tbody>
-</table>
-
-
-## Yes, but still traits look unusual
-
-See for example Kenny Kerr's article in the MSDN magazine Volume 26 Number 07 from July 2011
-[Windows with C++ - C++ and the Windows API](https://learn.microsoft.com/en-us/archive/msdn-magazine/2011/july/msdn-magazine-windows-with-c-c-and-the-windows-api)
-
-Notice the similarities of Kenny Kerr's `unique_handle` in naming and implementation.
-```cpp
-template <typename Type, typename Traits>
-class unique_handle
-{
-  unique_handle(unique_handle const &);
-  unique_handle & operator=(unique_handle const &);
-  void close() throw()
-  {
-    if (*this)
-    {
-      Traits::close(m_value);
-    }
-  }
-  Type m_value;
-public:
-  explicit unique_handle(Type value = Traits::invalid()) throw() :
-    m_value(value)
-  {
-  }
-  ~unique_handle() throw()
-  {
-    close();
-  }
-```
-
-Sample proposed usage of Kenny Kerr's class.
-```cpp
-struct handle_traits
-{
-  static HANDLE invalid() throw()
-  {
-    return nullptr;
-  }
-  static void close(HANDLE value) throw()
-  {
-    CloseHandle(value);
-  }
-};
-
-typedef unique_handle<HANDLE, handle_traits> handle;
-
-handle h(CreateEvent( ... ));
-```
-
-There are some differences, but I think they are historical and surface only.
-My point is that this design and naming (including "traits") makes sense if multiple
-designs independently come to so many similarities.
-
-
-## `.ref()`, `.ptr()`, `.out_ptr()` etc.
+## What is the `out_ptr` `inout_ptr` all about again?
 
 The predecesor of `unique_handle`, `raii_with_invalid_value` provided
-just `.ptr()`, without the `out` and `inout` variations.
+just `.ptr()`. I tried to provide `out_ptr()` and `inout_ptr()` variations,
+but then back to just `.ptr()`.
 
-This was not much of a problem as most of the C APIs are `out_ptr` type
-ones, the usage was to declare an instance just ahead of calling the
-C API.
+Most of the C APIs are `out_ptr` type ones, the usage was to declare an
+instance just ahead of calling the C API:
 ```cpp
 file_handle open_file(const char* file_name, const char* mode)
 {
@@ -1227,14 +1737,15 @@ file_handle open_file(const char* file_name, const char* mode)
 
 I provided `.ref()` because I thought this was part of an "expressive basis"
 (see EOP 1.4), but it turns out that there are not so many usages for that
-e.g. maybe for a large struct like `STARTUPINFOW` (see below).
+e.g. maybe for a large struct like `STARTUPINFOW`.
 
-On the other side the experience shows that developers are more likely
-to misuse it. Most of the usages in the field of `.ref()` would immediately
-just take the address like `&smart_ptr.ref()`: it would have been easier to
-just use `.ptr()` like `smart_ptr.ptr()`.
+The experience shows that developers are able to misuse `.ref()`.
+Most of the usages in the field of `.ref()` would immediately
+just take the address like `&smart_handle.ref()`: it would have been easier to
+just use `.ptr()` like `smart_handle.ptr()`. But the misues has no safety or
+correctness consequences.
 
-Also some developers expect a distinct `out_ptr()` access
+Some developers expect a distinct `out_ptr()` access
 ```cpp
 file_handle open_file(const char* file_name, const char* mode)
 {
@@ -1246,8 +1757,8 @@ file_handle open_file(const char* file_name, const char* mode)
 ```
 and are concerned of a direct access via a `.ptr()`. Not sure if the concern
 is justified because to me it's clear that the default constructor just ahead
-of the C API call initializes the `unique_handle` to the `invalid_value()`,
-but I see that it's real, people are concerned.
+of the C API call initializes the `unique_handle` to the `invalid_value()`.
+But I see that it's real issue, people are concerned.
 
 So I've added a mechanism to use the traits to selecting available pointer
 access in `unique_handle`.
@@ -1274,7 +1785,7 @@ The basic access is the recommended option for cleanup actions that store a
 `bool` (or similar) as a handle.
 
 More modern C APIs creating handles return an error code, the handle to be
-created is taken by pointer and `out_ptr()` access provides the interface
+created is taken by pointer and `.out_ptr()` access provides the interface
 to do this:
 ```cpp
 file_handle return_value;
@@ -1293,15 +1804,6 @@ and `.out_ptr()`:
   - that's really a renamed `.ptr()`
 - `.inout_ref()` for effective access avoiding the copy via `.get()`
   - that's really a renamed `.ref()`
-
-
-## Why no `.out_ref()`?
-
-The asymmetry that there is a `.inout_ref()`, but no `.out_ref()` is because while there are
-very few cases where you might want a reference (e.g. when the "handle" is a struct, to
-avoid copying the struct), I've not encountered a case where you want to `.reset()` before
-access, usually the `.reset()` did happen when the handle was initialized via a `out_ptr`
-C API.
 
 
 ## Performance of `.out_ptr()` vs direct pointer access
@@ -1345,108 +1847,8 @@ But if this is your concern, you can use `.inout_ptr()`, which is just
 worried that the handle might not be set to `invalid_value()` before
 calling the C API.
 
-## Performance of `unique_handle` vs C
 
-How does it compare with the C alternative:
-```c
-bool foo(const char* file_name, const char* mode)
-{
-  FILE* file;
-  errno_t result;
-  result = fopen_s(&file, file_name, mode);
-  if (0 != result)
-  {
-    return false;
-  }
-
-  fclose(file);
-  return true;
-}
-```
-
-The particular C version above avoids initializing `file` and also avoid testing
-`file` before closing, it only tested the `result` and assumes that the `file` is
-not `nullptr`. It might gain something out of that, though it's playing with fire.
-NOTE: this is a trick similar to the one used in linear find value with sentinel
-equal to the value where the loop only has to test for the value, not for the end,
-compared with the `std::find` that needs to test for end and value in the loop.
-
-NOTE: the code above, relies on the contract that the C API (`fopen_s` in this
-case) only sets the `out_ptr` if it succeeds, we make all sort of assumptions about
-C APIs: equally we assume in the `unique_handle` usage that on failure the `out_ptr`
-is not garbage.
-
-Performance-wise the `unique_handle` C++ version initializes the handle member to the
-invalid value, tests the `FILE*` in addition to the `result` and requires the
-compiler to optmise out the move operations.
-
-The advantages of the `unique_handle` C++ version are that it:
-- allows reuse: you only need to wrap `fopen_s` once in your application
-- prevents coding errors where the file is not closed on some return branch
-
-You could maybe claw back the initialization by using a uninitialized raw pointer
-when calling the C API, and declaring and initializing a `unique_handle` after the
-C API in the success case, but you go back to error prone code that's not as reusable.
-
-## Why use handle_arg, why not use raw handles?
-
-In the example above we had
-```cpp
-service_handle open_service(
-  service_manager_arg smgr, const std::wstring & service_name, DWORD desired_access);
-```
-
-It creates a barrier when we want to distinguish between the `SC_HANDLE`
-returned from `OpenSCManagerW` and the one returned by `OpenServiceW`.
-The barrier is permeable as the `service_manager_arg` can also be constructed
-with a raw `SC_HANDLE` that we can obtain by calling `get()` on a `service_handle`,
-but it is still a barrier.
-
-
-## Comparison (equality in particular) and std::hash
-
-`std::unique_ptr` implements equality, but it does not make sense. The
-only instances that are equal have a `nullptr` value. The values that are
-not `nullptr` better be unique. Another smell is that a equality is
-linked to copy (a copy should be equal to the original), but `std::unique_ptr`
-is not copyable.
-
-`unique_handle` is in a similar situation. I did not implement equality,
-comparison or `std::hash`.
-
-There is potentially the case where one would want to implement a C API
-in C++ and provide handles via that C API, and needs order or hash to
-efficiently search for opened handles in some data structure. Well,
-`unique_handle` was not designed for that, it was designed for using
-C APIs that deal with handles rather than implementing them.
-
-
-## swap
-Did not yet have to implement, could be, if needed.
-
-
-## Design of constraints in unique_handle_traits
-
-```cpp
-  template<unique_handle_traits Traits>
-  class [[nodiscard]] unique_handle
-```
-
-`unique_handle_traits` is a concept that tries to enforce requirements on
-`unique_handle` trait types e.g. to ensure that `close_handle` is a `noexcept`
-function (because it's called from the destructor of `unique_handle`) or
-that the `handle_type` is constructible without exceptions (this is
-what `get` does)
-
-There is an additional `unique_handle_custom_is_valid_traits` that can be
-used via a `static_assert` to check that `is_valid` is provided correctly
-by the traits class: this was a compromise to avoid duplicating `unique_handle`
-for that scenario.
-
-
-## Micro design decisions
-
-### Why traits inheritance for access configuration
+## Why traits inheritance for access configuration
 
 E.g.
 ```cpp
@@ -1478,399 +1880,22 @@ struct file_handle_traits
 Both are more verbose.
 
 
-### Move constructor
-Move constructor is implented as:
-```cpp
-unique_handle(unique_handle&& other) noexcept :
-  h_{ std::move(other.h_) }
-{
-  other.h_ = Traits::invalid_value();
-}
-```
-It could be re-written as
-```cpp
-unique_handle(unique_handle&& other) noexcept :
-  h_{ std::exchange(other.h_, Traits::invalid_value()) }
-{
-}
-```
-But in the first case it's clear that exactly two assignments take place, whereas
-in the `exchange` case we rely on the compiler to optimise out, and did not want to
-risk it especially for the case where the `handle_type` is a large C struct.
+## Going back to just `.ptr()`
 
-### Move assignment
-Similarly
-```cpp
-unique_handle& operator=(unique_handle&& other) noexcept
-{
-  handle_type tmp = std::move(other.h_);
-  other.h_ = Traits::invalid_value();
-  close_if_valid();
-  h_ = std::move(tmp);
-  return *this;
-}
-```
-vs. the more compact
-```cpp
-unique_handle& operator=(unique_handle&& other) noexcept
-{
-  reset(other.h_.release());
-  return *this;
-}
-```
-It's harder to count the assignments in the `reset`+`release` version.
+My observation is that the narative about `.out_ptr()` and `.inout_ptr()`
+creates cognitive overload that is not justified by any safety gains.
 
-Also note that we avoided a version that checks `if (&other == this)` out of
-concern of additional branching, the code as it is handles the assignment to self
-because if `other` is this very object, then the value is saved to `tmp` and
-assigning the `invalid_value` to `other.h_` will make this very handle invalid,
-with nothing to close before restoring `h_` from `tmp`.
+The requirement to define access upfront creates friction. Users of C APIs
+undestand handle type, invalid value and close handle function, but then
+they need to decide the access: is it basic (no pointer access), `.out_ptr()`
+or full? Incorrect choices are made.
 
+It's so much easier to have a single `.ptr()` function always available even
+if not used. Sure, you can shoot in the foot, but so it's the case with
+the pointers/references to array of a `std::vector`: it provides `.data()`,
+you don't have to use it, if you do, you need to be careful.
 
-### `std::ignore` required sometimes due to `[[nodiscard]]`
+Having `.out_ptr()` and `.inout_ptr()` also creates the question: which one
+to use in which scenario. Mistakes are made.
 
-Let's say that you have a wrapper for a Windows registry handle:
-
-```cpp
-struct registry_handle_traits : cpp_util::unique_handle_out_ptr_access
-{
-  using handle_type = HKEY;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept {
-    static_cast<void>(::RegCloseKey(h));
-  }
-};
-using registry_handle = cpp_util::unique_handle<registry_handle_traits>;
-
-// Construction API wrapper
-registry_handle create_registry_key(...)
-{
-  registry_handle return_value;
-  auto result = ::RegCreateKeyExW(..., return_value.out_ptr(), ...);
-  if (ERROR_SUCCESS != result)
-  {
-    throw std::runtime_error("RegCreateKeyExW failed");
-  }
-  return return_value;
-}
-```
-
-Then if you just want to create a registry key,
-but not use it, you (might) need to use `std::ignore`
-```cpp
-void usage()
-{
-  // just create a registry key
-  // don't use the returned handle
-  std::ignore = create_registry_key(...);
-}
-```
-
-The cause is that `create_registry_key` returns a `unique_handle` which
-is marked `[[nodiscard]]`, requiring the user to use the return value.
-But in this case we just want to create a registry key (e.g. maybe part
-of a product installer). So you need to asign it to `std::ignore`. Another
-case in the same situation would creating an empty file in the style of
-shell command `touch`: you get a file handle that you discard without using
-it to read or write from the file.
-
-We could have not marked the `unique_handle` as `[[nodiscard]]`, but then
-we would have to mark `[[nodiscard]]` functions like
-`co_uninitialize_handle initialize_ex_multi_threaded()`,
-`co_uninitialize_handle initialize_ui_appartment()`, `impersonate_anonymous()`
-where the scope has to be maintained for longer.
-
-We made the choice that adding `std::ignore` has has a simple, obvious solution
-to the user, albeit visible anoying, vs. the more subtle need to mark selective
-function as `[[nodiscard]]` on an ongoing basis.
-
-
-# Even more usage scenarios
-
-## WTSFreeMemory wrapper templated example
-- Shows usage where a templated version is used for `::WTSFreeMemory`.
-- It also shows a case where the `out_ptr()` method is used
-  for an API where a `reinterpret_cast` is needed.
-
-```cpp
-template<typename T>
-struct wts_free_memory_raii_traits : cpp_util::unique_handle_out_ptr_access
-{
-  using handle_type = T;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept { ::WTSFreeMemory(h); }
-};
-template<typename T>
-using wts_free_memory_raii = cpp_util::unique_handle<wts_free_memory_raii_traits<T>>;
-
-template<typename T>
-wts_free_memory_raii<T> query_session_information(DWORD sessionId, WTS_INFO_CLASS wtsInfoClass)
-{
-  wts_free_memory_raii<T> return_value;
-
-  DWORD bytesReturned = 0;
-  BOOL result = ::WTSQuerySessionInformationW(
-    WTS_CURRENT_SERVER_HANDLE, sessionId, wtsInfoClass,
-    reinterpret_cast<LPWSTR>(return_value.out_ptr()),
-    &bytesReturned);
-  if (FALSE == result)
-  {
-    throw std::runtime_error("WTSQuerySessionInformation failed");
-  }
-
-  return return_value;
-}
-
-void usage()
-{
-  // ...
-  std::wstring wts_user_name = query_session_information<WCHAR*>(session_id, WTSUserName).get();
-
-  connect_state state = to_connect_state(
-    *query_session_information<WTS_CONNECTSTATE_CLASS*>(session_id, WTSConnectState).get());
-  // ...
-}
-```
-
-
-## Dealing with CreateProcessW structures
-
-This shows:
-- How to wrap a C API struct that has multiple resources inside
-- How to compose such unique handles:
-  - Have a unique handle for each C API struct
-  - Then have a struct that has those unique handle as members
-- How to use `.inout_ref()` to avoid further copies compared with `.get()`
-  - Though the compiler should probably optise those copies out
-
-```cpp
-struct startup_info_handle_traits : cpp_util::unique_handle_out_ptr_access
-{
-  using handle_type = STARTUPINFOW;
-
-  static constexpr auto invalid_value() noexcept {
-    return handle_type{ .cb = sizeof(STARTUPINFOW) };
-  }
-  static constexpr bool is_valid(const handle_type& h) noexcept {
-    return (nullptr != h.hStdInput) ||
-      (nullptr != h.hStdOutput) ||
-      (nullptr != h.hStdError);
-  }
-  static void close_handle(const handle_type& h) noexcept {
-    close_handle_helper(h.hStdInput);
-    close_handle_helper(h.hStdOutput);
-    close_handle_helper(h.hStdError);
-  }
-private:
-  static void close_handle_helper(HANDLE h) noexcept {
-    if (nullptr != h) {
-      static_cast<void>(::CloseHandle(h));
-    }
-  }
-};
-static_assert(cpp_util::unique_handle_custom_is_valid_traits<startup_info_handle_traits>);
-using startup_info_handle = cpp_util::unique_handle<startup_info_handle_traits>;
-
-struct process_information_handle_traits : cpp_util::unique_handle_out_ptr_access
-{
-  using handle_type = PROCESS_INFORMATION;
-
-  static constexpr auto invalid_value() noexcept {
-    return handle_type{};
-  }
-  static constexpr bool is_valid(const handle_type& h) noexcept {
-    return (nullptr != h.hProcess) ||
-      (nullptr != h.hThread);
-  }
-  static void close_handle(const handle_type& h) noexcept {
-    close_handle_helper(h.hProcess);
-    close_handle_helper(h.hThread);
-  }
-private:
-  static void close_handle_helper(HANDLE h) noexcept {
-    if (nullptr != h) {
-      static_cast<void>(::CloseHandle(h));
-    }
-  }
-};
-static_assert(cpp_util::unique_handle_custom_is_valid_traits<process_information_handle_traits>);
-using process_information_handle = cpp_util::unique_handle<process_information_handle_traits>;
-
-struct created_process
-{
-  startup_info_handle startup_info;
-  process_information_handle process_information;
-};
-
-created_process create_process(/*...*/)
-{
-  created_process return_value;
-
-  BOOL result = ::CreateProcessW(
-    //...
-    return_value.startup_info.out_ptr(),
-    return_value.process_information.out_ptr()
-  );
-  if (FALSE == result)
-  {
-    throw std::runtime_error("CreateProcessW failed");
-  }
-
-  return return_value;
-}
-
-int run_and_wait(/*...*/)
-{
-  created_process proc = create_process(/*...*/);
-  return wait_for_process_exit(proc.process_information.inout_ref().hProcess);
-}
-```
-
-## Compounding cleanup for the same handle
-
-- This is a rarer case where multiple cleanups are required for the same handle, one can store two instances of the `unique_handle`, or can compond both into one that can be passed arround withouth having to store the handle twice.
-
-```cpp
-struct win_http_handle_traits : cpp_util::unique_handle_basic_access
-{
-  using handle_type = HINTERNET;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept {
-    static_cast<void>(::WinHttpCloseHandle(h));
-  }
-};
-using win_http_handle = cpp_util::unique_handle<win_http_handle_traits>;
-
-struct unregister_callback_handle_traits : cpp_util::unique_handle_basic_access
-{
-  using handle_type = HINTERNET;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept {
-    WINHTTP_STATUS_CALLBACK callback_result{ ::WinHttpSetStatusCallback(h, NULL, /*...*/) };
-    if (WINHTTP_INVALID_STATUS_CALLBACK == callback_result)
-    {
-      // this is a fatal error (there is bug somewhere)
-      // throw will terminate, because we're inside noexcept function
-      throw std::runtime_error("WinHttpSetStatusCallback fatal error");
-    }
-  }
-};
-using unregister_callback_handle = cpp_util::unique_handle<unregister_callback_handle_traits>;
-
-// compond handle cleans up both of the above
-struct win_http_session_handle_traits : cpp_util::unique_handle_basic_access
-{
-  using handle_type = HINTERNET;
-  static constexpr auto invalid_value() noexcept { return nullptr; }
-  static void close_handle(handle_type h) noexcept {
-    // the destructors (in reverse order) will do the cleanup
-    win_http_handle a(h);
-    unregister_callback_handle b(h);
-  }
-};
-using win_http_session_handle = cpp_util::unique_handle<win_http_session_handle_traits>;
-
-win_http_session_handle transfer_to_win_http_session_handle(
-  win_http_handle && http_handle,
-  unregister_callback_handle && unregister_callback) noexcept
-{
-  // throw will terminate (there is bug somewhere)
-  if((unregister_callback.get() != http_handle.get()) || !(http_handle.is_valid()))
-  {
-    throw std::runtime_error("transfer_to_win_http_session_handle fatal error");
-  }
-  static_cast<void>(unregister_callback.release());
-  return win_http_session_handle(http_handle.release());
-}
-
-// Users only care about win_http_session which stores a single HINTERNET
-win_http_session_handle open_session()
-{
-  win_http_handle handle{ ::WinHttpOpen(/*...*/) }
-  if (!handle.is_valid())
-  {
-    throw std::runtime_error("WinHttpOpen failed");
-  }
-
-  // ...
-
-  WINHTTP_STATUS_CALLBACK callback_result{
-    ::WinHttpSetStatusCallback(handle.get(), winhttp_status_callback, /*...*/) };
-  if (WINHTTP_INVALID_STATUS_CALLBACK == callback_result)
-  {
-    throw std::runtime_error("WinHttpSetStatusCallback failed");
-  }
-  unregister_callback_handle unregister_callback(handle.get());
-
-  // ...
-
-  return transfer_to_win_http_session_handle(
-    std::move(handle), std::move(unregister_callback));
-}
-```
-
-## The case of multiple cleanup functions
-
-This is a very rare case e.g. `PSID` in Windows:
-
-When obtained from `AllocateAndInitializeSid` must be freed by using `FreeSid`.
-```cpp
-BOOL AllocateAndInitializeSid(
-  // ...
-  [out] PSID *pSid
-);
-```
-
-When obtained from `ConvertStringSidToSidW` must be freed by using `LocalFree`.
-```cpp
-BOOL ConvertStringSidToSidW(
-  // ...
-  [out] PSID *Sid
-);
-```
-
-When obtained from `CreateWellKnownSid` can use our own method of allocating and
-freeing (including space on the stack). E.g. can call once with a `NULL`, then use
-`cbSid` as the number of bytes that need to be allocated.
-```cpp
-BOOL CreateWellKnownSid(
-  // ...
-  [out, optional] PSID pSid,
-  [in, out] DWORD *cbSid
-);
-```
-
-In other cases the `PSID` is allocated as part of a larger structure.
-E.g. for `GetTokenInformation` the user has to allocate a buffer. When
-called with `TokenUser`, the content of the buffer is nominally a struct
-```cpp
-struct TOKEN_USER
-{
-  SID_AND_ATTRIBUTES User;
-};
-```
-where
-```cpp
-struct SID_AND_ATTRIBUTES
-{
-  PSID  Sid;
-  DWORD Attributes;
-};
-```
-But the buffer needs to be larger to accomodate the `SID` pointed by `Sid`,
-following the `TOKEN_USER`.
-
-I speculate that the reason for the `PSID` multiple cleanup functions is that
-it is not a true resource (e.g. like a file), but instead it is a pointer to
-[a C data structure](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understand-security-identifiers)
-(despite the `PSID` being declared as a `void*`).
-
-The options are to either:
-- use a single RAII class based on `local_ptr<PSID>`, never use `AllocateAndInitializeSid`
-- use multiple RAII classes
-  - e.g. one based on `local_ptr<PSID>`, another one that calls `FreeSid` and maybe yet
-    another one storing a `unique_ptr<unsigned char[]>`
-- use a special RAII that captures the cleanup/deleter as a pointer
-
-The last two options require a custom `sid_arg` type rather than one based on `handle_arg`
-which was designed to work in conjunction with a single `unique_handle`
+In 2026 I went back to just `.ptr()`, with no configuration of access to it.
