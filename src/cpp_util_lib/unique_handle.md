@@ -1184,7 +1184,9 @@ int run_and_wait(/*...*/)
 
 ## Compounding cleanup for the same handle
 
-- This is a rarer case where multiple cleanups are required for the same handle, one can store two instances of the `unique_handle`, or can compond both into one that can be passed arround withouth having to store the handle twice.
+- This is a rarer case where multiple cleanups are required for the same handle,
+one can store two instances of the `unique_handle`, or can compond both into one
+that can be passed arround withouth having to store the handle twice.
 
 ```cpp
 struct win_http_handle_traits
